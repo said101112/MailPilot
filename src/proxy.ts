@@ -7,9 +7,7 @@ export async function proxy(request: NextRequest) {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error(
-      "Missing Supabase environment variables. Check .env.local and restart the Next.js dev server."
-    );
+    return NextResponse.next();
   }
 
   let response = NextResponse.next({
@@ -45,11 +43,15 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user && !request.nextUrl.pathname.startsWith("/login")) {
-    return NextResponse.redirect(new URL("/login", request.url));
+  const isLoginPage = request.nextUrl.pathname.startsWith("/login");
+
+  if (!user && !isLoginPage) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirect", request.nextUrl.pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
-  if (user && request.nextUrl.pathname.startsWith("/login")) {
+  if (user && isLoginPage) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
@@ -57,5 +59,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|csv)$).*)",
+  ],
 };

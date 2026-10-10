@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import "./globals.css";
 import { Toaster } from "sonner";
+import AppHeader from "@/components/AppHeader";
 import Navbar from "@/components/Navbar";
+import { APP_DESCRIPTION, APP_NAME } from "@/lib/brand";
+import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "NextStep Apply | Job Application Automation",
-  description: "Automate your job applications with single forms or bulk CSV uploads.",
+  title: `${APP_NAME} | Premium Automation Workspace`,
+  description: APP_DESCRIPTION,
 };
 
 export default function RootLayout({
@@ -17,18 +19,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className="dark">
+    <html lang="fr">
       <body
         suppressHydrationWarning
-        className={`${inter.className} bg-[#0A0F1C] text-[#F9FAFB] min-h-screen antialiased`}
+        className={`${inter.variable} min-h-screen bg-[var(--editorial-background)] antialiased`}
       >
-        <div className="flex min-h-screen relative">
+        <div className="flex min-h-screen">
           <Navbar />
-          <main className="flex-1 h-screen overflow-y-auto relative z-10 pt-[57px] md:pt-0">
-            {children}
+          <main className="flex min-h-screen min-w-0 flex-1 flex-col bg-[var(--editorial-background)]">
+            <AppHeader />
+            <div className="min-w-0 flex-1">{children}</div>
           </main>
         </div>
-        <Toaster position="bottom-right" theme="dark" richColors />
+        <Toaster position="bottom-right" richColors />
       </body>
     </html>
   );

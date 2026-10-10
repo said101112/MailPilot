@@ -1,0 +1,14 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="routepilot-gradient-public" x1="10" y1="8" x2="54" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#3A7BFF"/>
+      <stop offset="100%" stop-color="#145BD7"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="18" fill="url(#routepilot-gradient-public)"/>
+  <circle cx="18" cy="46" r="4.5" fill="white" fill-opacity="0.95"/>
+  <circle cx="46" cy="18" r="4.5" fill="white" fill-opacity="0.95"/>
+  <path d="M18 46V30C18 25.582 21.582 22 26 22H38" stroke="white" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M35 14L46 18L42 29" stroke="white" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M24 38H36" stroke="#DFE9FF" stroke-width="4" stroke-linecap="round"/>
+</svg>
