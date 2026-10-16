@@ -94,6 +94,13 @@ export default function CompanyCombobox({
     onChange({
       companyId: null,
       name: next,
+      website: "",
+      domain: "",
+      logoUrl: "",
+      sector: "",
+      location: "",
+      description: "",
+      wikidataId: null,
     });
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
@@ -273,7 +280,17 @@ export default function CompanyCombobox({
                   "flex w-full items-center gap-2 border-t border-gray-100 px-3 py-2.5 text-left text-xs font-medium text-[#ff5722] hover:bg-[#fff3ef]",
                 )}
                 onClick={() => {
-                  onChange({ companyId: null, name: query });
+                  onChange({
+                    companyId: null,
+                    name: query,
+                    website: "",
+                    domain: "",
+                    logoUrl: "",
+                    sector: "",
+                    location: "",
+                    description: "",
+                    wikidataId: null,
+                  });
                   setOpen(false);
                 }}
               >

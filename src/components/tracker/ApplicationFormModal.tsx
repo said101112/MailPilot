@@ -22,6 +22,26 @@ import {
 } from "@/lib/tracker/queries";
 import type { ApplicationFormValues, CompanyRow, ContactRow, JobApplicationRow } from "@/lib/tracker/types";
 import CompanyCombobox from "@/components/tracker/CompanyCombobox";
+import type { CompanyComboboxValue } from "@/components/tracker/CompanyCombobox";
+
+function comboboxPatchToFormValues(
+  patch: Partial<CompanyComboboxValue>,
+): Partial<ApplicationFormValues> {
+  const next: Partial<ApplicationFormValues> = {};
+  if (patch.companyId !== undefined) {
+    next.companyId = patch.companyId;
+    next.primaryContactId = null;
+  }
+  if (patch.name !== undefined) next.companyName = patch.name;
+  if (patch.website !== undefined) next.companyWebsite = patch.website;
+  if (patch.domain !== undefined) next.companyDomain = patch.domain;
+  if (patch.logoUrl !== undefined) next.companyLogoUrl = patch.logoUrl;
+  if (patch.sector !== undefined) next.companySector = patch.sector;
+  if (patch.location !== undefined) next.companyLocation = patch.location;
+  if (patch.description !== undefined) next.companyDescription = patch.description;
+  if (patch.wikidataId !== undefined) next.companyWikidataId = patch.wikidataId;
+  return next;
+}
 
 interface ApplicationFormModalProps {
   open: boolean;
@@ -316,8 +336,7 @@ export default function ApplicationFormModal({
                     wikidataId: values.companyWikidataId,
                   }}
                   onChange={(next) => {
-                    if (next.companyId !== undefined) patch({ primaryContactId: null });
-                    patch(next);
+                    patch(comboboxPatchToFormValues(next));
                   }}
                 />
               </section>
