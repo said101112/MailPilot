@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { getAuthUserId } from "@/lib/auth";
 import type { JobStatus } from "./constants";
 import type {
   ApplicationEventRow,
@@ -12,14 +13,6 @@ import type {
   JobApplicationRow,
   StatusHistoryRow,
 } from "./types";
-
-export async function getAuthUserId(): Promise<string> {
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data.user) {
-    throw new Error("You must be signed in to use the tracker.");
-  }
-  return data.user.id;
-}
 
 function throwIfError(error: { message: string } | null, fallback: string) {
   if (error) throw new Error(error.message || fallback);
