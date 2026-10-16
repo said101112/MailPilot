@@ -23,14 +23,30 @@ const pageTitles: Record<string, string> = {
   "/history": "History",
   "/connections": "Connections",
   "/templates": "Templates",
+  "/tracker": "Tracker",
+  "/tracker/applications": "Candidatures",
+  "/tracker/companies": "Entreprises",
+  "/tracker/contacts": "Contacts",
+  "/tracker/interviews": "Entretiens",
+  "/tracker/follow-ups": "Relances",
 };
+
+function resolvePageTitle(pathname: string): string {
+  const exact = pageTitles[pathname];
+  if (exact) return exact;
+  const prefixes = Object.keys(pageTitles)
+    .filter((key) => key !== "/")
+    .sort((a, b) => b.length - a.length);
+  const match = prefixes.find((key) => pathname.startsWith(`${key}/`));
+  return match ? pageTitles[match] : "Dashboard";
+}
 
 export default function AppHeader() {
   const pathname = usePathname();
   const [candidateName, setCandidateName] = useState(PROFILE_DEFAULT_NAME);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  const title = useMemo(() => pageTitles[pathname] ?? "Dashboard", [pathname]);
+  const title = useMemo(() => resolvePageTitle(pathname), [pathname]);
 
   const initials = useMemo(() => {
     const parts = candidateName.trim().split(/\s+/).filter(Boolean);

@@ -4,19 +4,21 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  Bell,
+  Briefcase,
+  Building2,
+  CalendarClock,
   ChevronLeft,
   ChevronRight,
-  CircleHelp,
   Clock,
   FileText,
   Home,
   LogOut,
   Menu,
+  MessageSquarePlus,
   Network,
-  Radio,
   Send,
   Upload,
+  Users,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -56,6 +58,41 @@ const hunterNavSections = [
         name: "Bulk Upload",
         href: "/upload",
         icon: Upload,
+      },
+    ],
+  },
+  {
+    label: "Tracker",
+    items: [
+      {
+        name: "Tracker",
+        href: "/tracker",
+        icon: Briefcase,
+      },
+      {
+        name: "Candidatures",
+        href: "/tracker/applications",
+        icon: Send,
+      },
+      {
+        name: "Entreprises",
+        href: "/tracker/companies",
+        icon: Building2,
+      },
+      {
+        name: "Contacts",
+        href: "/tracker/contacts",
+        icon: Users,
+      },
+      {
+        name: "Entretiens",
+        href: "/tracker/interviews",
+        icon: CalendarClock,
+      },
+      {
+        name: "Relances",
+        href: "/tracker/follow-ups",
+        icon: MessageSquarePlus,
       },
     ],
   },
@@ -154,6 +191,11 @@ export default function Navbar() {
       isCollapsed && "justify-center px-0",
     );
 
+  const isActivePath = (href: string) => {
+    if (href === "/") return pathname === "/";
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
+
   return (
     <>
       {/* Mobile Top Navbar */}
@@ -204,7 +246,7 @@ export default function Navbar() {
               )}
               <nav className="mt-1 flex flex-col gap-0.5">
                 {section.items.map((item) => {
-                  const isActive = pathname === item.href;
+                  const isActive = isActivePath(item.href);
                   return (
                     <Link
                       key={item.name}
@@ -297,15 +339,15 @@ export default function Navbar() {
                   </p>
                 )}
                 <nav className="mt-1 flex flex-col gap-0.5">
-                  {section.items.map((item) => {
-                    const isActive = pathname === item.href;
-                    return (
-                      <Link
-                        key={item.name}
-                        className={navLinkClass(isActive)}
-                        href={item.href}
-                        title={item.name}
-                      >
+                {section.items.map((item) => {
+                  const isActive = isActivePath(item.href);
+                  return (
+                    <Link
+                      key={item.name}
+                      className={navLinkClass(isActive)}
+                      href={item.href}
+                      title={item.name}
+                    >
                         <item.icon
                           className={cn(
                             "h-4 w-4 shrink-0",
@@ -321,33 +363,6 @@ export default function Navbar() {
             ))}
           </div>
         </div>
-
-        {/* Hunter-style Utility Links above user profile */}
-        {!isCollapsed && (
-          <div className="px-2 py-2 border-t border-gray-100 space-y-0.5">
-            <button
-              onClick={() => toast.info("Bulk status is healthy.")}
-              className="flex w-full items-center gap-3 rounded-md px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50 hover:text-gray-900"
-            >
-              <Radio className="h-3.5 w-3.5" />
-              <span>Bulk Status</span>
-            </button>
-            <button
-              onClick={() => toast.info("No unread notifications.")}
-              className="flex w-full items-center gap-3 rounded-md px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50 hover:text-gray-900"
-            >
-              <Bell className="h-3.5 w-3.5" />
-              <span>Notifications</span>
-            </button>
-            <button
-              onClick={() => toast.info("Support center: support@routepilot.ai")}
-              className="flex w-full items-center gap-3 rounded-md px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50 hover:text-gray-900"
-            >
-              <CircleHelp className="h-3.5 w-3.5" />
-              <span>Support</span>
-            </button>
-          </div>
-        )}
 
         {/* Attached Resume (CV) Card */}
         {!isCollapsed && <CvUploadCard variant="compact" />}

@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# supabase local config / migrations (applied manually via dashboard)
+/supabase
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

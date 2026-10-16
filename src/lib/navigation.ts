@@ -1,10 +1,15 @@
 import {
+  Briefcase,
+  Building2,
+  CalendarClock,
   FileText,
   History as HistoryIcon,
   Home,
+  MessageSquarePlus,
   Network,
   Send,
   Upload,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 
@@ -49,6 +54,47 @@ export const workspaceNavigationSections: Array<{
     ],
   },
   {
+    label: "Tracker",
+    items: [
+      {
+        name: "Tracker",
+        href: "/tracker",
+        description: "Job application tracker dashboard and shortcuts.",
+        icon: Briefcase,
+      },
+      {
+        name: "Candidatures",
+        href: "/tracker/applications",
+        description: "Table, Kanban and calendar views of every application.",
+        icon: Send,
+      },
+      {
+        name: "Entreprises",
+        href: "/tracker/companies",
+        description: "Company profiles, logos and application history.",
+        icon: Building2,
+      },
+      {
+        name: "Contacts",
+        href: "/tracker/contacts",
+        description: "Recruiters and contacts linked to each company.",
+        icon: Users,
+      },
+      {
+        name: "Entretiens",
+        href: "/tracker/interviews",
+        description: "Upcoming interviews and past results.",
+        icon: CalendarClock,
+      },
+      {
+        name: "Relances",
+        href: "/tracker/follow-ups",
+        description: "Follow-ups, overdue relances and silent applications.",
+        icon: MessageSquarePlus,
+      },
+    ],
+  },
+  {
     label: "Setup",
     items: [
       {
@@ -78,4 +124,10 @@ export const searchPlaceholders: Record<string, string> = {
   "/history": "Search application log...",
   "/connections": "Search connection health...",
   "/templates": "Search template library...",
+  "/tracker": "Search tracker...",
+  "/tracker/applications": "Search applications...",
+  "/tracker/companies": "Search companies...",
+  "/tracker/contacts": "Search contacts...",
+  "/tracker/interviews": "Search interviews...",
+  "/tracker/follow-ups": "Search follow-ups...",
 };
