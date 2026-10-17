@@ -10,10 +10,12 @@ import {
   ChevronRight,
   Columns3,
   ListFilter,
+  Loader2,
   Pencil,
   Plus,
   Search,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -33,6 +35,7 @@ import {
 import { formatDate, formatRelativeTime } from "@/lib/tracker/format";
 import {
   changeApplicationStatus,
+  deleteApplication,
   listApplications,
   listFollowUps,
   listInterviews,
@@ -218,8 +221,27 @@ export default function ApplicationsPage() {
   const [smartPasteOpen, setSmartPasteOpen] = useState(false);
   const [prefillValues, setPrefillValues] = useState<ApplicationFormValues | null>(null);
   const [editing, setEditing] = useState<JobApplicationRow | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const router = useRouter();
+
+  const handleDelete = async (app: JobApplicationRow, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const name = app.company?.name || app.position || "cette candidature";
+    if (!window.confirm(`Supprimer définitivement la candidature chez "${name}" ?`)) {
+      return;
+    }
+    setDeletingId(app.id);
+    try {
+      await deleteApplication(app.id);
+      toast.success(`Candidature chez ${name} supprimée.`);
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erreur lors de la suppression.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const load = useCallback(async () => {
     try {
@@ -486,18 +508,35 @@ export default function ApplicationsPage() {
                             {formatRelativeTime(app.last_interaction_at)}
                           </td>
                           <td className="px-5 py-3">
-                            <button
-                              type="button"
-                              className="editorial-icon-button"
-                              title="Modifier"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setEditing(app);
-                                setFormOpen(true);
-                              }}
+                            <div
+                              className="flex items-center justify-end gap-1.5"
+                              onClick={(event) => event.stopPropagation()}
                             >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </button>
+                              <button
+                                type="button"
+                                className="editorial-icon-button"
+                                title="Modifier"
+                                onClick={() => {
+                                  setEditing(app);
+                                  setFormOpen(true);
+                                }}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                className="editorial-icon-button text-gray-400 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                                title="Supprimer la candidature"
+                                disabled={deletingId === app.id}
+                                onClick={() => void handleDelete(app)}
+                              >
+                                {deletingId === app.id ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin text-red-500" />
+                                ) : (
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                )}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -637,6 +676,7 @@ export default function ApplicationsPage() {
             setPrefillValues(null);
           }}
           onSaved={() => void load()}
+          onDeleted={() => void load()}
           editingApplication={editing}
           prefillValues={prefillValues}
           onOpenSmartPaste={() => setSmartPasteOpen(true)}

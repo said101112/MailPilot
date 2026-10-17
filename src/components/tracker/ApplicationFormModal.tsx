@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, Sparkles, X } from "lucide-react";
+import { Loader2, Sparkles, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -16,6 +16,7 @@ import { emptyFormValues, formValuesFromApplication } from "@/lib/tracker/form";
 import {
   changeApplicationStatus,
   createApplication,
+  deleteApplication,
   listCompanies,
   listContacts,
   updateApplication,
@@ -48,6 +49,7 @@ interface ApplicationFormModalProps {
   open: boolean;
   onClose: () => void;
   onSaved: (application: JobApplicationRow) => void;
+  onDeleted?: (id: string) => void;
   editingApplication?: JobApplicationRow | null;
   prefillCompany?: CompanyRow | null;
   prefillValues?: ApplicationFormValues | null;
@@ -58,6 +60,7 @@ export default function ApplicationFormModal({
   open,
   onClose,
   onSaved,
+  onDeleted,
   editingApplication,
   prefillCompany,
   prefillValues,
@@ -93,6 +96,7 @@ export default function ApplicationFormModal({
   const [companies, setCompanies] = useState<CompanyRow[]>([]);
   const [contacts, setContacts] = useState<ContactRow[]>([]);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const isEdit = Boolean(editingApplication);
@@ -127,6 +131,25 @@ export default function ApplicationFormModal({
     if (!values.companyId) return contacts;
     return contacts.filter((contact) => contact.company_id === values.companyId);
   }, [contacts, values.companyId]);
+
+  const handleDelete = async () => {
+    if (!editingApplication) return;
+    const name = values.companyName || values.position || "cette candidature";
+    if (!window.confirm(`Supprimer définitivement la candidature chez "${name}" ?`)) {
+      return;
+    }
+    setDeleting(true);
+    try {
+      await deleteApplication(editingApplication.id);
+      toast.success(`Candidature chez ${name} supprimée.`);
+      onDeleted?.(editingApplication.id);
+      onClose();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erreur lors de la suppression.");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -457,22 +480,42 @@ export default function ApplicationFormModal({
               </section>
             </div>
 
-            <div className="mt-6 flex items-center justify-end gap-2 border-t border-gray-100 pt-4">
-              <button
-                type="button"
-                className="editorial-button-secondary h-9 px-4"
-                onClick={onClose}
-              >
-                Annuler
-              </button>
-              <button
-                type="submit"
-                className={cn("editorial-button-primary h-9 px-4", saving && "opacity-60")}
-                disabled={saving}
-              >
-                {saving && <Loader2 className="mr-2 inline h-3.5 w-3.5 animate-spin" />}
-                {isEdit ? "Enregistrer" : "Créer la candidature"}
-              </button>
+            <div className="mt-6 flex items-center justify-between border-t border-gray-100 pt-4">
+              {isEdit && editingApplication ? (
+                <button
+                  type="button"
+                  className="editorial-button-secondary h-9 px-3 text-red-600 hover:border-red-200 hover:bg-red-50"
+                  onClick={handleDelete}
+                  disabled={saving || deleting}
+                >
+                  {deleting ? (
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin text-red-600" />
+                  ) : (
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                  )}
+                  Supprimer
+                </button>
+              ) : (
+                <div />
+              )}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="editorial-button-secondary h-9 px-4"
+                  onClick={onClose}
+                  disabled={saving || deleting}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className={cn("editorial-button-primary h-9 px-4", (saving || deleting) && "opacity-60")}
+                  disabled={saving || deleting}
+                >
+                  {saving && <Loader2 className="mr-2 inline h-3.5 w-3.5 animate-spin" />}
+                  {isEdit ? "Enregistrer" : "Créer la candidature"}
+                </button>
+              </div>
             </div>
           </form>
         )}
