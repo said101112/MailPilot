@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { initialsOf } from "@/lib/tracker/format";
+import { domainFromWebsite, duckduckgoIconUrl, logoDevUrl } from "@/lib/tracker/logo";
 
 interface CompanyLogoProps {
   name: string;
@@ -13,16 +14,6 @@ interface CompanyLogoProps {
   className?: string;
 }
 
-function domainFrom(website?: string | null): string | null {
-  if (!website) return null;
-  try {
-    return new URL(website.startsWith("http") ? website : `https://${website}`)
-      .hostname.replace(/^www\./, "");
-  } catch {
-    return null;
-  }
-}
-
 export default function CompanyLogo({
   name,
   logoUrl,
@@ -30,39 +21,41 @@ export default function CompanyLogo({
   website,
   className,
 }: CompanyLogoProps) {
-  const resolvedDomain = domain ?? domainFrom(website);
-  const [stage, setStage] = useState<"primary" | "favicon" | "fallback">(
-    logoUrl ? "primary" : resolvedDomain ? "favicon" : "fallback",
-  );
-
-  const sizeClass = className ?? "h-9 w-9";
-
-  if (stage === "primary" && logoUrl) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={logoUrl}
-        alt={`${name} logo`}
-        className={cn(
-          sizeClass,
-          "shrink-0 rounded-md border border-gray-200 bg-white object-contain p-1",
-        )}
-        onError={() => setStage(resolvedDomain ? "favicon" : "fallback")}
-      />
-    );
+  const resolvedDomain = domain ?? domainFromWebsite(website);
+  const sources: string[] = [];
+  if (logoUrl) sources.push(logoUrl);
+  if (resolvedDomain) {
+    const logodev = logoDevUrl(resolvedDomain);
+    if (logodev) sources.push(logodev);
+    sources.push(duckduckgoIconUrl(resolvedDomain));
   }
 
-  if (stage === "favicon" && resolvedDomain) {
+  const sourcesKey = sources.join("|");
+  const [state, setState] = useState({ key: sourcesKey, index: 0 });
+  if (state.key !== sourcesKey) {
+    setState({ key: sourcesKey, index: 0 });
+  }
+
+  const sizeClass = className ?? "h-9 w-9";
+  const src = state.index < sources.length ? sources[state.index] : undefined;
+
+  if (src) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={`https://www.google.com/s2/favicons?domain=${resolvedDomain}&sz=128`}
+        src={src}
         alt={`${name} logo`}
         className={cn(
           sizeClass,
           "shrink-0 rounded-md border border-gray-200 bg-white object-contain p-1",
         )}
-        onError={() => setStage("fallback")}
+        onError={() =>
+          setState((current) =>
+            current.key === sourcesKey
+              ? { key: sourcesKey, index: current.index + 1 }
+              : current,
+          )
+        }
       />
     );
   }

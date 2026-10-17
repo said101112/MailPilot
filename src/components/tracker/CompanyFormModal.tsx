@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { toast } from "sonner";
-import { createCompany, updateCompany } from "@/lib/tracker/queries";
+import { createCompany, ensureCompanyLogo, updateCompany } from "@/lib/tracker/queries";
 import type { CompanyRow } from "@/lib/tracker/types";
 
 interface CompanyFormModalProps {
@@ -36,10 +36,16 @@ export default function CompanyFormModal({
     }
     setSaving(true);
     try {
+      const logoUrl = await ensureCompanyLogo(
+        editingCompany?.logo_url,
+        domain,
+        website,
+      );
       const payload = {
         name: name.trim(),
         website: website.trim() || null,
         domain: domain.trim() || null,
+        logo_url: logoUrl || null,
         sector: sector.trim() || null,
         location: location.trim() || null,
         description: description.trim() || null,

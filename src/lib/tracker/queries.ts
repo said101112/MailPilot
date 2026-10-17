@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { getAuthUserId } from "@/lib/auth";
 import type { JobStatus } from "./constants";
+import { domainFromWebsite, normalizeDomain } from "./logo";
 import type {
   ApplicationEventRow,
   ApplicationFormValues,
@@ -101,6 +102,33 @@ export async function updateCompany(
 }
 
 /**
+ * Resolve a company logo when none is known yet: ask the server chain
+ * (Logo.dev -> site favicon scrape -> DuckDuckGo -> root favicon).
+ * Never throws — a missing logo must not block saving.
+ */
+export async function ensureCompanyLogo(
+  currentLogo: string | null | undefined,
+  domain?: string | null,
+  website?: string | null,
+): Promise<string> {
+  const existing = currentLogo?.trim();
+  if (existing) return existing;
+  const resolvedDomain = normalizeDomain(domain) ?? normalizeDomain(domainFromWebsite(website));
+  if (!resolvedDomain) return "";
+  try {
+    const response = await fetch(
+      `/api/companies/logo?domain=${encodeURIComponent(resolvedDomain)}`,
+      { signal: AbortSignal.timeout(6000) },
+    );
+    if (!response.ok) return "";
+    const payload = (await response.json()) as { logoUrl?: string | null };
+    return payload.logoUrl?.trim() ?? "";
+  } catch {
+    return "";
+  }
+}
+
+/**
  * Reuse an existing company when a similar name already exists,
  * otherwise create a new one. Never silently swaps companies:
  * callers pass an explicit companyId when the user picked a result.
@@ -122,12 +150,18 @@ export async function resolveCompany(
   const name = values.companyName.trim();
   if (!name) return null;
 
+  const logoUrl = await ensureCompanyLogo(
+    values.companyLogoUrl,
+    values.companyDomain,
+    values.companyWebsite,
+  );
+
   if (values.companyId) {
     await updateCompany(values.companyId, {
       name: values.companyName.trim() || undefined,
       website: values.companyWebsite.trim() || null,
       domain: values.companyDomain.trim() || null,
-      logo_url: values.companyLogoUrl.trim() || null,
+      logo_url: logoUrl || null,
       sector: values.companySector.trim() || null,
       location: values.companyLocation.trim() || null,
       description: values.companyDescription.trim() || null,
@@ -138,6 +172,9 @@ export async function resolveCompany(
 
   const existing = await findCompanyByName(name);
   if (existing) {
+    if (logoUrl && !existing.logo_url) {
+      await updateCompany(existing.id, { logo_url: logoUrl });
+    }
     return existing.id;
   }
 
@@ -145,7 +182,7 @@ export async function resolveCompany(
     name,
     website: values.companyWebsite.trim() || null,
     domain: values.companyDomain.trim() || null,
-    logo_url: values.companyLogoUrl.trim() || null,
+    logo_url: logoUrl || null,
     sector: values.companySector.trim() || null,
     location: values.companyLocation.trim() || null,
     description: values.companyDescription.trim() || null,

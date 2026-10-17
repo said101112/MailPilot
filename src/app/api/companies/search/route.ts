@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { resolveLogoForDomain } from "@/lib/tracker/logo-server";
 
 export const runtime = "nodejs";
 
@@ -220,7 +221,16 @@ export async function GET(request: Request) {
       search?: WikidataSearchHit[];
     };
 
-    const suggestions = await buildSuggestions(searchData.search ?? []);
+    const built = await buildSuggestions(searchData.search ?? []);
+    const suggestions = await Promise.all(
+      built.map(async (suggestion) => {
+        if (suggestion.logoUrl || !suggestion.domain) return suggestion;
+        const logoUrl = await resolveLogoForDomain(suggestion.domain, {
+          quickOnly: true,
+        });
+        return logoUrl ? { ...suggestion, logoUrl } : suggestion;
+      }),
+    );
 
     cache.set(cacheKey, { expires: Date.now() + CACHE_TTL_MS, value: suggestions });
     if (cache.size > CACHE_MAX_ENTRIES) {
