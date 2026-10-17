@@ -35,6 +35,8 @@ interface CompanyComboboxProps {
   value: CompanyComboboxValue;
   onChange: (patch: Partial<CompanyComboboxValue>) => void;
   disabled?: boolean;
+  label?: string;
+  showNewCompanyHint?: boolean;
 }
 
 export default function CompanyCombobox({
@@ -42,19 +44,41 @@ export default function CompanyCombobox({
   value,
   onChange,
   disabled,
+  label = "Entreprise",
+  showNewCompanyHint = true,
 }: CompanyComboboxProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState(value.name);
   const [prevName, setPrevName] = useState(value.name);
   const [onlineResults, setOnlineResults] = useState<OnlineResult[]>([]);
+  const [onlineQuery, setOnlineQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoSetRef = useRef<Map<string, string | null>>(new Map());
 
   if (value.name !== prevName) {
     setPrevName(value.name);
     setQuery(value.name);
   }
+
+  const rememberSet = useCallback((patch: Partial<CompanyComboboxValue>) => {
+    const map = autoSetRef.current;
+    if (patch.website !== undefined) map.set("website", patch.website);
+    if (patch.domain !== undefined) map.set("domain", patch.domain);
+    if (patch.logoUrl !== undefined) map.set("logoUrl", patch.logoUrl);
+    if (patch.sector !== undefined) map.set("sector", patch.sector);
+    if (patch.location !== undefined) map.set("location", patch.location);
+    if (patch.description !== undefined) map.set("description", patch.description);
+    if (patch.wikidataId !== undefined) map.set("wikidataId", patch.wikidataId);
+  }, []);
+
+  const stillUntouched = (key: string): boolean => {
+    if (!autoSetRef.current.has(key)) return false;
+    const stored = autoSetRef.current.get(key);
+    const current = (value as unknown as Record<string, string | null>)[key];
+    return stored === current;
+  };
 
   useEffect(() => {
     const onPointerDown = (event: MouseEvent) => {
@@ -70,7 +94,9 @@ export default function CompanyCombobox({
   }, []);
 
   const searchOnline = useCallback(async (term: string) => {
+    const normalized = term.trim().toLowerCase();
     if (term.trim().length < 2) {
+      setOnlineQuery(normalized);
       setOnlineResults([]);
       setSearching(false);
       return;
@@ -80,36 +106,85 @@ export default function CompanyCombobox({
       const response = await fetch(`/api/companies/search?q=${encodeURIComponent(term)}`);
       if (!response.ok) throw new Error("search failed");
       const payload = (await response.json()) as { results?: OnlineResult[] };
+      setOnlineQuery(normalized);
       setOnlineResults(payload.results ?? []);
     } catch {
+      setOnlineQuery(normalized);
       setOnlineResults([]);
     } finally {
       setSearching(false);
     }
   }, []);
 
+  const commitTypedName = (nextName: string) => {
+    const patch: Partial<CompanyComboboxValue> = { companyId: null, name: nextName };
+    if (stillUntouched("website")) patch.website = "";
+    if (stillUntouched("domain")) patch.domain = "";
+    if (stillUntouched("logoUrl")) patch.logoUrl = "";
+    if (stillUntouched("sector")) patch.sector = "";
+    if (stillUntouched("location")) patch.location = "";
+    if (stillUntouched("description")) patch.description = "";
+    if (stillUntouched("wikidataId")) patch.wikidataId = null;
+    autoSetRef.current.clear();
+    onChange(patch);
+  };
+
   const handleQueryChange = (next: string) => {
     setQuery(next);
     setOpen(true);
-    onChange({
-      companyId: null,
-      name: next,
-      website: "",
-      domain: "",
-      logoUrl: "",
-      sector: "",
-      location: "",
-      description: "",
-      wikidataId: null,
-    });
+    commitTypedName(next);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       void searchOnline(next);
     }, 350);
   };
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      if (disabled || value.companyId) return;
+      const typed = value.name.trim().toLowerCase();
+      if (typed.length < 3) return;
+
+      const local = companies.find(
+        (company) => company.name.trim().toLowerCase() === typed,
+      );
+      const onlineForTyped = onlineQuery === typed ? onlineResults : [];
+      const exactOnline = onlineForTyped.find(
+        (result) => result.name.trim().toLowerCase() === typed,
+      );
+      const singleOnline = onlineForTyped.length === 1 ? onlineForTyped[0] : null;
+
+      const fill: Partial<CompanyComboboxValue> = {};
+      if (local) {
+        if (!value.website && local.website) fill.website = local.website;
+        if (!value.domain && local.domain) fill.domain = local.domain;
+        if (!value.logoUrl && local.logo_url) fill.logoUrl = local.logo_url;
+        if (!value.sector && local.sector) fill.sector = local.sector;
+        if (!value.location && local.location) fill.location = local.location;
+        if (!value.description && local.description) fill.description = local.description;
+        if (!value.wikidataId && local.wikidata_id) fill.wikidataId = local.wikidata_id;
+      } else {
+        const match = exactOnline ?? singleOnline;
+        if (match) {
+          if (!value.website && match.website) fill.website = match.website;
+          if (!value.domain && match.domain) fill.domain = match.domain;
+          if (!value.logoUrl && match.logoUrl) fill.logoUrl = match.logoUrl;
+          if (!value.sector && match.sector) fill.sector = match.sector;
+          if (!value.location && match.location) fill.location = match.location;
+          if (!value.description && match.description) fill.description = match.description;
+          if (!value.wikidataId && match.wikidataId) fill.wikidataId = match.wikidataId;
+        }
+      }
+
+      if (Object.keys(fill).length === 0) return;
+      rememberSet(fill);
+      onChange(fill);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [value, companies, onlineResults, onlineQuery, disabled, onChange, rememberSet]);
+
   const selectExisting = (company: CompanyRow) => {
-    onChange({
+    const patch: Partial<CompanyComboboxValue> = {
       companyId: company.id,
       name: company.name,
       website: company.website ?? "",
@@ -119,12 +194,14 @@ export default function CompanyCombobox({
       location: company.location ?? "",
       description: company.description ?? "",
       wikidataId: company.wikidata_id,
-    });
+    };
+    rememberSet(patch);
+    onChange(patch);
     setOpen(false);
   };
 
   const selectOnline = (result: OnlineResult) => {
-    onChange({
+    const patch: Partial<CompanyComboboxValue> = {
       companyId: null,
       name: result.name,
       website: result.website ?? "",
@@ -134,7 +211,9 @@ export default function CompanyCombobox({
       location: result.location ?? "",
       description: result.description ?? "",
       wikidataId: result.wikidataId,
-    });
+    };
+    rememberSet(patch);
+    onChange(patch);
     setOpen(false);
   };
 
@@ -148,7 +227,7 @@ export default function CompanyCombobox({
 
   return (
     <div ref={containerRef} className="relative">
-      <label className="editorial-label">Entreprise</label>
+      <label className="editorial-label">{label}</label>
       <div className="relative mt-1.5">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
         <input
@@ -170,7 +249,7 @@ export default function CompanyCombobox({
           Entreprise existante sélectionnée — elle sera réutilisée.
         </p>
       )}
-      {!value.companyId && value.name.trim() && (
+      {showNewCompanyHint && !value.companyId && value.name.trim() && (
         <p className="mt-1.5 text-[11px] text-gray-500">
           Nouvelle entreprise : une fiche sera créée automatiquement à la sauvegarde.
         </p>
@@ -280,17 +359,7 @@ export default function CompanyCombobox({
                   "flex w-full items-center gap-2 border-t border-gray-100 px-3 py-2.5 text-left text-xs font-medium text-[#ff5722] hover:bg-[#fff3ef]",
                 )}
                 onClick={() => {
-                  onChange({
-                    companyId: null,
-                    name: query,
-                    website: "",
-                    domain: "",
-                    logoUrl: "",
-                    sector: "",
-                    location: "",
-                    description: "",
-                    wikidataId: null,
-                  });
+                  commitTypedName(query);
                   setOpen(false);
                 }}
               >

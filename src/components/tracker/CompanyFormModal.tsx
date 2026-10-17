@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { toast } from "sonner";
-import { createCompany, ensureCompanyLogo, updateCompany } from "@/lib/tracker/queries";
+import { createCompany, ensureCompanyLogo, listCompanies, updateCompany } from "@/lib/tracker/queries";
 import type { CompanyRow } from "@/lib/tracker/types";
+import CompanyCombobox, { type CompanyComboboxValue } from "@/components/tracker/CompanyCombobox";
 
 interface CompanyFormModalProps {
   open: boolean;
@@ -22,11 +23,34 @@ export default function CompanyFormModal({
   const [name, setName] = useState(editingCompany?.name ?? "");
   const [website, setWebsite] = useState(editingCompany?.website ?? "");
   const [domain, setDomain] = useState(editingCompany?.domain ?? "");
+  const [logoUrl, setLogoUrl] = useState(editingCompany?.logo_url ?? "");
+  const [wikidataId, setWikidataId] = useState(editingCompany?.wikidata_id ?? "");
   const [sector, setSector] = useState(editingCompany?.sector ?? "");
   const [location, setLocation] = useState(editingCompany?.location ?? "");
   const [description, setDescription] = useState(editingCompany?.description ?? "");
   const [notes, setNotes] = useState(editingCompany?.notes ?? "");
+  const [companies, setCompanies] = useState<CompanyRow[]>([]);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void listCompanies()
+        .then(setCompanies)
+        .catch(() => undefined);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  const handleComboboxChange = (next: Partial<CompanyComboboxValue>) => {
+    if (next.name !== undefined) setName(next.name);
+    if (next.website !== undefined) setWebsite(next.website);
+    if (next.domain !== undefined) setDomain(next.domain);
+    if (next.logoUrl !== undefined) setLogoUrl(next.logoUrl);
+    if (next.sector !== undefined) setSector(next.sector);
+    if (next.location !== undefined) setLocation(next.location);
+    if (next.description !== undefined) setDescription(next.description);
+    if (next.wikidataId !== undefined) setWikidataId(next.wikidataId ?? "");
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -36,16 +60,13 @@ export default function CompanyFormModal({
     }
     setSaving(true);
     try {
-      const logoUrl = await ensureCompanyLogo(
-        editingCompany?.logo_url,
-        domain,
-        website,
-      );
+      const resolvedLogo = await ensureCompanyLogo(logoUrl, domain, website);
       const payload = {
         name: name.trim(),
         website: website.trim() || null,
         domain: domain.trim() || null,
-        logo_url: logoUrl || null,
+        logo_url: resolvedLogo || null,
+        wikidata_id: wikidataId || null,
         sector: sector.trim() || null,
         location: location.trim() || null,
         description: description.trim() || null,
@@ -89,16 +110,23 @@ export default function CompanyFormModal({
 
         <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto px-6 py-5">
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="sm:col-span-2 space-y-1.5">
-              <label className="editorial-label" htmlFor="company-name">
-                Nom *
-              </label>
-              <input
-                id="company-name"
-                className="editorial-input w-full"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                required
+            <div className="sm:col-span-2">
+              <CompanyCombobox
+                label="Nom *"
+                showNewCompanyHint={false}
+                companies={companies}
+                value={{
+                  companyId: null,
+                  name,
+                  website,
+                  domain,
+                  logoUrl,
+                  sector,
+                  location,
+                  description,
+                  wikidataId,
+                }}
+                onChange={handleComboboxChange}
               />
             </div>
             <div className="space-y-1.5">
