@@ -9,12 +9,14 @@ import {
   CheckSquare,
   ChevronLeft,
   ChevronRight,
+  ClipboardPaste,
   Download,
   FileSpreadsheet,
   FileText,
   Loader2,
   MinusSquare,
   Play,
+  Sparkles,
   Square,
   UploadCloud,
 } from "lucide-react";
@@ -102,9 +104,60 @@ function getValidationState(row: CSVRow, duplicateEmails: Set<string>): Validati
   return "ready";
 }
 
+function extractEmailsFromText(rawText: string): string[] {
+  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+  const matches = rawText.match(emailRegex) || [];
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  for (const m of matches) {
+    const cleaned = m.trim().toLowerCase();
+    if (!seen.has(cleaned)) {
+      seen.add(cleaned);
+      unique.push(cleaned);
+    }
+  }
+  return unique;
+}
+
+const COMMON_FREE_PROVIDERS = new Set([
+  "gmail.com",
+  "yahoo.com",
+  "yahoo.fr",
+  "hotmail.com",
+  "hotmail.fr",
+  "outlook.com",
+  "outlook.fr",
+  "live.com",
+  "icloud.com",
+  "proton.me",
+  "protonmail.com",
+]);
+
+function guessCompanyFromEmail(email: string): string {
+  const parts = email.split("@");
+  if (parts.length < 2) return "Recruteur";
+  const domain = parts[1].toLowerCase();
+  if (COMMON_FREE_PROVIDERS.has(domain)) {
+    return "Recruteur Direct";
+  }
+  const cleanDomain = domain.replace(
+    /^(recrutement|recruitment|carrieres|carriere|careers|career|rh|hr|jobs|job|talent|talents|contact|stages|stage|pfe)\./i,
+    "",
+  );
+  const domainParts = cleanDomain.split(".");
+  const namePart =
+    domainParts.length >= 2 ? domainParts[domainParts.length - 2] : domainParts[0];
+  if (!namePart) return "Entreprise";
+  return namePart.charAt(0).toUpperCase() + namePart.slice(1);
+}
+
 export default function UploadPage() {
   const [data, setData] = useState<CSVRow[]>([]);
   const [fileName, setFileName] = useState("routepilot_batch_template.csv");
+  const [inputMode, setInputMode] = useState<"file" | "paste">("file");
+  const [pastedText, setPastedText] = useState("");
+  const [defaultPosition, setDefaultPosition] = useState("Stage PFE / Emploi");
+  const [defaultContactName, setDefaultContactName] = useState("Hiring Manager");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [templates, setTemplates] = useState(cloneDefaultTemplates);
@@ -291,6 +344,32 @@ export default function UploadPage() {
 
     processCsvFile(file);
     event.target.value = "";
+  };
+
+  const detectedEmails = useMemo(() => {
+    return extractEmailsFromText(pastedText);
+  }, [pastedText]);
+
+  const handleImportPastedEmails = () => {
+    if (detectedEmails.length === 0) {
+      toast.error("Aucune adresse email valide détectée dans le texte.");
+      return;
+    }
+
+    const nextRows: CSVRow[] = detectedEmails.map((email) => ({
+      email,
+      company: guessCompanyFromEmail(email),
+      position: defaultPosition.trim() || "Stage PFE / Emploi",
+      name: defaultContactName.trim() || "Hiring Manager",
+      status: "pending",
+    }));
+
+    setFileName(`linkedin-paste-${detectedEmails.length}-contacts.csv`);
+    setData(nextRows);
+    setProgress({ current: 0, total: nextRows.length });
+    setSelectedRows(new Set(nextRows.map((_, index) => index)));
+    setCurrentPage(1);
+    toast.success(`${detectedEmails.length} contacts extraits et importés avec succès !`);
   };
 
   const toggleRow = (index: number) => {
@@ -551,96 +630,260 @@ export default function UploadPage() {
         {/* STATE 1: NO FILE LOADED (Organized 2-Column Upload View) */}
         {data.length === 0 ? (
           <div className="grid gap-6 lg:grid-cols-12">
-            {/* Left: Upload Dropzone (7 cols) */}
+            {/* Left Column: Dual Mode Upload / Paste (7 cols) */}
             <div className="lg:col-span-7">
-              <div
-                className={cn(
-                  "flex min-h-[380px] flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 text-center transition-all cursor-pointer",
-                  isDragging
-                    ? "border-[#ff5722] bg-[#fff3ef]/40"
-                    : "border-gray-300 bg-gray-50/50 hover:border-gray-400 hover:bg-white",
-                )}
-                onClick={() => fileInputRef.current?.click()}
-                onDragLeave={() => setIsDragging(false)}
-                onDragOver={(event) => {
-                  event.preventDefault();
-                  setIsDragging(true);
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    fileInputRef.current?.click();
-                  }
-                }}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  setIsDragging(false);
-                  const file = event.dataTransfer.files?.[0];
-                  if (file) processCsvFile(file);
-                }}
-                role="button"
-                tabIndex={0}
-              >
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#fff3ef] text-[#ff5722]">
-                  <UploadCloud className="h-7 w-7" />
-                </div>
-
-                <h2 className="mt-4 text-sm font-semibold text-gray-900">
-                  Drop your CSV file here
-                </h2>
-                <p className="mt-1 max-w-sm text-xs leading-relaxed text-gray-500">
-                  Drag and drop your spreadsheet, or click anywhere inside this box to browse from your computer.
-                </p>
-
-                <div className="mt-5 flex flex-col items-center gap-2">
-                  <button
-                    className="editorial-button-primary h-8 px-4 text-xs font-semibold"
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      fileInputRef.current?.click();
-                    }}
-                  >
-                    <UploadCloud className="h-3.5 w-3.5" />
-                    Select Batch File
-                  </button>
-                  <span className="text-[11px] text-gray-400">
-                    Maximum file size 25MB • .csv format
-                  </span>
-                </div>
+              {/* Tab Selector */}
+              <div className="mb-3 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setInputMode("file")}
+                  className={cn(
+                    "flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition cursor-pointer",
+                    inputMode === "file"
+                      ? "bg-[#fff3ef] text-[#ff5722] border border-[#ff5722]/30 shadow-xs"
+                      : "bg-white text-gray-600 hover:text-gray-900 border border-gray-200 hover:bg-gray-50",
+                  )}
+                >
+                  <UploadCloud className="h-4 w-4" />
+                  Fichier CSV
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInputMode("paste")}
+                  className={cn(
+                    "flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition cursor-pointer",
+                    inputMode === "paste"
+                      ? "bg-[#fff3ef] text-[#ff5722] border border-[#ff5722]/30 shadow-xs"
+                      : "bg-white text-gray-600 hover:text-gray-900 border border-gray-200 hover:bg-gray-50",
+                  )}
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Copier-Coller / LinkedIn
+                  {detectedEmails.length > 0 && (
+                    <span className="rounded-full bg-[#ff5722] text-white px-2 py-0.5 text-[10px] font-bold">
+                      {detectedEmails.length}
+                    </span>
+                  )}
+                </button>
               </div>
+
+              {/* View A: Drag & Drop CSV */}
+              {inputMode === "file" ? (
+                <div
+                  className={cn(
+                    "flex min-h-[420px] flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 text-center transition-all cursor-pointer",
+                    isDragging
+                      ? "border-[#ff5722] bg-[#fff3ef]/40"
+                      : "border-gray-300 bg-gray-50/50 hover:border-gray-400 hover:bg-white",
+                  )}
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    setIsDragging(true);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      fileInputRef.current?.click();
+                    }
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    setIsDragging(false);
+                    const file = event.dataTransfer.files?.[0];
+                    if (file) processCsvFile(file);
+                  }}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#fff3ef] text-[#ff5722]">
+                    <UploadCloud className="h-7 w-7" />
+                  </div>
+
+                  <h2 className="mt-4 text-sm font-semibold text-gray-900">
+                    Déposez votre fichier CSV ici
+                  </h2>
+                  <p className="mt-1 max-w-sm text-xs leading-relaxed text-gray-500">
+                    Glissez-déposez votre tableur, ou cliquez n'importe où dans ce cadre pour sélectionner un fichier sur votre ordinateur.
+                  </p>
+
+                  <div className="mt-5 flex flex-col items-center gap-2">
+                    <button
+                      className="editorial-button-primary h-8 px-4 text-xs font-semibold"
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        fileInputRef.current?.click();
+                      }}
+                    >
+                      <UploadCloud className="h-3.5 w-3.5" />
+                      Sélectionner un fichier CSV
+                    </button>
+                    <span className="text-[11px] text-gray-400">
+                      Taille max. 25 Mo • Format .csv
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                /* View B: Smart Paste / LinkedIn Email Extraction */
+                <div className="flex min-h-[420px] flex-col rounded-lg border border-gray-200 bg-white p-5 shadow-xs space-y-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-gray-100 pb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#fff3ef] text-[#ff5722]">
+                        <ClipboardPaste className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h2 className="text-sm font-semibold text-gray-900">
+                          Collez votre texte ou post LinkedIn
+                        </h2>
+                        <p className="text-xs text-gray-500">
+                          Extraction automatique des emails, déduplication et inférence d'entreprises.
+                        </p>
+                      </div>
+                    </div>
+                    {detectedEmails.length > 0 && (
+                      <span className="inline-flex items-center gap-1.5 self-start rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 border border-emerald-200">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        {detectedEmails.length} email{detectedEmails.length > 1 ? "s" : ""} détecté{detectedEmails.length > 1 ? "s" : ""}
+                      </span>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="editorial-label mb-1.5 block">
+                      Collez le texte brut (post LinkedIn, liste d'emails, texte avec adresses) :
+                    </label>
+                    <textarea
+                      className="w-full min-h-[160px] rounded-lg border border-gray-300 p-3 text-xs font-mono placeholder:font-sans placeholder-gray-400 focus:border-[#ff5722] focus:outline-none focus:ring-1 focus:ring-[#ff5722] leading-relaxed resize-y"
+                      placeholder={`Collez ici une liste d'emails ou un post LinkedIn partagé...\n\nExemples pris en compte :\n• rh@soprasteria.com, recrutement@wavestone.com\n• Post LinkedIn : "Voici les recruteurs qui embauchent ce mois-ci : envoyez vos CVs à stage@renault.com ou contact@thalesgroup.com !"\n• Liste d'emails séparés par des virgules ou retours à la ligne.`}
+                      value={pastedText}
+                      onChange={(e) => setPastedText(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Batch defaults for missing columns */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <label className="editorial-label mb-1 block">Poste ciblé par défaut</label>
+                      <input
+                        type="text"
+                        className="editorial-input h-9 text-xs"
+                        placeholder="ex: Stage PFE / Candidature Spontanée"
+                        value={defaultPosition}
+                        onChange={(e) => setDefaultPosition(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="editorial-label mb-1 block">Contact / Titre par défaut</label>
+                      <input
+                        type="text"
+                        className="editorial-input h-9 text-xs"
+                        placeholder="ex: Hiring Manager"
+                        value={defaultContactName}
+                        onChange={(e) => setDefaultContactName(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-100">
+                    <div className="text-[11px] text-gray-500">
+                      {detectedEmails.length > 0 ? (
+                        <span className="text-emerald-600 font-medium">
+                          ✓ {detectedEmails.length} email{detectedEmails.length > 1 ? "s" : ""} unique{detectedEmails.length > 1 ? "s" : ""}. Les noms d'entreprises seront déduits des domaines.
+                        </span>
+                      ) : (
+                        <span>Collez un texte ci-dessus pour détecter les adresses email.</span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {pastedText && (
+                        <button
+                          type="button"
+                          className="editorial-button-secondary h-8 px-3 text-xs"
+                          onClick={() => setPastedText("")}
+                        >
+                          Effacer
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="editorial-button-primary h-8 px-4 text-xs font-semibold"
+                        disabled={detectedEmails.length === 0}
+                        onClick={handleImportPastedEmails}
+                      >
+                        <Sparkles className="h-3.5 w-3.5" />
+                        Importer ({detectedEmails.length})
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Right: Requirements & Instructions (5 cols) */}
+            {/* Right Column: Requirements & Instructions (5 cols) */}
             <div className="flex flex-col gap-4 lg:col-span-5">
-              {/* Card 1: Column Format */}
-              <div className="rounded-lg border border-gray-200 bg-white p-5">
-                <h3 className="text-xs font-semibold text-gray-900">
-                  Expected Column Headers
-                </h3>
-                <p className="mt-1 text-xs text-gray-500">
-                  Your CSV should contain these key columns:
-                </p>
+              {inputMode === "paste" ? (
+                /* Card 1 for Paste Mode: How LinkedIn copy-paste works */
+                <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-xs">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-gray-900">
+                    <Sparkles className="h-4 w-4 text-[#ff5722]" />
+                    <span>Détection Intelligente LinkedIn</span>
+                  </div>
+                  <p className="mt-1.5 text-xs text-gray-500 leading-relaxed">
+                    Pas besoin de préparer un fichier Excel ou CSV à la main :
+                  </p>
 
-                <div className="mt-3 divide-y divide-gray-100 rounded-md border border-gray-100 text-xs">
-                  <div className="flex items-center justify-between p-2.5">
-                    <span className="font-mono font-semibold text-gray-800">company</span>
-                    <span className="text-gray-500">Carrier or broker name</span>
-                  </div>
-                  <div className="flex items-center justify-between p-2.5">
-                    <span className="font-mono font-semibold text-gray-800">email</span>
-                    <span className="text-gray-500">Target dispatch contact</span>
-                  </div>
-                  <div className="flex items-center justify-between p-2.5">
-                    <span className="font-mono font-semibold text-gray-800">position</span>
-                    <span className="text-gray-500">Role or offer title</span>
-                  </div>
-                  <div className="flex items-center justify-between p-2.5">
-                    <span className="font-mono font-semibold text-gray-800">name</span>
-                    <span className="text-gray-500">Contact person name</span>
+                  <div className="mt-3.5 space-y-2.5 text-xs text-gray-600">
+                    <div className="flex items-start gap-2.5">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#fff3ef] text-[11px] font-bold text-[#ff5722]">1</span>
+                      <span>Copiez n'importe quel post ou liste partagée sur LinkedIn.</span>
+                    </div>
+                    <div className="flex items-start gap-2.5">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#fff3ef] text-[11px] font-bold text-[#ff5722]">2</span>
+                      <span>Collez tout le texte : les emails sont automatiquement extraits et les doublons éliminés.</span>
+                    </div>
+                    <div className="flex items-start gap-2.5">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#fff3ef] text-[11px] font-bold text-[#ff5722]">3</span>
+                      <span>L'entreprise est déduite du domaine (ex: <code className="font-mono text-gray-800 bg-gray-100 px-1 py-0.5 rounded text-[10.5px]">@wavestone.com</code> ➔ Wavestone).</span>
+                    </div>
+                    <div className="flex items-start gap-2.5">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#fff3ef] text-[11px] font-bold text-[#ff5722]">4</span>
+                      <span>Cliquez sur Importer, prévisualisez dans le tableau et créez tous vos brouillons Gmail !</span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                /* Card 1 for File Mode: Expected Column Headers */
+                <div className="rounded-lg border border-gray-200 bg-white p-5">
+                  <h3 className="text-xs font-semibold text-gray-900">
+                    Colonnes attendues dans le CSV
+                  </h3>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Votre tableur devrait contenir ces colonnes clés :
+                  </p>
+
+                  <div className="mt-3 divide-y divide-gray-100 rounded-md border border-gray-100 text-xs">
+                    <div className="flex items-center justify-between p-2.5">
+                      <span className="font-mono font-semibold text-gray-800">company</span>
+                      <span className="text-gray-500">Nom de l'entreprise</span>
+                    </div>
+                    <div className="flex items-center justify-between p-2.5">
+                      <span className="font-mono font-semibold text-gray-800">email</span>
+                      <span className="text-gray-500">Adresse email du recruteur</span>
+                    </div>
+                    <div className="flex items-center justify-between p-2.5">
+                      <span className="font-mono font-semibold text-gray-800">position</span>
+                      <span className="text-gray-500">Titre du poste ou de l'offre</span>
+                    </div>
+                    <div className="flex items-center justify-between p-2.5">
+                      <span className="font-mono font-semibold text-gray-800">name</span>
+                      <span className="text-gray-500">Nom du contact / recruteur</span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Card 2: Protections Active */}
               <div className="rounded-lg border border-gray-200 bg-white p-5">
