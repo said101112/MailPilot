@@ -23,6 +23,7 @@ import {
 import type { ApplicationFormValues, CompanyRow, ContactRow, JobApplicationRow } from "@/lib/tracker/types";
 import CompanyCombobox from "@/components/tracker/CompanyCombobox";
 import type { CompanyComboboxValue } from "@/components/tracker/CompanyCombobox";
+import EditorialSelect from "@/components/tracker/EditorialSelect";
 
 function comboboxPatchToFormValues(
   patch: Partial<CompanyComboboxValue>,
@@ -207,35 +208,25 @@ export default function ApplicationFormModal({
                     <label className="editorial-label" htmlFor="jobType">
                       Type
                     </label>
-                    <select
+                    <EditorialSelect
                       id="jobType"
                       className="editorial-select w-full"
                       value={values.jobType}
-                      onChange={(event) => patch({ jobType: event.target.value })}
-                    >
-                      {JOB_TYPES.map((type) => (
-                        <option key={type.value} value={type.value}>
-                          {type.label}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(next) => patch({ jobType: next })}
+                      options={JOB_TYPES}
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <label className="editorial-label" htmlFor="domain">
                       Domaine
                     </label>
-                    <select
+                    <EditorialSelect
                       id="domain"
                       className="editorial-select w-full"
                       value={values.domain}
-                      onChange={(event) => patch({ domain: event.target.value })}
-                    >
-                      {JOB_DOMAINS.map((domain) => (
-                        <option key={domain.value} value={domain.value}>
-                          {domain.label}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(next) => patch({ domain: next })}
+                      options={JOB_DOMAINS}
+                    />
                   </div>
                   <div className="sm:col-span-2 space-y-1.5">
                     <label className="editorial-label" htmlFor="description">
@@ -302,18 +293,13 @@ export default function ApplicationFormModal({
                     <label className="editorial-label" htmlFor="workMode">
                       Mode de travail
                     </label>
-                    <select
+                    <EditorialSelect
                       id="workMode"
                       className="editorial-select w-full"
                       value={values.workMode}
-                      onChange={(event) => patch({ workMode: event.target.value })}
-                    >
-                      {WORK_MODES.map((mode) => (
-                        <option key={mode.value} value={mode.value}>
-                          {mode.label}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(next) => patch({ workMode: next })}
+                      options={WORK_MODES}
+                    />
                   </div>
                 </div>
               </section>
@@ -350,39 +336,31 @@ export default function ApplicationFormModal({
                     <label className="editorial-label" htmlFor="channel">
                       Canal utilisé
                     </label>
-                    <select
+                    <EditorialSelect
                       id="channel"
                       className="editorial-select w-full"
                       value={values.channel}
-                      onChange={(event) => patch({ channel: event.target.value })}
-                    >
-                      {APPLICATION_CHANNELS.map((channel) => (
-                        <option key={channel.value} value={channel.value}>
-                          {channel.label}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(next) => patch({ channel: next })}
+                      options={APPLICATION_CHANNELS}
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <label className="editorial-label" htmlFor="primaryContact">
                       Contact principal
                     </label>
-                    <select
+                    <EditorialSelect
                       id="primaryContact"
                       className="editorial-select w-full"
                       value={values.primaryContactId ?? ""}
-                      onChange={(event) =>
-                        patch({ primaryContactId: event.target.value || null })
-                      }
-                    >
-                      <option value="">Aucun contact</option>
-                      {companyContacts.map((contact) => (
-                        <option key={contact.id} value={contact.id}>
-                          {contact.full_name}
-                          {contact.role ? ` — ${contact.role}` : ""}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(next) => patch({ primaryContactId: next || null })}
+                      options={[
+                        { value: "", label: "Aucun contact" },
+                        ...companyContacts.map((contact) => ({
+                          value: contact.id,
+                          label: `${contact.full_name}${contact.role ? ` — ${contact.role}` : ""}`,
+                        })),
+                      ]}
+                    />
                     {values.companyId && companyContacts.length === 0 && (
                       <p className="text-[11px] text-gray-400">
                         Ajoutez un contact depuis la fiche entreprise.
@@ -431,18 +409,16 @@ export default function ApplicationFormModal({
                     <label className="editorial-label" htmlFor="status">
                       Statut
                     </label>
-                    <select
+                    <EditorialSelect
                       id="status"
                       className="editorial-select w-full"
                       value={values.status}
-                      onChange={(event) => patch({ status: event.target.value })}
-                    >
-                      {JOB_STATUSES.map((status) => (
-                        <option key={status} value={status}>
-                          {JOB_STATUS_LABELS[status]}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(next) => patch({ status: next })}
+                      options={JOB_STATUSES.map((status) => ({
+                        value: status,
+                        label: JOB_STATUS_LABELS[status],
+                      }))}
+                    />
                   </div>
                 </div>
               </section>

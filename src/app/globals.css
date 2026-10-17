@@ -141,44 +141,46 @@ a {
 }
 
 /* Hunter Input Style: Clean white with crisp gray-300 border */
-.editorial-input,
-.editorial-select,
-.editorial-textarea {
-  width: 100%;
-  border: 1px solid #d1d5db;
-  background: #ffffff;
-  color: #111827;
-  border-radius: 6px;
-  outline: none;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
+@layer components {
+  .editorial-input,
+  .editorial-select,
+  .editorial-textarea {
+    width: 100%;
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    color: #111827;
+    border-radius: 6px;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
 
-.editorial-input,
-.editorial-select {
-  height: 36px;
-  padding: 0 12px;
-  font-size: 13px;
-}
+  .editorial-input,
+  .editorial-select {
+    height: 36px;
+    padding: 0 12px;
+    font-size: 13px;
+  }
 
-.editorial-textarea {
-  min-height: 120px;
-  padding: 10px 12px;
-  font-size: 13px;
-  line-height: 1.5;
-  resize: vertical;
-}
+  .editorial-textarea {
+    min-height: 120px;
+    padding: 10px 12px;
+    font-size: 13px;
+    line-height: 1.5;
+    resize: vertical;
+  }
 
-.editorial-input::placeholder,
-.editorial-textarea::placeholder {
-  color: #9ca3af;
-}
+  .editorial-input::placeholder,
+  .editorial-textarea::placeholder {
+    color: #9ca3af;
+  }
 
-.editorial-input:focus,
-.editorial-select:focus,
-.editorial-textarea:focus {
-  border-color: #ff5722;
-  box-shadow: 0 0 0 2px rgba(255, 87, 34, 0.12);
-  background: #ffffff;
+  .editorial-input:focus,
+  .editorial-select:focus,
+  .editorial-textarea:focus {
+    border-color: #ff5722;
+    box-shadow: 0 0 0 2px rgba(255, 87, 34, 0.12);
+    background: #ffffff;
+  }
 }
 
 /* Hunter Button Styles */

@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { EmptyState, LoadingBlock } from "@/components/tracker/Feedback";
 import CompanyLogo from "@/components/tracker/CompanyLogo";
 import ContactFormModal from "@/components/tracker/ContactFormModal";
+import EditorialSelect from "@/components/tracker/EditorialSelect";
 import { formatRelativeTime } from "@/lib/tracker/format";
 import { deleteContact, listCompanies, listContacts } from "@/lib/tracker/queries";
 import type { CompanyRow, ContactRow } from "@/lib/tracker/types";
@@ -118,18 +119,18 @@ export default function ContactsPage() {
             onChange={(event) => setSearch(event.target.value)}
           />
         </div>
-        <select
+        <EditorialSelect
           className="editorial-select w-full sm:w-56"
           value={companyFilter}
-          onChange={(event) => setCompanyFilter(event.target.value)}
-        >
-          <option value="all">Toutes les entreprises</option>
-          {companies.map((company) => (
-            <option key={company.id} value={company.id}>
-              {company.name}
-            </option>
-          ))}
-        </select>
+          onChange={setCompanyFilter}
+          options={[
+            { value: "all", label: "Toutes les entreprises" },
+            ...companies.map((company) => ({
+              value: company.id,
+              label: company.name,
+            })),
+          ]}
+        />
       </div>
 
       {filtered.length === 0 ? (

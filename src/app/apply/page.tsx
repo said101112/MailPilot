@@ -207,7 +207,7 @@ export default function ApplyPage() {
         throw error;
       }
 
-      toast.success("Application sent successfully.");
+      toast.success("Draft created in Gmail! Check your Gmail drafts.");
       setEmail("");
       setEmailCheck(validateEmailFormat(""));
     } catch (error) {
@@ -248,10 +248,10 @@ export default function ApplyPage() {
       <div className="mx-auto max-w-[960px] space-y-6">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">
-            Manual Apply
+            Manual Apply (Draft)
           </h1>
           <p className="mt-1 text-xs text-gray-500">
-            Send a pre-saved template directly to a recruiter or carrier hiring manager.
+            Create a pre-saved template as a draft directly in your Gmail with CV attached.
           </p>
         </div>
 
@@ -259,15 +259,15 @@ export default function ApplyPage() {
         <CvUploadCard variant="banner" />
 
         <div className="grid gap-6 md:grid-cols-2">
-          {/* Quick Send Card */}
+          {/* Quick Draft Card */}
           <div className="rounded-lg border border-gray-200 bg-white p-6">
             <div className="mb-5 flex items-center gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#fff3ef] text-[#ff5722]">
                 <Send className="h-4 w-4" />
               </div>
               <div>
-                <h2 className="text-sm font-semibold text-gray-900">Direct Send</h2>
-                <p className="text-xs text-gray-500">Dispatch using your saved templates</p>
+                <h2 className="text-sm font-semibold text-gray-900">Create Gmail Draft</h2>
+                <p className="text-xs text-gray-500">Generate a reviewable draft in Gmail with CV</p>
               </div>
             </div>
 
@@ -365,7 +365,7 @@ export default function ApplyPage() {
               ) : (
                 <Sparkles className="h-4 w-4" />
               )}
-              {n8nBlocked ? "n8n Blocked" : "Send Application"}
+              {n8nBlocked ? "n8n Blocked" : "Create Draft in Gmail"}
             </button>
           </div>
 

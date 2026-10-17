@@ -79,8 +79,8 @@ const COLUMN_ALIASES: Record<string, string> = {
 };
 
 const VALIDATION_LABELS: Record<ValidationState, string> = {
-  processing: "Sending",
-  sent: "Sent",
+  processing: "Drafting",
+  sent: "Draft Created",
   error: "Error",
   "invalid-email": "Invalid Email",
   duplicate: "Duplicate",
@@ -460,9 +460,9 @@ export default function UploadPage() {
     if (failCount > 0 && successCount === 0) {
       toast.error(`Queue completed: all ${failCount} failed.`);
     } else if (failCount > 0) {
-      toast.warning(`Queue completed: ${successCount} sent, ${failCount} failed.`);
+      toast.warning(`Queue completed: ${successCount} drafts created, ${failCount} failed.`);
     } else {
-      toast.success(`Queue complete: ${successCount} sent successfully.`);
+      toast.success(`Queue complete: ${successCount} drafts created in Gmail.`);
     }
   };
 
@@ -477,11 +477,11 @@ export default function UploadPage() {
       case "incomplete":
         return "Missing company, position, or contact name.";
       case "processing":
-        return "Currently queued for delivery.";
+        return "Currently generating draft in Gmail.";
       case "sent":
-        return "Sent successfully via automation workflow.";
+        return "Draft created successfully in Gmail with CV attached.";
       case "error":
-        return row.error || "Delivery failed - email was not sent.";
+        return row.error || "Delivery failed - draft was not created.";
       case "ready":
       default:
         return "Validated and ready for launch.";
@@ -516,7 +516,7 @@ export default function UploadPage() {
               Bulk Upload Manager
             </h1>
             <p className="mt-1 text-xs text-gray-500">
-              Import CSV contact lists, validate data, and launch automated outreach sequences.
+              Import CSV contact lists, validate data, and generate Gmail drafts in bulk.
             </p>
           </div>
 
@@ -675,7 +675,7 @@ export default function UploadPage() {
                   <p className="mt-1 text-xl font-bold text-gray-900">{data.length}</p>
                 </div>
                 <div className="p-4">
-                  <span className="text-xs text-emerald-600 font-medium">Ready to Dispatch</span>
+                  <span className="text-xs text-emerald-600 font-medium">Ready to Draft</span>
                   <p className="mt-1 text-xl font-bold text-gray-900">{readyCount}</p>
                 </div>
                 <div className="p-4">
@@ -752,8 +752,8 @@ export default function UploadPage() {
                     <Play className="h-3.5 w-3.5" />
                   )}
                   {isProcessing
-                    ? `Sending (${progress.current}/${progress.total})`
-                    : `Start Queue (${selectedCount})`}
+                    ? `Creating Drafts (${progress.current}/${progress.total})`
+                    : `Create Drafts (${selectedCount})`}
                 </button>
               </div>
             </div>

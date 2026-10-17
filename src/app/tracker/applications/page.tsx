@@ -20,6 +20,7 @@ import { EmptyState, LoadingBlock } from "@/components/tracker/Feedback";
 import CompanyLogo from "@/components/tracker/CompanyLogo";
 import StatusBadge from "@/components/tracker/StatusBadge";
 import ApplicationFormModal from "@/components/tracker/ApplicationFormModal";
+import EditorialSelect from "@/components/tracker/EditorialSelect";
 import {
   CHANNEL_LABELS,
   JOB_STATUSES,
@@ -328,21 +329,21 @@ export default function ApplicationsPage() {
               }}
             />
           </div>
-          <select
+          <EditorialSelect
             className="editorial-select w-48"
             value={statusFilter}
-            onChange={(event) => {
-              setStatusFilter(event.target.value as JobStatus | "all");
+            onChange={(next) => {
+              setStatusFilter(next as JobStatus | "all");
               setPage(1);
             }}
-          >
-            <option value="all">Tous les statuts</option>
-            {JOB_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {JOB_STATUS_LABELS[status]}
-              </option>
-            ))}
-          </select>
+            options={[
+              { value: "all", label: "Tous les statuts" },
+              ...JOB_STATUSES.map((status) => ({
+                value: status,
+                label: JOB_STATUS_LABELS[status],
+              })),
+            ]}
+          />
         </div>
         <div className="flex items-center gap-1 rounded-md border border-gray-200 p-0.5">
           {([

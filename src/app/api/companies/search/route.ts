@@ -50,6 +50,55 @@ async function wikidataFetch(url: string): Promise<unknown> {
   return response.json();
 }
 
+async function searchWikidata(
+  query: string,
+  language: "en" | "fr",
+  limit: number,
+): Promise<WikidataSearchHit[]> {
+  const url = `${WIKIDATA_API}?action=wbsearchentities&search=${encodeURIComponent(
+    query,
+  )}&language=${language}&uselang=${language}&type=item&limit=${limit}&format=json`;
+  const data = (await wikidataFetch(url)) as { search?: WikidataSearchHit[] };
+  return data.search ?? [];
+}
+
+async function searchWikipedia(
+  query: string,
+  lang: "en" | "fr",
+  limit = 5,
+): Promise<WikidataSearchHit[]> {
+  const url = `https://${lang}.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(
+    query,
+  )}&gsrnamespace=0&gsrlimit=${limit}&prop=pageprops&ppprop=wikibase_item&redirects=1&format=json`;
+  const data = (await wikidataFetch(url)) as {
+    query?: {
+      pages?: Record<
+        string,
+        { title?: string; pageprops?: { wikibase_item?: string } }
+      >;
+    };
+  };
+  const hits: WikidataSearchHit[] = [];
+  for (const page of Object.values(data.query?.pages ?? {})) {
+    const qid = page.pageprops?.wikibase_item;
+    if (qid) hits.push({ id: qid, label: page.title });
+  }
+  return hits;
+}
+
+function mergeHits(...lists: WikidataSearchHit[][]): WikidataSearchHit[] {
+  const seen = new Set<string>();
+  const merged: WikidataSearchHit[] = [];
+  for (const list of lists) {
+    for (const hit of list) {
+      if (seen.has(hit.id)) continue;
+      seen.add(hit.id);
+      merged.push(hit);
+    }
+  }
+  return merged;
+}
+
 function extractStringClaim(entity: unknown, propertyId: string): string | null {
   const claims = (entity as { claims?: Record<string, unknown[]> })?.claims;
   const list = claims?.[propertyId];
@@ -214,14 +263,24 @@ export async function GET(request: Request) {
   }
 
   try {
-    const searchUrl = `${WIKIDATA_API}?action=wbsearchentities&search=${encodeURIComponent(
-      query,
-    )}&language=en&uselang=en&type=item&limit=10&format=json`;
-    const searchData = (await wikidataFetch(searchUrl)) as {
-      search?: WikidataSearchHit[];
-    };
+    const [enHits, frHits] = await Promise.all([
+      searchWikidata(query, "en", 8),
+      searchWikidata(query, "fr", 8),
+    ]);
+    let hits = mergeHits(enHits, frHits);
+    let source = "wikidata";
+    if (hits.length < 6) {
+      const [wikiFr, wikiEn] = await Promise.all([
+        searchWikipedia(query, "fr"),
+        searchWikipedia(query, "en"),
+      ]);
+      const extended = mergeHits(hits, wikiFr, wikiEn);
+      if (extended.length > hits.length) source = "wikidata+wikipedia";
+      hits = extended;
+    }
+    hits = hits.slice(0, 16);
 
-    const built = await buildSuggestions(searchData.search ?? []);
+    const built = await buildSuggestions(hits);
     const suggestions = await Promise.all(
       built.map(async (suggestion) => {
         if (suggestion.logoUrl || !suggestion.domain) return suggestion;
@@ -238,7 +297,7 @@ export async function GET(request: Request) {
       if (oldest) cache.delete(oldest);
     }
 
-    return NextResponse.json({ results: suggestions, source: "wikidata" });
+    return NextResponse.json({ results: suggestions, source });
   } catch {
     return NextResponse.json(
       {

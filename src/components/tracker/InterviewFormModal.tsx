@@ -16,6 +16,7 @@ import {
 } from "@/lib/tracker/queries";
 import { fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/tracker/format";
 import type { InterviewRow, JobApplicationRow } from "@/lib/tracker/types";
+import EditorialSelect from "@/components/tracker/EditorialSelect";
 
 const TYPE_STATUS_MAP: Record<string, JobStatus> = {
   hr: "interview_hr",
@@ -164,60 +165,49 @@ export default function InterviewFormModal({
               <label className="editorial-label" htmlFor="interview-application">
                 Candidature
               </label>
-              <select
+              <EditorialSelect
                 id="interview-application"
                 className="editorial-select w-full"
                 value={applicationId}
-                onChange={(event) => setApplicationId(event.target.value)}
-                required
-              >
-                <option value="">Sélectionner...</option>
-                {applications.map((app) => (
-                  <option key={app.id} value={app.id}>
-                    {app.company?.name ? `${app.company.name} — ` : ""}
-                    {app.position}
-                  </option>
-                ))}
-              </select>
+                onChange={setApplicationId}
+                placeholder="Sélectionner..."
+                options={[
+                  { value: "", label: "Sélectionner..." },
+                  ...applications.map((app) => ({
+                    value: app.id,
+                    label: `${app.company?.name ? `${app.company.name} — ` : ""}${app.position}`,
+                  })),
+                ]}
+              />
             </div>
             <div className="space-y-1.5">
               <label className="editorial-label" htmlFor="interview-type">
                 Type d&apos;entretien
               </label>
-              <select
+              <EditorialSelect
                 id="interview-type"
                 className="editorial-select w-full"
                 value={type}
-                onChange={(event) => {
-                  setType(event.target.value);
+                onChange={(next) => {
+                  setType(next);
                   if (!editingInterview) {
-                    setStatusUpdate(TYPE_STATUS_MAP[event.target.value] ?? "");
+                    setStatusUpdate(TYPE_STATUS_MAP[next] ?? "");
                   }
                 }}
-              >
-                {INTERVIEW_TYPES.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
+                options={INTERVIEW_TYPES}
+              />
             </div>
             <div className="space-y-1.5">
               <label className="editorial-label" htmlFor="interview-format">
                 Format
               </label>
-              <select
+              <EditorialSelect
                 id="interview-format"
                 className="editorial-select w-full"
                 value={format}
-                onChange={(event) => setFormat(event.target.value)}
-              >
-                {INTERVIEW_FORMATS.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
+                onChange={setFormat}
+                options={INTERVIEW_FORMATS}
+              />
             </div>
             <div className="space-y-1.5">
               <label className="editorial-label" htmlFor="interview-datetime">
@@ -283,35 +273,31 @@ export default function InterviewFormModal({
               <label className="editorial-label" htmlFor="interview-status">
                 Statut de l&apos;entretien
               </label>
-              <select
+              <EditorialSelect
                 id="interview-status"
                 className="editorial-select w-full"
                 value={status}
-                onChange={(event) => setStatus(event.target.value)}
-              >
-                {INTERVIEW_STATUSES.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
+                onChange={setStatus}
+                options={INTERVIEW_STATUSES}
+              />
             </div>
             {!editingInterview && (
               <div className="space-y-1.5">
                 <label className="editorial-label" htmlFor="status-update">
                   Mettre à jour le statut
                 </label>
-                <select
+                <EditorialSelect
                   id="status-update"
                   className="editorial-select w-full"
                   value={statusUpdate}
-                  onChange={(event) => setStatusUpdate(event.target.value)}
-                >
-                  <option value="">Ne pas changer</option>
-                  <option value="interview_hr">Entretien RH programmé</option>
-                  <option value="interview_technical">Entretien technique programmé</option>
-                  <option value="interview_final">Entretien final programmé</option>
-                </select>
+                  onChange={setStatusUpdate}
+                  options={[
+                    { value: "", label: "Ne pas changer" },
+                    { value: "interview_hr", label: "Entretien RH programmé" },
+                    { value: "interview_technical", label: "Entretien technique programmé" },
+                    { value: "interview_final", label: "Entretien final programmé" },
+                  ]}
+                />
               </div>
             )}
             <div className="sm:col-span-2 space-y-1.5">

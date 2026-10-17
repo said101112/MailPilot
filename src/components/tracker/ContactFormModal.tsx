@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { CONTACT_ROLES } from "@/lib/tracker/constants";
 import { createContact, updateContact } from "@/lib/tracker/queries";
 import type { CompanyRow, ContactRow } from "@/lib/tracker/types";
+import EditorialSelect from "@/components/tracker/EditorialSelect";
 
 interface ContactFormModalProps {
   open: boolean;
@@ -105,36 +106,31 @@ export default function ContactFormModal({
               <label className="editorial-label" htmlFor="contact-role">
                 Fonction
               </label>
-              <select
+              <EditorialSelect
                 id="contact-role"
                 className="editorial-select w-full"
                 value={role}
-                onChange={(event) => setRole(event.target.value)}
-              >
-                {CONTACT_ROLES.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
+                onChange={setRole}
+                options={CONTACT_ROLES.map((item) => ({ value: item, label: item }))}
+              />
             </div>
             <div className="sm:col-span-2 space-y-1.5">
               <label className="editorial-label" htmlFor="contact-company">
                 Entreprise
               </label>
-              <select
+              <EditorialSelect
                 id="contact-company"
                 className="editorial-select w-full"
                 value={companyId}
-                onChange={(event) => setCompanyId(event.target.value)}
-              >
-                <option value="">Aucune entreprise</option>
-                {companies.map((company) => (
-                  <option key={company.id} value={company.id}>
-                    {company.name}
-                  </option>
-                ))}
-              </select>
+                onChange={setCompanyId}
+                options={[
+                  { value: "", label: "Aucune entreprise" },
+                  ...companies.map((company) => ({
+                    value: company.id,
+                    label: company.name,
+                  })),
+                ]}
+              />
             </div>
             <div className="space-y-1.5">
               <label className="editorial-label" htmlFor="contact-email">

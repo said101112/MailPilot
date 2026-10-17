@@ -11,6 +11,7 @@ import {
   updateFollowUp,
 } from "@/lib/tracker/queries";
 import type { FollowUpRow, JobApplicationRow } from "@/lib/tracker/types";
+import EditorialSelect from "@/components/tracker/EditorialSelect";
 
 interface FollowUpFormModalProps {
   open: boolean;
@@ -140,24 +141,23 @@ export default function FollowUpFormModal({
               <label className="editorial-label" htmlFor="followup-application">
                 Candidature
               </label>
-              <select
+              <EditorialSelect
                 id="followup-application"
                 className="editorial-select w-full"
                 value={applicationId}
-                onChange={(event) => {
-                  setApplicationId(event.target.value);
+                onChange={(next) => {
+                  setApplicationId(next);
                   setContactId("");
                 }}
-                required
-              >
-                <option value="">Sélectionner...</option>
-                {applications.map((app) => (
-                  <option key={app.id} value={app.id}>
-                    {app.company?.name ? `${app.company.name} — ` : ""}
-                    {app.position}
-                  </option>
-                ))}
-              </select>
+                placeholder="Sélectionner..."
+                options={[
+                  { value: "", label: "Sélectionner..." },
+                  ...applications.map((app) => ({
+                    value: app.id,
+                    label: `${app.company?.name ? `${app.company.name} — ` : ""}${app.position}`,
+                  })),
+                ]}
+              />
             </div>
             <div className="space-y-1.5">
               <label className="editorial-label" htmlFor="followup-date">
@@ -176,53 +176,43 @@ export default function FollowUpFormModal({
               <label className="editorial-label" htmlFor="followup-channel">
                 Canal
               </label>
-              <select
+              <EditorialSelect
                 id="followup-channel"
                 className="editorial-select w-full"
                 value={channel}
-                onChange={(event) => setChannel(event.target.value)}
-              >
-                {APPLICATION_CHANNELS.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
+                onChange={setChannel}
+                options={APPLICATION_CHANNELS}
+              />
             </div>
             <div className="space-y-1.5">
               <label className="editorial-label" htmlFor="followup-contact">
                 Contact à joindre
               </label>
-              <select
+              <EditorialSelect
                 id="followup-contact"
                 className="editorial-select w-full"
                 value={contactId}
-                onChange={(event) => setContactId(event.target.value)}
-              >
-                <option value="">Aucun</option>
-                {contactsForCompany.map((contact) => (
-                  <option key={contact.id} value={contact.id}>
-                    {contact.full_name}
-                  </option>
-                ))}
-              </select>
+                onChange={setContactId}
+                options={[
+                  { value: "", label: "Aucun" },
+                  ...contactsForCompany.map((contact) => ({
+                    value: contact.id,
+                    label: contact.full_name,
+                  })),
+                ]}
+              />
             </div>
             <div className="space-y-1.5">
               <label className="editorial-label" htmlFor="followup-status">
                 État
               </label>
-              <select
+              <EditorialSelect
                 id="followup-status"
                 className="editorial-select w-full"
                 value={status}
-                onChange={(event) => setStatus(event.target.value)}
-              >
-                {FOLLOW_UP_STATUSES.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
+                onChange={setStatus}
+                options={FOLLOW_UP_STATUSES}
+              />
             </div>
             <div className="sm:col-span-2 space-y-1.5">
               <label className="editorial-label" htmlFor="followup-reason">

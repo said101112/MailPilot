@@ -11,17 +11,20 @@ import {
   MessageSquarePlus,
   Plus,
   Target,
+  Trash2,
   UserPlus,
   Users,
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
 import { LoadingBlock } from "@/components/tracker/Feedback";
 import StatusBadge from "@/components/tracker/StatusBadge";
 import ApplicationFormModal from "@/components/tracker/ApplicationFormModal";
 import InterviewFormModal from "@/components/tracker/InterviewFormModal";
 import FollowUpFormModal from "@/components/tracker/FollowUpFormModal";
+import CleanDataModal from "@/components/CleanDataModal";
 import {
   CHANNEL_LABELS,
   JOB_STATUS_LABELS,
@@ -110,6 +113,7 @@ export default function TrackerDashboardPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [interviewOpen, setInterviewOpen] = useState(false);
   const [followUpOpen, setFollowUpOpen] = useState(false);
+  const [cleanModalOpen, setCleanModalOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -127,6 +131,33 @@ export default function TrackerDashboardPage() {
       setLoading(false);
     }
   }, []);
+
+  const handleCleanAllTrackerAndSends = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      throw new Error("Utilisateur non connecté.");
+    }
+
+    // Delete outreach sends (applications table)
+    const { error: appErr } = await supabase
+      .from("applications")
+      .delete()
+      .eq("user_id", user.id);
+    if (appErr) throw appErr;
+
+    // Delete tracker job applications (job_applications table)
+    const { error: jobErr } = await supabase
+      .from("job_applications")
+      .delete()
+      .eq("user_id", user.id);
+    if (jobErr) throw jobErr;
+
+    await load();
+    toast.success("Toutes les données (envois et tracker) ont été nettoyées avec succès dans Supabase !");
+  };
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -258,6 +289,14 @@ export default function TrackerDashboardPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className="editorial-button-secondary h-8 px-3 text-xs text-red-600 hover:bg-red-50 hover:border-red-200"
+            onClick={() => setCleanModalOpen(true)}
+          >
+            <Trash2 className="mr-1.5 inline h-3.5 w-3.5 text-red-500" />
+            Nettoyer les données
+          </button>
           <button
             type="button"
             className="editorial-button-secondary h-8 px-3 text-xs"
@@ -544,6 +583,16 @@ export default function TrackerDashboardPage() {
           applications={applications}
         />
       )}
+
+      <CleanDataModal
+        isOpen={cleanModalOpen}
+        onClose={() => setCleanModalOpen(false)}
+        onConfirm={handleCleanAllTrackerAndSends}
+        title="Nettoyer toutes les données du Tracker & Envois"
+        description="Cette action supprimera définitivement tous les enregistrements d'envois (applications) et de candidatures (job_applications) enregistrés dans Supabase en production. Cette action est irréversible."
+        confirmWord="SUPPRIMER"
+        itemCount={applications.length}
+      />
     </div>
   );
 }

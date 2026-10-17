@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { EmptyState, LoadingBlock } from "@/components/tracker/Feedback";
 import CompanyLogo from "@/components/tracker/CompanyLogo";
 import InterviewFormModal from "@/components/tracker/InterviewFormModal";
+import EditorialSelect from "@/components/tracker/EditorialSelect";
 import {
   INTERVIEW_FORMAT_LABELS,
   INTERVIEW_STATUS_LABELS,
@@ -138,17 +139,15 @@ export default function InterviewsPage() {
             </a>
           )}
           {showActions && (
-            <select
+            <EditorialSelect
               className="editorial-select h-8 text-xs"
               value={interview.status}
-              onChange={(event) => void changeStatus(interview, event.target.value)}
-            >
-              {["scheduled", "completed", "postponed", "cancelled"].map((status) => (
-                <option key={status} value={status}>
-                  {INTERVIEW_STATUS_LABELS[status]}
-                </option>
-              ))}
-            </select>
+              onChange={(next) => void changeStatus(interview, next)}
+              options={["scheduled", "completed", "postponed", "cancelled"].map((status) => ({
+                value: status,
+                label: INTERVIEW_STATUS_LABELS[status],
+              }))}
+            />
           )}
         </div>
       </div>

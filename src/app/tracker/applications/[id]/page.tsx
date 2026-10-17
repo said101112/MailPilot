@@ -28,6 +28,7 @@ import ApplicationFormModal from "@/components/tracker/ApplicationFormModal";
 import InterviewFormModal from "@/components/tracker/InterviewFormModal";
 import FollowUpFormModal from "@/components/tracker/FollowUpFormModal";
 import ContactFormModal from "@/components/tracker/ContactFormModal";
+import EditorialSelect from "@/components/tracker/EditorialSelect";
 import {
   APPLICATION_CHANNELS,
   CHANNEL_LABELS,
@@ -342,17 +343,15 @@ export default function ApplicationDetailPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <select
+            <EditorialSelect
               className="editorial-select h-8 w-52 text-xs"
               value={application.status}
-              onChange={(event) => void handleStatusChange(event.target.value)}
-            >
-              {JOB_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {JOB_STATUS_LABELS[status]}
-                </option>
-              ))}
-            </select>
+              onChange={(next) => void handleStatusChange(next)}
+              options={JOB_STATUSES.map((status) => ({
+                value: status,
+                label: JOB_STATUS_LABELS[status],
+              }))}
+            />
             {application.offer_url && (
               <a
                 href={application.offer_url}
@@ -686,19 +685,11 @@ export default function ApplicationDetailPage() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <label className="editorial-label" htmlFor="event-type">Type</label>
-                    <select id="event-type" className="editorial-select w-full" value={eventType} onChange={(e) => setEventType(e.target.value)}>
-                      {EVENT_TYPES.map((item) => (
-                        <option key={item.value} value={item.value}>{item.label}</option>
-                      ))}
-                    </select>
+                    <EditorialSelect id="event-type" className="editorial-select w-full" value={eventType} onChange={setEventType} options={EVENT_TYPES} />
                   </div>
                   <div className="space-y-1.5">
                     <label className="editorial-label" htmlFor="event-channel">Canal</label>
-                    <select id="event-channel" className="editorial-select w-full" value={eventChannel} onChange={(e) => setEventChannel(e.target.value)}>
-                      {APPLICATION_CHANNELS.map((item) => (
-                        <option key={item.value} value={item.value}>{item.label}</option>
-                      ))}
-                    </select>
+                    <EditorialSelect id="event-channel" className="editorial-select w-full" value={eventChannel} onChange={setEventChannel} options={APPLICATION_CHANNELS} />
                   </div>
                   <div className="space-y-1.5">
                     <label className="editorial-label" htmlFor="event-date">Date et heure</label>
@@ -706,12 +697,19 @@ export default function ApplicationDetailPage() {
                   </div>
                   <div className="space-y-1.5">
                     <label className="editorial-label" htmlFor="event-contact">Contact concerné</label>
-                    <select id="event-contact" className="editorial-select w-full" value={eventContactId} onChange={(e) => setEventContactId(e.target.value)}>
-                      <option value="">Aucun</option>
-                      {contacts.map((contact) => (
-                        <option key={contact.id} value={contact.id}>{contact.full_name}</option>
-                      ))}
-                    </select>
+                    <EditorialSelect
+                      id="event-contact"
+                      className="editorial-select w-full"
+                      value={eventContactId}
+                      onChange={setEventContactId}
+                      options={[
+                        { value: "", label: "Aucun" },
+                        ...contacts.map((contact) => ({
+                          value: contact.id,
+                          label: contact.full_name,
+                        })),
+                      ]}
+                    />
                   </div>
                   <div className="sm:col-span-2 space-y-1.5">
                     <label className="editorial-label" htmlFor="event-summary">Résumé</label>
@@ -865,11 +863,11 @@ export default function ApplicationDetailPage() {
                             Rejoindre
                           </a>
                         )}
-                        <select
+                        <EditorialSelect
                           className="editorial-select h-8 text-xs"
-                          value={interview.status}
-                          onChange={(event) => {
-                            void updateInterview(interview.id, { status: event.target.value })
+                          value={interview.status ?? "scheduled"}
+                          onChange={(next) => {
+                            void updateInterview(interview.id, { status: next })
                               .then(() => {
                                 toast.success("Entretien mis à jour.");
                                 return load();
@@ -878,12 +876,13 @@ export default function ApplicationDetailPage() {
                                 toast.error(error instanceof Error ? error.message : "Unable to update."),
                               );
                           }}
-                        >
-                          <option value="scheduled">Prévu</option>
-                          <option value="completed">Terminé</option>
-                          <option value="postponed">Reporté</option>
-                          <option value="cancelled">Annulé</option>
-                        </select>
+                          options={[
+                            { value: "scheduled", label: INTERVIEW_STATUS_LABELS["scheduled"] ?? "Prévu" },
+                            { value: "completed", label: INTERVIEW_STATUS_LABELS["completed"] ?? "Terminé" },
+                            { value: "postponed", label: INTERVIEW_STATUS_LABELS["postponed"] ?? "Reporté" },
+                            { value: "cancelled", label: INTERVIEW_STATUS_LABELS["cancelled"] ?? "Annulé" },
+                          ]}
+                        />
                       </div>
                     </div>
                     {(interview.prep_notes || interview.questions || interview.feedback || interview.result || interview.next_step) && (
@@ -994,11 +993,7 @@ export default function ApplicationDetailPage() {
               }}
             >
               <input className="editorial-input" placeholder="Nom" value={docName} onChange={(e) => setDocName(e.target.value)} />
-              <select className="editorial-select" value={docType} onChange={(e) => setDocType(e.target.value)}>
-                {DOCUMENT_TYPES.map((item) => (
-                  <option key={item.value} value={item.value}>{item.label}</option>
-                ))}
-              </select>
+              <EditorialSelect className="editorial-select" value={docType} onChange={setDocType} options={DOCUMENT_TYPES} />
               <input className="editorial-input" type="url" placeholder="https://..." value={docUrl} onChange={(e) => setDocUrl(e.target.value)} />
               <button type="submit" className="editorial-button-primary h-9 text-xs">Ajouter</button>
               <input className="editorial-input sm:col-span-4" placeholder="Notes (optionnel)" value={docNotes} onChange={(e) => setDocNotes(e.target.value)} />

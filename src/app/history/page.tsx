@@ -9,6 +9,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
+import CleanDataModal from "@/components/CleanDataModal";
 
 interface HistoryItem {
   id: string;
@@ -58,6 +59,7 @@ export default function HistoryPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | "success" | "error">("all");
   const [daysFilter, setDaysFilter] = useState<30 | 90 | 365>(30);
+  const [isCleanModalOpen, setIsCleanModalOpen] = useState(false);
 
   const fetchHistory = async () => {
     setLoading(true);
@@ -110,36 +112,27 @@ export default function HistoryPage() {
     };
   }, []);
 
-  const clearHistory = async () => {
-    if (!confirm("Clear the entire execution history?")) {
-      return;
+  const handleCleanAllData = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      throw new Error("Utilisateur non authentifié.");
     }
 
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    const { error } = await supabase
+      .from("applications")
+      .delete()
+      .eq("user_id", user.id);
 
-      if (!user) {
-        return;
-      }
-
-      const { error } = await supabase
-        .from("applications")
-        .delete()
-        .eq("user_id", user.id);
-
-      if (error) {
-        throw error;
-      }
-
-      setHistory([]);
-      setSelectedId(null);
-      toast.success("History cleared.");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to clear history.";
-      toast.error(message);
+    if (error) {
+      throw error;
     }
+
+    setHistory([]);
+    setSelectedId(null);
+    toast.success("Toutes les données d'envois ont été nettoyées avec succès dans Supabase !");
   };
 
   const deleteItem = async (id: string) => {
@@ -192,12 +185,12 @@ export default function HistoryPage() {
 
           {history.length > 0 && (
             <button
-              className="editorial-button-secondary h-8 px-3 text-xs"
-              onClick={clearHistory}
+              className="editorial-button-secondary h-8 px-3 text-xs text-red-600 hover:bg-red-50 hover:border-red-200"
+              onClick={() => setIsCleanModalOpen(true)}
               type="button"
             >
               <Trash2 className="h-3.5 w-3.5 text-red-500" />
-              Clear History
+              Nettoyer les données (Clean sends)
             </button>
           )}
         </div>
@@ -247,7 +240,7 @@ export default function HistoryPage() {
                 <div className="flex gap-1">
                   {[
                     { label: "All", value: "all" },
-                    { label: "Success", value: "success" },
+                    { label: "Draft Created", value: "success" },
                     { label: "Failed", value: "error" },
                   ].map((option) => (
                     <button
@@ -311,7 +304,7 @@ export default function HistoryPage() {
                                   : "bg-red-50 text-red-700",
                               )}
                             >
-                              {item.status === "success" ? "Delivered" : "Failed"}
+                              {item.status === "success" ? "Draft Created" : "Failed"}
                             </span>
                           </td>
                           <td className="px-5 py-3 text-right">
@@ -397,6 +390,16 @@ export default function HistoryPage() {
           </div>
         )}
       </div>
+
+      <CleanDataModal
+        isOpen={isCleanModalOpen}
+        onClose={() => setIsCleanModalOpen(false)}
+        onConfirm={handleCleanAllData}
+        itemCount={history.length}
+        title="Nettoyer l'historique des envois"
+        description="Cette action supprimera définitivement tous les enregistrements d'envois et de brouillons dans Supabase en production. Cette action est irréversible."
+        confirmWord="SUPPRIMER"
+      />
     </div>
   );
 }
