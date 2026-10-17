@@ -13,6 +13,7 @@ import {
   Pencil,
   Plus,
   Search,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,7 @@ import { EmptyState, LoadingBlock } from "@/components/tracker/Feedback";
 import CompanyLogo from "@/components/tracker/CompanyLogo";
 import StatusBadge from "@/components/tracker/StatusBadge";
 import ApplicationFormModal from "@/components/tracker/ApplicationFormModal";
+import SmartPasteModal from "@/components/tracker/SmartPasteModal";
 import EditorialSelect from "@/components/tracker/EditorialSelect";
 import {
   CHANNEL_LABELS,
@@ -35,7 +37,7 @@ import {
   listFollowUps,
   listInterviews,
 } from "@/lib/tracker/queries";
-import type { FollowUpRow, InterviewRow, JobApplicationRow } from "@/lib/tracker/types";
+import type { ApplicationFormValues, FollowUpRow, InterviewRow, JobApplicationRow } from "@/lib/tracker/types";
 
 type ViewMode = "table" | "kanban" | "calendar";
 
@@ -213,6 +215,8 @@ export default function ApplicationsPage() {
   const [statusFilter, setStatusFilter] = useState<JobStatus | "all">("all");
   const [page, setPage] = useState(1);
   const [formOpen, setFormOpen] = useState(false);
+  const [smartPasteOpen, setSmartPasteOpen] = useState(false);
+  const [prefillValues, setPrefillValues] = useState<ApplicationFormValues | null>(null);
   const [editing, setEditing] = useState<JobApplicationRow | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const router = useRouter();
@@ -302,17 +306,29 @@ export default function ApplicationsPage() {
             {filtered.length} candidature(s) · vue tableau, Kanban ou calendrier.
           </p>
         </div>
-        <button
-          type="button"
-          className="editorial-button-primary h-8 px-3 text-xs"
-          onClick={() => {
-            setEditing(null);
-            setFormOpen(true);
-          }}
-        >
-          <Plus className="mr-1.5 inline h-3.5 w-3.5" />
-          Nouvelle candidature
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="editorial-button-secondary h-8 px-3 text-xs flex items-center gap-1.5 border-[#ff5722]/40 text-[#ff5722] hover:bg-[#fff3ef]"
+            onClick={() => setSmartPasteOpen(true)}
+            title="Coller du texte brut (email, message, note) pour extraction automatique"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-[#ff5722]" />
+            ⚡ Ajout rapide (Texte)
+          </button>
+          <button
+            type="button"
+            className="editorial-button-primary h-8 px-3 text-xs"
+            onClick={() => {
+              setEditing(null);
+              setPrefillValues(null);
+              setFormOpen(true);
+            }}
+          >
+            <Plus className="mr-1.5 inline h-3.5 w-3.5" />
+            Nouvelle candidature
+          </button>
+        </div>
       </div>
 
       <div className="mt-5 flex flex-col gap-3 rounded-lg border border-gray-200 bg-white px-5 py-3 md:flex-row md:items-center md:justify-between">
@@ -377,13 +393,27 @@ export default function ApplicationsPage() {
               title="Aucune candidature"
               description="Enregistrez votre première candidature pour démarrer le suivi."
               action={
-                <button
-                  type="button"
-                  className="editorial-button-primary mt-2 h-8 px-3 text-xs"
-                  onClick={() => setFormOpen(true)}
-                >
-                  Ajouter une candidature
-                </button>
+                <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    className="editorial-button-secondary h-8 px-3 text-xs border-[#ff5722]/40 text-[#ff5722] hover:bg-[#fff3ef]"
+                    onClick={() => setSmartPasteOpen(true)}
+                  >
+                    <Sparkles className="mr-1.5 inline h-3.5 w-3.5" />
+                    ⚡ Ajout rapide par texte
+                  </button>
+                  <button
+                    type="button"
+                    className="editorial-button-primary h-8 px-3 text-xs"
+                    onClick={() => {
+                      setEditing(null);
+                      setPrefillValues(null);
+                      setFormOpen(true);
+                    }}
+                  >
+                    Ajouter manuellement
+                  </button>
+                </div>
               }
             />
           ) : (
@@ -585,13 +615,31 @@ export default function ApplicationsPage() {
         </div>
       )}
 
+      {smartPasteOpen && (
+        <SmartPasteModal
+          open
+          onClose={() => setSmartPasteOpen(false)}
+          onSaved={() => void load()}
+          onOpenFullForm={(values) => {
+            setPrefillValues(values);
+            setEditing(null);
+            setFormOpen(true);
+          }}
+        />
+      )}
+
       {formOpen && (
         <ApplicationFormModal
-          key={editing?.id ?? "new-application"}
+          key={editing?.id ?? (prefillValues ? "prefill" : "new-application")}
           open
-          onClose={() => setFormOpen(false)}
+          onClose={() => {
+            setFormOpen(false);
+            setPrefillValues(null);
+          }}
           onSaved={() => void load()}
           editingApplication={editing}
+          prefillValues={prefillValues}
+          onOpenSmartPaste={() => setSmartPasteOpen(true)}
         />
       )}
     </div>

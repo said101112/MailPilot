@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, X } from "lucide-react";
+import { Loader2, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -50,6 +50,8 @@ interface ApplicationFormModalProps {
   onSaved: (application: JobApplicationRow) => void;
   editingApplication?: JobApplicationRow | null;
   prefillCompany?: CompanyRow | null;
+  prefillValues?: ApplicationFormValues | null;
+  onOpenSmartPaste?: () => void;
 }
 
 export default function ApplicationFormModal({
@@ -58,9 +60,12 @@ export default function ApplicationFormModal({
   onSaved,
   editingApplication,
   prefillCompany,
+  prefillValues,
+  onOpenSmartPaste,
 }: ApplicationFormModalProps) {
   const [values, setValues] = useState<ApplicationFormValues>(() => {
     if (editingApplication) return formValuesFromApplication(editingApplication);
+    if (prefillValues) return { ...prefillValues };
     const today = new Date().toISOString().slice(0, 10);
     if (prefillCompany) {
       return emptyFormValues({
@@ -78,6 +83,13 @@ export default function ApplicationFormModal({
     }
     return emptyFormValues({ appliedAt: today });
   });
+
+  useEffect(() => {
+    if (prefillValues && open && !editingApplication) {
+      setValues({ ...prefillValues });
+    }
+  }, [prefillValues, open, editingApplication]);
+
   const [companies, setCompanies] = useState<CompanyRow[]>([]);
   const [contacts, setContacts] = useState<ContactRow[]>([]);
   const [saving, setSaving] = useState(false);
@@ -186,6 +198,27 @@ export default function ApplicationFormModal({
         ) : (
           <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto px-6 py-5">
             <div className="space-y-5">
+              {!isEdit && onOpenSmartPaste && (
+                <div className="flex items-center justify-between rounded-lg border border-[#ff5722]/20 bg-[#fff3ef] p-3 text-xs">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-[#ff5722] shrink-0" />
+                    <span className="text-gray-700">
+                      Vous avez un email ou un texte de candidature ?
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onOpenSmartPaste();
+                    }}
+                    className="font-semibold text-[#ff5722] hover:underline"
+                  >
+                    ⚡ Remplir automatiquement par texte
+                  </button>
+                </div>
+              )}
+
               <section className="space-y-3">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
                   Poste

@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   MessageSquarePlus,
   Plus,
+  Sparkles,
   Target,
   Trash2,
   UserPlus,
@@ -22,6 +23,7 @@ import { supabase } from "@/lib/supabase";
 import { LoadingBlock } from "@/components/tracker/Feedback";
 import StatusBadge from "@/components/tracker/StatusBadge";
 import ApplicationFormModal from "@/components/tracker/ApplicationFormModal";
+import SmartPasteModal from "@/components/tracker/SmartPasteModal";
 import InterviewFormModal from "@/components/tracker/InterviewFormModal";
 import FollowUpFormModal from "@/components/tracker/FollowUpFormModal";
 import CleanDataModal from "@/components/CleanDataModal";
@@ -111,6 +113,7 @@ export default function TrackerDashboardPage() {
   const [interviews, setInterviews] = useState<InterviewRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
+  const [smartPasteOpen, setSmartPasteOpen] = useState(false);
   const [interviewOpen, setInterviewOpen] = useState(false);
   const [followUpOpen, setFollowUpOpen] = useState(false);
   const [cleanModalOpen, setCleanModalOpen] = useState(false);
@@ -312,6 +315,15 @@ export default function TrackerDashboardPage() {
           >
             <MessageSquarePlus className="mr-1.5 inline h-3.5 w-3.5" />
             Relance
+          </button>
+          <button
+            type="button"
+            className="editorial-button-secondary h-8 px-3 text-xs flex items-center gap-1.5 border-[#ff5722]/40 text-[#ff5722] hover:bg-[#fff3ef]"
+            onClick={() => setSmartPasteOpen(true)}
+            title="Coller du texte brut (email, message, note) pour extraction automatique"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-[#ff5722]" />
+            ⚡ Ajout rapide (Texte)
           </button>
           <button
             type="button"
@@ -563,6 +575,17 @@ export default function TrackerDashboardPage() {
           open
           onClose={() => setFormOpen(false)}
           onSaved={() => void load()}
+          onOpenSmartPaste={() => setSmartPasteOpen(true)}
+        />
+      )}
+      {smartPasteOpen && (
+        <SmartPasteModal
+          open
+          onClose={() => setSmartPasteOpen(false)}
+          onSaved={() => void load()}
+          onOpenFullForm={() => {
+            setFormOpen(true);
+          }}
         />
       )}
       {interviewOpen && (
