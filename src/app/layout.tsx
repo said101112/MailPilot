@@ -19,17 +19,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr">
+    <html lang="fr" className="h-full">
       <body
         suppressHydrationWarning
-        className={`${inter.variable} min-h-screen bg-[var(--editorial-background)] antialiased`}
+        className={`${inter.variable} h-full overflow-hidden bg-[var(--editorial-background)] antialiased`}
       >
-        <div className="flex min-h-screen w-full max-w-full overflow-x-hidden">
+        <div className="flex h-screen h-dvh w-full max-w-full overflow-hidden">
           <Navbar />
-          <main className="flex min-h-screen min-w-0 w-full max-w-full flex-1 flex-col bg-[var(--editorial-background)] pt-14 lg:pt-0 overflow-x-hidden">
+          <div className="flex h-full min-w-0 w-full max-w-full flex-1 flex-col overflow-hidden bg-[var(--editorial-background)]">
             <AppHeader />
-            <div className="min-w-0 w-full max-w-full flex-1 overflow-x-hidden">{children}</div>
-          </main>
+            <main className="min-w-0 w-full max-w-full flex-1 overflow-y-auto overflow-x-hidden pt-14 lg:pt-0">
+              {children}
+            </main>
+          </div>
         </div>
         <Toaster position="bottom-right" richColors />
       </body>
