@@ -196,7 +196,7 @@ export async function resolveCompany(
 // ---------------------------------------------------------------------------
 
 const CONTACT_SELECT =
-  "*, company:companies(id, name, logo_url)";
+  "*, company:companies(id, name, logo_url, location)";
 
 export async function listContacts(companyId?: string): Promise<ContactRow[]> {
   const userId = await getAuthUserId();

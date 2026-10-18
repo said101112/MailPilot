@@ -31,7 +31,7 @@ export interface ContactRow {
   next_action: string | null;
   created_at: string;
   updated_at: string;
-  company?: Pick<CompanyRow, "id" | "name" | "logo_url"> | null;
+  company?: Pick<CompanyRow, "id" | "name" | "logo_url" | "location"> | null;
 }
 
 export interface JobApplicationRow {

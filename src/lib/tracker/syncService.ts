@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { getAuthUserId } from "@/lib/auth";
 import { ensureCompanyLogo } from "./queries";
 import type { CompanyRow, ContactRow, JobApplicationRow } from "./types";
+import { resolveCountryCategory } from "./countries";
 
 const PUBLIC_EMAIL_DOMAINS = new Set([
   "gmail.com",
@@ -196,23 +197,46 @@ export async function syncEmailDispatchToTracker(
       targetCompany = companiesByDomain[0];
     }
   }
+ 
+   const detectedCountry = resolveCountryCategory(null, domain || email);
+   const detectedLocation =
+     detectedCountry === "saudi"
+       ? "Arabie Saoudite"
+       : detectedCountry === "morocco"
+       ? "Maroc"
+       : detectedCountry === "france"
+       ? "France"
+       : null;
 
-  let isNewCompany = false;
-  if (!targetCompany) {
-    // Create new company
-    const logoUrl = await ensureCompanyLogo(null, domain, website);
-    const { data: createdComp, error: compErr } = await supabase
-      .from("companies")
-      .insert({
-        user_id: userId,
-        name: compName,
-        domain: domain,
-        website: website,
-        logo_url: logoUrl || null,
-        sector: "Technologie & Services",
-      })
-      .select()
-      .single();
+   if (targetCompany && !targetCompany.location && detectedLocation) {
+     try {
+       await supabase
+         .from("companies")
+         .update({ location: detectedLocation })
+         .eq("id", targetCompany.id);
+       targetCompany.location = detectedLocation;
+     } catch {
+       // non-blocking
+     }
+   }
+
+   let isNewCompany = false;
+   if (!targetCompany) {
+     // Create new company
+     const logoUrl = await ensureCompanyLogo(null, domain, website);
+     const { data: createdComp, error: compErr } = await supabase
+       .from("companies")
+       .insert({
+         user_id: userId,
+         name: compName,
+         domain: domain,
+         website: website,
+         logo_url: logoUrl || null,
+         sector: "Technologie & Services",
+         location: detectedLocation,
+       })
+       .select()
+       .single();
 
     if (compErr) {
       throw new Error(`Unable to create company "${compName}": ${compErr.message}`);

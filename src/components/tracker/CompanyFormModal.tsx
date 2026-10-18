@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { createCompany, ensureCompanyLogo, listCompanies, updateCompany } from "@/lib/tracker/queries";
 import type { CompanyRow } from "@/lib/tracker/types";
 import CompanyCombobox, { type CompanyComboboxValue } from "@/components/tracker/CompanyCombobox";
+import { cn } from "@/lib/utils";
 
 interface CompanyFormModalProps {
   open: boolean;
@@ -169,14 +170,36 @@ export default function CompanyFormModal({
             </div>
             <div className="space-y-1.5">
               <label className="editorial-label" htmlFor="company-location">
-                Localisation
+                Pays / Localisation
               </label>
               <input
                 id="company-location"
                 className="editorial-input w-full"
                 value={location}
                 onChange={(event) => setLocation(event.target.value)}
+                placeholder="Ex. Arabie Saoudite, Maroc, France..."
               />
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                {[
+                  { name: "Arabie Saoudite", flag: "🇸🇦" },
+                  { name: "Maroc", flag: "🇲🇦" },
+                  { name: "France", flag: "🇫🇷" },
+                ].map((c) => (
+                  <button
+                    key={c.name}
+                    type="button"
+                    onClick={() => setLocation(c.name)}
+                    className={cn(
+                      "text-[11px] px-2 py-0.5 rounded-md border transition-colors cursor-pointer",
+                      location.toLowerCase().includes(c.name.toLowerCase())
+                        ? "bg-[#ff5722]/10 border-[#ff5722] text-[#ff5722] font-semibold"
+                        : "bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100"
+                    )}
+                  >
+                    {c.flag} {c.name}
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="sm:col-span-2 space-y-1.5">
               <label className="editorial-label" htmlFor="company-description">

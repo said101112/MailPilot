@@ -25,6 +25,13 @@ import EditorialSelect from "@/components/tracker/EditorialSelect";
 import { formatRelativeTime } from "@/lib/tracker/format";
 import { deleteContact, listCompanies, listContacts } from "@/lib/tracker/queries";
 import type { CompanyRow, ContactRow } from "@/lib/tracker/types";
+import {
+  COUNTRY_OPTIONS,
+  getCountryBadge,
+  resolveCountryCategory,
+  type CountryCategory,
+} from "@/lib/tracker/countries";
+import { syncSaudiDirectory } from "@/lib/tracker/saudiDirectory";
 import { cn } from "@/lib/utils";
 
 const roleOptions = [
@@ -53,9 +60,11 @@ export default function ContactsPage() {
   const [contacts, setContacts] = useState<ContactRow[]>([]);
   const [companies, setCompanies] = useState<CompanyRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncingSaudi, setSyncingSaudi] = useState(false);
   const [search, setSearch] = useState("");
   const [companyFilter, setCompanyFilter] = useState("all");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [countryFilter, setCountryFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState("recent");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -82,9 +91,38 @@ export default function ContactsPage() {
         setEditing(null);
         setModalOpen(true);
       }
+
+      // Check if automatic Saudi directory synchronization is needed on first visit
+      const synced = localStorage.getItem("tracker_saudi_contacts_synced_v2");
+      if (!synced) {
+        void syncSaudiDirectory()
+          .then((res) => {
+            localStorage.setItem("tracker_saudi_contacts_synced_v2", "true");
+            if (res.createdContacts > 0 || res.updatedCompanies > 0) {
+              void load();
+            }
+          })
+          .catch(() => undefined);
+      }
     }, 0);
     return () => window.clearTimeout(timer);
   }, [load]);
+
+  const handleSyncSaudi = async () => {
+    setSyncingSaudi(true);
+    try {
+      const res = await syncSaudiDirectory();
+      toast.success(
+        `Annuaire Arabie Saoudite synchronisé : ${res.createdCompanies + res.updatedCompanies} entreprise(s), ${res.createdContacts + res.updatedContacts} contact(s).`
+      );
+      localStorage.setItem("tracker_saudi_contacts_synced_v2", "true");
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erreur lors de la synchronisation.");
+    } finally {
+      setSyncingSaudi(false);
+    }
+  };
 
   const companyOptions = useMemo(() => {
     const list = [
@@ -100,12 +138,17 @@ export default function ContactsPage() {
   }, [companies]);
 
   const isFiltered =
-    search.trim() !== "" || companyFilter !== "all" || roleFilter !== "all" || sortBy !== "recent";
+    search.trim() !== "" ||
+    companyFilter !== "all" ||
+    roleFilter !== "all" ||
+    countryFilter !== "all" ||
+    sortBy !== "recent";
 
   const handleResetFilters = () => {
     setSearch("");
     setCompanyFilter("all");
     setRoleFilter("all");
+    setCountryFilter("all");
     setSortBy("recent");
     setPage(1);
   };
@@ -125,7 +168,16 @@ export default function ContactsPage() {
         return false;
       }
 
-      // 2. Role filter
+      // 2. Country Category filter (Saudi, Maroc, France, Other)
+      if (countryFilter !== "all") {
+        const detected = resolveCountryCategory(
+          contact.company?.location,
+          contact.email || contact.company?.name
+        );
+        if (detected !== countryFilter) return false;
+      }
+
+      // 3. Role filter
       if (roleFilter !== "all") {
         const roleLower = (contact.role || "").toLowerCase();
         if (roleFilter === "recruiter") {
@@ -149,7 +201,7 @@ export default function ContactsPage() {
         }
       }
 
-      // 3. Search query
+      // 4. Search query
       if (!term) return true;
       return [
         contact.full_name,
@@ -160,6 +212,7 @@ export default function ContactsPage() {
         contact.notes,
         contact.next_action,
         contact.company?.name,
+        contact.company?.location,
       ]
         .filter(Boolean)
         .join(" ")
@@ -190,7 +243,7 @@ export default function ContactsPage() {
       const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
       return timeB - timeA;
     });
-  }, [contacts, search, companyFilter, roleFilter, sortBy]);
+  }, [contacts, search, companyFilter, countryFilter, roleFilter, sortBy]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -225,25 +278,37 @@ export default function ContactsPage() {
         <div>
           <h1 className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">Contacts</h1>
           <p className="mt-1 text-xs text-gray-500">
-            {contacts.length} contact(s) · recruteurs, RH et interlocuteurs.
+            {contacts.length} contact(s) · recruteurs, RH et interlocuteurs catégorisés par pays.
           </p>
         </div>
-        <button
-          type="button"
-          className="editorial-button-primary h-8 px-3 text-xs"
-          onClick={() => {
-            setEditing(null);
-            setModalOpen(true);
-          }}
-        >
-          <UserPlus className="mr-1.5 inline h-3.5 w-3.5" />
-          Nouveau contact
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            disabled={syncingSaudi}
+            className="editorial-button-secondary h-8 px-3 text-xs flex items-center gap-1.5"
+            onClick={handleSyncSaudi}
+            title="Attacher et catégoriser les 60 emails d'Arabie Saoudite"
+          >
+            <span className="text-sm leading-none">🇸🇦</span>
+            <span>{syncingSaudi ? "Synchronisation..." : "Attacher contacts Saudi (60)"}</span>
+          </button>
+          <button
+            type="button"
+            className="editorial-button-primary h-8 px-3 text-xs"
+            onClick={() => {
+              setEditing(null);
+              setModalOpen(true);
+            }}
+          >
+            <UserPlus className="mr-1.5 inline h-3.5 w-3.5" />
+            Nouveau contact
+          </button>
+        </div>
       </div>
 
       {/* Filter and Search Bar */}
       <div className="mt-5 rounded-lg border border-gray-200 bg-white p-3 sm:p-4 space-y-3">
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
           {/* Search */}
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
@@ -269,6 +334,17 @@ export default function ContactsPage() {
               </button>
             )}
           </div>
+
+          {/* Country Category Filter (Saudi, Maroc, France, Other) */}
+          <EditorialSelect
+            className="editorial-select w-full text-xs"
+            value={countryFilter}
+            onChange={(val) => {
+              setCountryFilter(val);
+              setPage(1);
+            }}
+            options={COUNTRY_OPTIONS}
+          />
 
           {/* Company Filter */}
           <EditorialSelect
@@ -365,7 +441,7 @@ export default function ContactsPage() {
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/75 text-[11px] font-semibold text-gray-500">
                   <th className="px-5 py-2.5">Contact</th>
-                  <th className="px-5 py-2.5">Entreprise</th>
+                  <th className="px-5 py-2.5">Entreprise & Pays</th>
                   <th className="px-5 py-2.5">Fonction</th>
                   <th className="px-5 py-2.5">Coordonnées</th>
                   <th className="px-5 py-2.5">Dernière interaction</th>
@@ -374,214 +450,256 @@ export default function ContactsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {paginated.map((contact) => (
-                  <tr key={contact.id} className="transition-colors hover:bg-gray-50/80">
-                    <td className="px-5 py-3">
-                      <p className="font-semibold text-gray-900">{contact.full_name}</p>
-                      {contact.notes && (
-                        <p className="max-w-xs truncate text-gray-500">{contact.notes}</p>
-                      )}
-                    </td>
-                    <td className="px-5 py-3">
-                      {contact.company ? (
-                        <Link
-                          href={`/tracker/companies/${contact.company.id}`}
-                          className="flex items-center gap-2 font-medium text-gray-800 hover:text-[#ff5722]"
-                        >
-                          <CompanyLogo
-                            name={contact.company.name}
-                            logoUrl={contact.company.logo_url}
-                            className="h-6 w-6"
-                          />
-                          {contact.company.name}
-                        </Link>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="px-5 py-3 text-gray-600">{contact.role ?? "—"}</td>
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-1">
-                        {contact.email && (
-                          <a
-                            href={`mailto:${contact.email}`}
-                            className="editorial-icon-button"
-                            title={contact.email}
-                          >
-                            <Mail className="h-3.5 w-3.5" />
-                          </a>
+                {paginated.map((contact) => {
+                  const country = resolveCountryCategory(
+                    contact.company?.location,
+                    contact.email || contact.company?.name
+                  );
+                  const countryBadge = getCountryBadge(country);
+
+                  return (
+                    <tr key={contact.id} className="transition-colors hover:bg-gray-50/80">
+                      <td className="px-5 py-3">
+                        <p className="font-semibold text-gray-900">{contact.full_name}</p>
+                        {contact.notes && (
+                          <p className="max-w-xs truncate text-gray-500">{contact.notes}</p>
                         )}
-                        {contact.phone && (
-                          <a
-                            href={`tel:${contact.phone}`}
-                            className="editorial-icon-button"
-                            title={contact.phone}
-                          >
-                            <Phone className="h-3.5 w-3.5" />
-                          </a>
+                      </td>
+                      <td className="px-5 py-3">
+                        {contact.company ? (
+                          <div className="flex flex-col gap-1 items-start">
+                            <Link
+                              href={`/tracker/companies/${contact.company.id}`}
+                              className="flex items-center gap-2 font-medium text-gray-800 hover:text-[#ff5722]"
+                            >
+                              <CompanyLogo
+                                name={contact.company.name}
+                                logoUrl={contact.company.logo_url}
+                                className="h-5 w-5"
+                              />
+                              <span className="font-medium text-gray-900">{contact.company.name}</span>
+                            </Link>
+                            {countryBadge && (
+                              <span
+                                className={cn(
+                                  "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium border",
+                                  countryBadge.badgeClass
+                                )}
+                              >
+                                <span>{countryBadge.flag}</span>
+                                <span>{countryBadge.name}</span>
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          "—"
                         )}
-                        {contact.linkedin_url && (
-                          <a
-                            href={contact.linkedin_url}
-                            target="_blank"
-                            rel="noreferrer"
+                      </td>
+                      <td className="px-5 py-3 text-gray-600">{contact.role ?? "—"}</td>
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-1">
+                          {contact.email && (
+                            <a
+                              href={`mailto:${contact.email}`}
+                              className="editorial-icon-button"
+                              title={contact.email}
+                            >
+                              <Mail className="h-3.5 w-3.5" />
+                            </a>
+                          )}
+                          {contact.phone && (
+                            <a
+                              href={`tel:${contact.phone}`}
+                              className="editorial-icon-button"
+                              title={contact.phone}
+                            >
+                              <Phone className="h-3.5 w-3.5" />
+                            </a>
+                          )}
+                          {contact.linkedin_url && (
+                            <a
+                              href={contact.linkedin_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="editorial-icon-button"
+                              title="LinkedIn"
+                            >
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </a>
+                          )}
+                          {contact.whatsapp && (
+                            <a
+                              href={`https://wa.me/${contact.whatsapp.replace(/\D/g, "")}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="editorial-icon-button"
+                              title="WhatsApp"
+                            >
+                              <MessageSquare className="h-3.5 w-3.5" />
+                            </a>
+                          )}
+                          {!contact.email &&
+                            !contact.phone &&
+                            !contact.linkedin_url &&
+                            !contact.whatsapp && <span className="text-gray-400">—</span>}
+                        </div>
+                      </td>
+                      <td className="px-5 py-3 text-gray-600">
+                        {formatRelativeTime(contact.last_interaction_at)}
+                      </td>
+                      <td className="max-w-[180px] px-5 py-3 text-gray-600">
+                        {contact.next_action ?? "—"}
+                      </td>
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
                             className="editorial-icon-button"
-                            title="LinkedIn"
+                            title="Modifier"
+                            onClick={() => {
+                              setEditing(contact);
+                              setModalOpen(true);
+                            }}
                           >
-                            <ExternalLink className="h-3.5 w-3.5" />
-                          </a>
-                        )}
-                        {contact.whatsapp && (
-                          <a
-                            href={`https://wa.me/${contact.whatsapp.replace(/\D/g, "")}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="editorial-icon-button"
-                            title="WhatsApp"
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            className="editorial-icon-button text-red-500"
+                            title="Supprimer"
+                            onClick={() => void handleDelete(contact)}
                           >
-                            <MessageSquare className="h-3.5 w-3.5" />
-                          </a>
-                        )}
-                        {!contact.email &&
-                          !contact.phone &&
-                          !contact.linkedin_url &&
-                          !contact.whatsapp && <span className="text-gray-400">—</span>}
-                      </div>
-                    </td>
-                    <td className="px-5 py-3 text-gray-600">
-                      {formatRelativeTime(contact.last_interaction_at)}
-                    </td>
-                    <td className="max-w-[180px] px-5 py-3 text-gray-600">
-                      {contact.next_action ?? "—"}
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          className="editorial-icon-button"
-                          title="Modifier"
-                          onClick={() => {
-                            setEditing(contact);
-                            setModalOpen(true);
-                          }}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          className="editorial-icon-button text-red-500"
-                          title="Supprimer"
-                          onClick={() => void handleDelete(contact)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
 
           {/* Mobile Cards (Shown on mobile screens < md) */}
           <div className="md:hidden divide-y divide-gray-100">
-            {paginated.map((contact) => (
-              <div key={contact.id} className="p-3.5 space-y-2.5">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-xs text-gray-900">{contact.full_name}</p>
-                    <p className="text-[11px] text-gray-500">
-                      {contact.role ?? "Contact recruteur"}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      type="button"
-                      className="editorial-icon-button h-7 w-7"
-                      title="Modifier"
-                      onClick={() => {
-                        setEditing(contact);
-                        setModalOpen(true);
-                      }}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      className="editorial-icon-button h-7 w-7 text-red-500"
-                      title="Supprimer"
-                      onClick={() => void handleDelete(contact)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
+            {paginated.map((contact) => {
+              const country = resolveCountryCategory(
+                contact.company?.location,
+                contact.email || contact.company?.name
+              );
+              const countryBadge = getCountryBadge(country);
 
-                {contact.company && (
-                  <Link
-                    href={`/tracker/companies/${contact.company.id}`}
-                    className="flex items-center gap-2 text-xs font-medium text-gray-700 hover:text-[#ff5722]"
-                  >
-                    <CompanyLogo
-                      name={contact.company.name}
-                      logoUrl={contact.company.logo_url}
-                      className="h-5 w-5 shrink-0"
-                    />
-                    <span className="truncate">{contact.company.name}</span>
-                  </Link>
-                )}
-
-                <div className="flex items-center justify-between pt-1 border-t border-gray-50 text-[11px]">
-                  <div className="flex items-center gap-1.5">
-                    {contact.email && (
-                      <a
-                        href={`mailto:${contact.email}`}
+              return (
+                <div key={contact.id} className="p-3.5 space-y-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-xs text-gray-900">{contact.full_name}</p>
+                      <p className="text-[11px] text-gray-500">
+                        {contact.role ?? "Contact recruteur"}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
                         className="editorial-icon-button h-7 w-7"
-                        title={contact.email}
+                        title="Modifier"
+                        onClick={() => {
+                          setEditing(contact);
+                          setModalOpen(true);
+                        }}
                       >
-                        <Mail className="h-3.5 w-3.5" />
-                      </a>
-                    )}
-                    {contact.phone && (
-                      <a
-                        href={`tel:${contact.phone}`}
-                        className="editorial-icon-button h-7 w-7"
-                        title={contact.phone}
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        className="editorial-icon-button h-7 w-7 text-red-500"
+                        title="Supprimer"
+                        onClick={() => void handleDelete(contact)}
                       >
-                        <Phone className="h-3.5 w-3.5" />
-                      </a>
-                    )}
-                    {contact.linkedin_url && (
-                      <a
-                        href={contact.linkedin_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="editorial-icon-button h-7 w-7"
-                        title="LinkedIn"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </a>
-                    )}
-                    {contact.whatsapp && (
-                      <a
-                        href={`https://wa.me/${contact.whatsapp.replace(/\D/g, "")}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="editorial-icon-button h-7 w-7"
-                        title="WhatsApp"
-                      >
-                        <MessageSquare className="h-3.5 w-3.5" />
-                      </a>
-                    )}
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </div>
-                  {contact.next_action && (
-                    <span className="text-[10.5px] text-amber-600 font-medium truncate max-w-[140px]">
-                      {contact.next_action}
-                    </span>
+
+                  {contact.company && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link
+                        href={`/tracker/companies/${contact.company.id}`}
+                        className="flex items-center gap-1.5 text-xs font-medium text-gray-700 hover:text-[#ff5722]"
+                      >
+                        <CompanyLogo
+                          name={contact.company.name}
+                          logoUrl={contact.company.logo_url}
+                          className="h-4 w-4 shrink-0"
+                        />
+                        <span className="truncate">{contact.company.name}</span>
+                      </Link>
+                      {countryBadge && (
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1 rounded px-1.5 py-0.2 text-[10px] font-medium border",
+                            countryBadge.badgeClass
+                          )}
+                        >
+                          <span>{countryBadge.flag}</span>
+                          <span>{countryBadge.name}</span>
+                        </span>
+                      )}
+                    </div>
                   )}
+
+                  <div className="flex items-center justify-between pt-1 border-t border-gray-50 text-[11px]">
+                    <div className="flex items-center gap-1.5">
+                      {contact.email && (
+                        <a
+                          href={`mailto:${contact.email}`}
+                          className="editorial-icon-button h-7 w-7"
+                          title={contact.email}
+                        >
+                          <Mail className="h-3.5 w-3.5" />
+                        </a>
+                      )}
+                      {contact.phone && (
+                        <a
+                          href={`tel:${contact.phone}`}
+                          className="editorial-icon-button h-7 w-7"
+                          title={contact.phone}
+                        >
+                          <Phone className="h-3.5 w-3.5" />
+                        </a>
+                      )}
+                      {contact.linkedin_url && (
+                        <a
+                          href={contact.linkedin_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="editorial-icon-button h-7 w-7"
+                          title="LinkedIn"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      )}
+                      {contact.whatsapp && (
+                        <a
+                          href={`https://wa.me/${contact.whatsapp.replace(/\D/g, "")}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="editorial-icon-button h-7 w-7"
+                          title="WhatsApp"
+                        >
+                          <MessageSquare className="h-3.5 w-3.5" />
+                        </a>
+                      )}
+                    </div>
+                    {contact.next_action && (
+                      <span className="text-[10.5px] text-amber-600 font-medium truncate max-w-[140px]">
+                        {contact.next_action}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Pagination Controls */}
