@@ -29,6 +29,10 @@ import {
   TEMPLATE_LIBRARY_EVENT,
   getStoredTemplates,
 } from "@/lib/templates";
+import {
+  syncEmailDispatchToTracker,
+  inferCompanyFromEmail,
+} from "@/lib/tracker/syncService";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import { readStoredCv } from "@/lib/workspace";
@@ -193,11 +197,14 @@ export default function ApplyPage() {
         jobUrl: "",
       });
 
+      const inferred = inferCompanyFromEmail(email);
+      const companyToSave = inferred?.name || null;
+
       const { error } = await supabase.from("applications").insert([
         {
           user_id: user.id,
-          company: null,
-          position: null,
+          company: companyToSave,
+          position: "Stage PFE / Emploi",
           email: email,
           status: "success",
         },
@@ -205,6 +212,18 @@ export default function ApplyPage() {
 
       if (error) {
         throw error;
+      }
+
+      // Automatically sync with Tracker (creates/links company & contact)
+      try {
+        await syncEmailDispatchToTracker({
+          company: companyToSave,
+          position: "Stage PFE / Emploi",
+          email: email,
+          status: "success",
+        });
+      } catch (syncErr) {
+        console.warn("Tracker sync failed:", syncErr);
       }
 
       toast.success("Draft created in Gmail! Check your Gmail drafts.");

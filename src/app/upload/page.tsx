@@ -38,6 +38,10 @@ import { supabase } from "@/lib/supabase";
 import { cn, delay } from "@/lib/utils";
 import { readCandidateName, readStoredCv } from "@/lib/workspace";
 import CvUploadCard from "@/components/CvUploadCard";
+import {
+  syncEmailDispatchToTracker,
+  inferCompanyFromEmail,
+} from "@/lib/tracker/syncService";
 
 interface CSVRow {
   company: string;
@@ -483,15 +487,28 @@ export default function UploadPage() {
         });
 
         if (user) {
+          const compToSave = row.company || inferCompanyFromEmail(row.email)?.name || null;
           await supabase.from("applications").insert([
             {
               user_id: user.id,
-              company: row.company || null,
+              company: compToSave,
               position: row.position || null,
               email: row.email,
               status: "success",
             },
           ]);
+
+          // Automatically sync with Tracker (creates/links company & contact)
+          try {
+            await syncEmailDispatchToTracker({
+              company: compToSave,
+              position: row.position,
+              email: row.email,
+              status: "success",
+            });
+          } catch (syncErr) {
+            console.warn("Bulk tracker sync failed:", syncErr);
+          }
         }
 
         nextData[index] = { ...nextData[index], status: "success", error: undefined };

@@ -2,19 +2,29 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  Building2,
   ChevronLeft,
   ChevronRight,
   Download,
   History as HistoryIcon,
   Loader2,
   Mail,
+  RefreshCw,
   Search,
+  Sparkles,
   Trash2,
+  UserCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import CleanDataModal from "@/components/CleanDataModal";
+import {
+  syncAllHistoryApplications,
+  syncEmailDispatchToTracker,
+  inferCompanyFromEmail,
+  parseContactFromEmail,
+} from "@/lib/tracker/syncService";
 
 interface HistoryItem {
   id: string;
@@ -49,6 +59,9 @@ export default function HistoryPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isCleanModalOpen, setIsCleanModalOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0 });
+  const [linkingId, setLinkingId] = useState<string | null>(null);
 
   const ROWS_PER_PAGE = 12;
 
@@ -147,6 +160,52 @@ export default function HistoryPage() {
     }
   };
 
+  const handleSyncAllTracker = async () => {
+    if (history.length === 0) {
+      toast.info("Aucune candidature à synchroniser.");
+      return;
+    }
+    setSyncing(true);
+    setSyncProgress({ current: 0, total: history.length });
+    try {
+      const stats = await syncAllHistoryApplications((current, total) => {
+        setSyncProgress({ current, total });
+      });
+
+      toast.success(
+        `Synchronisation réussie ! ${stats.companiesCreated} entreprise(s) créée(s), ${stats.contactsCreated} contact(s) créés et ${stats.applicationsCreated} candidature(s) liées au Tracker.`
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erreur lors de la synchronisation.";
+      toast.error(message);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleSyncSingle = async (item: HistoryItem) => {
+    setLinkingId(item.id);
+    try {
+      const res = await syncEmailDispatchToTracker({
+        id: item.id,
+        company: item.company,
+        email: item.email,
+        position: item.position,
+        created_at: item.created_at,
+        status: item.status,
+      });
+
+      toast.success(
+        `Lié au Tracker : Entreprise "${res.companyName}" et contact "${res.contactName}" !`
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erreur de liaison.";
+      toast.error(message);
+    } finally {
+      setLinkingId(null);
+    }
+  };
+
   // Export to CSV
   const exportHistoryCsv = () => {
     if (filteredHistory.length === 0) {
@@ -240,6 +299,24 @@ export default function HistoryPage() {
             {history.length > 0 && (
               <>
                 <button
+                  className="editorial-button-primary h-8 px-3 text-xs flex items-center gap-1.5"
+                  onClick={handleSyncAllTracker}
+                  disabled={syncing}
+                  type="button"
+                  title="Créer et lier automatiquement les entreprises et contacts dans le Tracker"
+                >
+                  {syncing ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-3.5 w-3.5" />
+                  )}
+                  <span>
+                    {syncing
+                      ? `Liaison en cours (${syncProgress.current}/${syncProgress.total})...`
+                      : "Lier au Tracker (Entreprises & Contacts)"}
+                  </span>
+                </button>
+                <button
                   className="editorial-button-secondary h-8 px-3 text-xs"
                   onClick={exportHistoryCsv}
                   type="button"
@@ -260,6 +337,27 @@ export default function HistoryPage() {
             )}
           </div>
         </div>
+
+        {/* Sync to Tracker Helper Banner */}
+        {history.length > 0 && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-[#ff5722]/20 bg-[#fff8f5] p-3.5 text-xs">
+            <div className="flex items-center gap-2.5">
+              <Sparkles className="h-4 w-4 text-[#ff5722] shrink-0" />
+              <p className="text-gray-700">
+                <span className="font-semibold text-gray-900">Liaison automatique Tracker</span> :{" "}
+                Vos candidatures envoyées sont automatiquement rattachées à vos entreprises et contacts. Si une entreprise n&apos;existe pas encore, elle est créée avec son logo et le contact lui est lié.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleSyncAllTracker}
+              disabled={syncing}
+              className="font-semibold text-[#ff5722] hover:underline shrink-0 text-left sm:text-right"
+            >
+              {syncing ? `Synchronisation (${syncProgress.current}/${syncProgress.total})...` : "⚡ Lier tout l'historique au Tracker →"}
+            </button>
+          </div>
+        )}
 
         {loading ? (
           <div className="flex min-h-[360px] flex-col items-center justify-center gap-3 rounded-lg border border-gray-200 bg-white shadow-xs">
@@ -402,9 +500,19 @@ export default function HistoryPage() {
                         >
                           {/* Company */}
                           <td className="px-5 py-3.5">
-                            <p className="font-semibold text-gray-900">
-                              {item.company || "Candidature Directe"}
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <Building2 className="h-4 w-4 text-gray-400 shrink-0" />
+                              <div className="min-w-0">
+                                <p className="font-semibold text-gray-900 truncate">
+                                  {item.company || inferCompanyFromEmail(item.email)?.name || "Candidature Directe"}
+                                </p>
+                                {inferCompanyFromEmail(item.email)?.domain && (
+                                  <p className="text-[10px] text-gray-400 truncate">
+                                    {inferCompanyFromEmail(item.email)?.domain}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
                           </td>
 
                           {/* Position */}
@@ -412,13 +520,18 @@ export default function HistoryPage() {
                             {item.position || "Stage PFE / Emploi"}
                           </td>
 
-                          {/* Email */}
+                          {/* Email & Contact */}
                           <td className="px-4 py-3.5">
-                            <div className="flex items-center gap-1.5">
-                              <Mail className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-                              <span className="font-mono text-gray-800 text-[11.5px]">
-                                {item.email}
-                              </span>
+                            <div>
+                              <p className="font-medium text-gray-900 text-xs">
+                                {parseContactFromEmail(item.email, item.company).fullName}
+                              </p>
+                              <div className="flex items-center gap-1.5 text-gray-500 mt-0.5">
+                                <Mail className="h-3 w-3 text-gray-400 shrink-0" />
+                                <span className="font-mono text-gray-700 text-[11px] truncate">
+                                  {item.email}
+                                </span>
+                              </div>
                             </div>
                           </td>
 
@@ -449,19 +562,34 @@ export default function HistoryPage() {
 
                           {/* Actions */}
                           <td className="px-5 py-3.5 text-right">
-                            <button
-                              className="text-gray-400 hover:text-red-600 p-1 transition cursor-pointer"
-                              disabled={deletingId === item.id}
-                              onClick={() => void deleteItem(item.id)}
-                              type="button"
-                              title="Supprimer cette ligne"
-                            >
-                              {deletingId === item.id ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                <Trash2 className="h-3.5 w-3.5" />
-                              )}
-                            </button>
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                className="editorial-icon-button"
+                                disabled={linkingId === item.id}
+                                onClick={() => void handleSyncSingle(item)}
+                                title="Lier cette entreprise et contact au Tracker"
+                                type="button"
+                              >
+                                {linkingId === item.id ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin text-[#ff5722]" />
+                                ) : (
+                                  <UserCheck className="h-3.5 w-3.5 text-emerald-600" />
+                                )}
+                              </button>
+                              <button
+                                className="editorial-icon-button text-gray-400 hover:text-red-600 hover:bg-red-50"
+                                disabled={deletingId === item.id}
+                                onClick={() => void deleteItem(item.id)}
+                                type="button"
+                                title="Supprimer définitivement"
+                              >
+                                {deletingId === item.id ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin text-red-500" />
+                                ) : (
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                )}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
