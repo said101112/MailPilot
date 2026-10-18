@@ -26,7 +26,7 @@ export default function RootLayout({
       >
         <div className="flex min-h-screen">
           <Navbar />
-          <main className="flex min-h-screen min-w-0 flex-1 flex-col bg-[var(--editorial-background)]">
+          <main className="flex min-h-screen min-w-0 flex-1 flex-col bg-[var(--editorial-background)] pt-14 lg:pt-0">
             <AppHeader />
             <div className="min-w-0 flex-1">{children}</div>
           </main>

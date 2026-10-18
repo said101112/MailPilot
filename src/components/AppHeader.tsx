@@ -83,7 +83,7 @@ export default function AppHeader() {
   }
 
   return (
-    <header className="sticky top-[64px] z-30 border-b border-gray-200 bg-white lg:top-0">
+    <header className="hidden lg:block sticky top-0 z-30 border-b border-gray-200 bg-white">
       <div className="mx-auto flex h-14 w-full items-center justify-between px-6">
         {/* Hunter style: Simple clean Page Title */}
         <h1 className="text-base font-semibold text-gray-900">{title}</h1>

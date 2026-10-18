@@ -328,10 +328,10 @@ export default function ApplicationsPage() {
             {filtered.length} candidature(s) · vue tableau, Kanban ou calendrier.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            className="editorial-button-secondary h-8 px-3 text-xs flex items-center gap-1.5 border-[#ff5722]/40 text-[#ff5722] hover:bg-[#fff3ef]"
+            className="editorial-button-secondary h-8 px-3 text-xs flex items-center justify-center gap-1.5 border-[#ff5722]/40 text-[#ff5722] hover:bg-[#fff3ef] flex-1 sm:flex-initial"
             onClick={() => setSmartPasteOpen(true)}
             title="Coller du texte brut (email, message, note) pour extraction automatique"
           >
@@ -340,7 +340,7 @@ export default function ApplicationsPage() {
           </button>
           <button
             type="button"
-            className="editorial-button-primary h-8 px-3 text-xs"
+            className="editorial-button-primary h-8 px-3 text-xs flex items-center justify-center flex-1 sm:flex-initial"
             onClick={() => {
               setEditing(null);
               setPrefillValues(null);
@@ -353,9 +353,9 @@ export default function ApplicationsPage() {
         </div>
       </div>
 
-      <div className="mt-5 flex flex-col gap-3 rounded-lg border border-gray-200 bg-white px-5 py-3 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-1 items-center gap-3">
-          <div className="relative w-full max-w-xs">
+      <div className="mt-5 flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-3 sm:px-5 sm:py-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col sm:flex-row flex-1 items-stretch sm:items-center gap-2.5">
+          <div className="relative w-full sm:max-w-xs">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
             <input
               className="editorial-input w-full pl-9"
@@ -368,7 +368,7 @@ export default function ApplicationsPage() {
             />
           </div>
           <EditorialSelect
-            className="editorial-select w-48"
+            className="editorial-select w-full sm:w-48"
             value={statusFilter}
             onChange={(next) => {
               setStatusFilter(next as JobStatus | "all");
@@ -383,7 +383,7 @@ export default function ApplicationsPage() {
             ]}
           />
         </div>
-        <div className="flex items-center gap-1 rounded-md border border-gray-200 p-0.5">
+        <div className="flex items-center justify-between sm:justify-start gap-1 rounded-md border border-gray-200 p-0.5 self-stretch sm:self-auto">
           {([
             { id: "table", icon: ListFilter, label: "Tableau" },
             { id: "kanban", icon: Columns3, label: "Kanban" },
@@ -393,9 +393,9 @@ export default function ApplicationsPage() {
               key={item.id}
               type="button"
               className={cn(
-                "flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium",
+                "flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium",
                 view === item.id
-                  ? "bg-gray-100 text-gray-900"
+                  ? "bg-gray-100 text-gray-900 font-semibold"
                   : "text-gray-500 hover:text-gray-800",
               )}
               onClick={() => setView(item.id)}
@@ -440,7 +440,8 @@ export default function ApplicationsPage() {
             />
           ) : (
             <div className="rounded-lg border border-gray-200 bg-white">
-              <div className="overflow-x-auto">
+              {/* Desktop Table */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="min-w-full text-left text-xs">
                   <thead>
                     <tr className="border-b border-gray-100 bg-gray-50/75 text-[11px] font-semibold text-gray-500">
@@ -543,6 +544,90 @@ export default function ApplicationsPage() {
                     })}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Mobile Cards (Shown on mobile screens < md) */}
+              <div className="md:hidden divide-y divide-gray-100">
+                {pageRows.map((app) => {
+                  const followUpDate = nextFollowUpDate(app);
+                  return (
+                    <div
+                      key={app.id}
+                      className="p-3.5 space-y-2.5 transition-colors hover:bg-gray-50/80 cursor-pointer"
+                      onClick={() => router.push(`/tracker/applications/${app.id}`)}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <CompanyLogo
+                            name={app.company?.name ?? "?"}
+                            logoUrl={app.company?.logo_url}
+                            website={app.company?.website}
+                            className="h-8 w-8 shrink-0"
+                          />
+                          <div className="min-w-0">
+                            <span className="font-semibold text-xs text-gray-900 block truncate">
+                              {app.company?.name ?? "—"}
+                            </span>
+                            <p className="text-[11px] text-gray-500 truncate">
+                              {app.channel ? CHANNEL_LABELS[app.channel] ?? app.channel : "Direct"} · {formatDate(app.applied_at)}
+                            </p>
+                          </div>
+                        </div>
+                        <StatusBadge status={app.status} />
+                      </div>
+
+                      <div>
+                        <p className="font-medium text-xs text-gray-900 line-clamp-1">
+                          {app.position}
+                        </p>
+                        {app.location && (
+                          <p className="text-[11px] text-gray-400">{app.location}</p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1 border-t border-gray-50 text-[11px] text-gray-500">
+                        <div>
+                          {followUpDate ? (
+                            <span className="text-amber-600 font-medium">Relance : {formatDate(followUpDate)}</span>
+                          ) : app.primary_contact?.full_name ? (
+                            <span className="text-gray-500 truncate">{app.primary_contact.full_name}</span>
+                          ) : (
+                            <span className="text-gray-400">{formatRelativeTime(app.last_interaction_at)}</span>
+                          )}
+                        </div>
+                        <div
+                          className="flex items-center gap-2"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          <button
+                            type="button"
+                            className="editorial-icon-button h-7 w-7"
+                            title="Modifier"
+                            onClick={() => {
+                              setEditing(app);
+                              setFormOpen(true);
+                            }}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            className="editorial-icon-button h-7 w-7 text-gray-400 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                            title="Supprimer la candidature"
+                            disabled={deletingId === app.id}
+                            onClick={() => void handleDelete(app)}
+                          >
+                            {deletingId === app.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin text-red-500" />
+                            ) : (
+                              <Trash2 className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
               {totalPages > 1 && (
                 <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3">
