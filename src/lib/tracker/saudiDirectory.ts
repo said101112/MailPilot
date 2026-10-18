@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { getAuthUserId } from "@/lib/auth";
 import { createCompany, createContact, listCompanies, listContacts, updateCompany, updateContact } from "./queries";
+import { lookupKnownCompanyLogo } from "./companyDirectory";
 
 export interface SaudiEntry {
   email: string;
@@ -533,15 +534,21 @@ export async function syncSaudiDirectory(): Promise<{
       targetCompany = compByDomain.get(cleanDomain);
     }
 
+    const knownLogo = lookupKnownCompanyLogo(entry.companyName, cleanDomain);
+
     if (targetCompany) {
-      // Check if location needs updating to "Arabie Saoudite"
-      if (!targetCompany.location || targetCompany.location.toLowerCase() !== "arabie saoudite") {
+      const needsLocation = !targetCompany.location || targetCompany.location.toLowerCase() !== "arabie saoudite";
+      const needsLogo = !targetCompany.logo_url && !!knownLogo;
+
+      if (needsLocation || needsLogo) {
         try {
-          const updated = await updateCompany(targetCompany.id, {
+          const patch: Parameters<typeof updateCompany>[1] = {
             location: "Arabie Saoudite",
             sector: targetCompany.sector || entry.sector,
             website: targetCompany.website || (cleanDomain ? `https://${cleanDomain}` : null),
-          });
+          };
+          if (needsLogo) patch.logo_url = knownLogo;
+          const updated = await updateCompany(targetCompany.id, patch);
           targetCompany = updated;
           updatedCompanies += 1;
         } catch {
@@ -556,6 +563,7 @@ export async function syncSaudiDirectory(): Promise<{
           website: cleanDomain ? `https://${cleanDomain}` : null,
           sector: entry.sector,
           location: "Arabie Saoudite",
+          logo_url: knownLogo,
         });
         targetCompany = created;
         compByName.set(cleanCompName, created);

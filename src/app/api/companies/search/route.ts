@@ -248,6 +248,8 @@ async function buildSuggestions(hits: WikidataSearchHit[]): Promise<CompanySugge
   });
 }
 
+import { searchKnownCompanies } from "@/lib/tracker/companyDirectory";
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = (searchParams.get("q") ?? "").trim();
@@ -262,26 +264,41 @@ export async function GET(request: Request) {
     return NextResponse.json({ results: cached.value, source: "cache" });
   }
 
+  // 1. Search our curated local directory (instant, verified, offline, 100% free)
+  const localHits: CompanySuggestion[] = searchKnownCompanies(query, 6).map(
+    (k) => ({
+      id: `known-${k.domain}`,
+      name: k.name,
+      domain: k.domain,
+      logoUrl: k.logoUrl,
+      website: k.website,
+      description: k.description ?? `${k.sector} (${k.location})`,
+      sector: k.sector,
+      location: k.location,
+      wikidataId: null,
+    }),
+  );
+
   try {
     const [enHits, frHits] = await Promise.all([
       searchWikidata(query, "en", 8),
       searchWikidata(query, "fr", 8),
     ]);
     let hits = mergeHits(enHits, frHits);
-    let source = "wikidata";
+    let source = localHits.length > 0 ? "curated+wikidata" : "wikidata";
     if (hits.length < 6) {
       const [wikiFr, wikiEn] = await Promise.all([
         searchWikipedia(query, "fr"),
         searchWikipedia(query, "en"),
       ]);
       const extended = mergeHits(hits, wikiFr, wikiEn);
-      if (extended.length > hits.length) source = "wikidata+wikipedia";
+      if (extended.length > hits.length) source = "curated+wikidata+wikipedia";
       hits = extended;
     }
     hits = hits.slice(0, 16);
 
     const built = await buildSuggestions(hits);
-    const suggestions = await Promise.all(
+    const remoteSuggestions = await Promise.all(
       built.map(async (suggestion) => {
         if (suggestion.logoUrl || !suggestion.domain) return suggestion;
         const logoUrl = await resolveLogoForDomain(suggestion.domain, {
@@ -291,14 +308,33 @@ export async function GET(request: Request) {
       }),
     );
 
-    cache.set(cacheKey, { expires: Date.now() + CACHE_TTL_MS, value: suggestions });
+    // Merge curated hits first, then remote suggestions avoiding domain/name duplicates
+    const seenDomains = new Set<string>();
+    const seenNames = new Set<string>();
+    const merged: CompanySuggestion[] = [];
+
+    for (const c of [...localHits, ...remoteSuggestions]) {
+      const dKey = c.domain?.toLowerCase();
+      const nKey = c.name.toLowerCase();
+      if (dKey && seenDomains.has(dKey)) continue;
+      if (seenNames.has(nKey)) continue;
+      if (dKey) seenDomains.add(dKey);
+      seenNames.add(nKey);
+      merged.push(c);
+    }
+
+    cache.set(cacheKey, { expires: Date.now() + CACHE_TTL_MS, value: merged });
     if (cache.size > CACHE_MAX_ENTRIES) {
       const oldest = cache.keys().next().value;
       if (oldest) cache.delete(oldest);
     }
 
-    return NextResponse.json({ results: suggestions, source });
+    return NextResponse.json({ results: merged, source });
   } catch {
+    // If Wikidata / Wikipedia network requests fail, still return our curated local results!
+    if (localHits.length > 0) {
+      return NextResponse.json({ results: localHits, source: "curated" });
+    }
     return NextResponse.json(
       {
         results: [],
@@ -309,3 +345,4 @@ export async function GET(request: Request) {
     );
   }
 }
+

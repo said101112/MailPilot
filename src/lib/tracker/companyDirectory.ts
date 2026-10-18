@@ -1,0 +1,830 @@
+export interface KnownCompany {
+  name: string;
+  aliases?: string[];
+  domain: string;
+  website: string;
+  logoUrl: string;
+  sector: string;
+  location: "Maroc" | "Arabie Saoudite" | "France" | "International";
+  description?: string;
+}
+
+export const KNOWN_COMPANIES: KnownCompany[] = [
+  // ==========================================
+  // MAROC
+  // ==========================================
+  {
+    name: "Intelcia",
+    aliases: ["intelcia group", "intelcia maroc"],
+    domain: "intelcia.com",
+    website: "https://www.intelcia.com",
+    logoUrl: "https://www.intelcia.com/themes/custom/intelcia/corpo/images/logo-gradient.svg",
+    sector: "BPO, Services IT & Relation Client",
+    location: "Maroc",
+    description: "Acteur global de l'externalisation, présent dans 17 pays (BPO, IT & Consulting).",
+  },
+  {
+    name: "OCP Group",
+    aliases: ["ocp", "office cherifien des phosphates"],
+    domain: "ocpgroup.ma",
+    website: "https://www.ocpgroup.ma",
+    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/5/58/Logo_Ocp.jpg",
+    sector: "Mines, Énergie & Chimie",
+    location: "Maroc",
+    description: "Premier exportateur mondial de phosphates et dérivés d'engrais.",
+  },
+  {
+    name: "Attijariwafa Bank",
+    aliases: ["attijariwafa", "attijari"],
+    domain: "attijariwafabank.com",
+    website: "https://www.attijariwafabank.com",
+    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/1/1c/LogoNew.png",
+    sector: "Banque & Assurance",
+    location: "Maroc",
+    description: "Premier groupe bancaire et financier du Maghreb et d'Afrique de l'Ouest.",
+  },
+  {
+    name: "Banque Populaire (BCP)",
+    aliases: ["bcp", "banque populaire maroc", "groupe bcp"],
+    domain: "groupebanquepopulaire.ma",
+    website: "https://groupebanquepopulaire.ma",
+    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/e/ec/Banque_Populaire_du_Maroc_Logo.svg",
+    sector: "Banque & Finance",
+    location: "Maroc",
+    description: "Groupe bancaire coopératif et mutualiste de référence au Maroc.",
+  },
+  {
+    name: "Maroc Telecom",
+    aliases: ["iam", "maroc telecom iam", "itissalat al maghrib"],
+    domain: "iam.ma",
+    website: "https://www.iam.ma",
+    logoUrl: "https://www.google.com/s2/favicons?domain=iam.ma&sz=128",
+    sector: "Télécommunications",
+    location: "Maroc",
+    description: "Opérateur historique de télécommunications au Maroc et en Afrique.",
+  },
+  {
+    name: "Inwi",
+    aliases: ["wana", "inwi maroc"],
+    domain: "inwi.ma",
+    website: "https://inwi.ma",
+    logoUrl: "https://icon.horse/icon/inwi.ma",
+    sector: "Télécommunications & Cloud",
+    location: "Maroc",
+    description: "Opérateur digital global des télécommunications au Maroc.",
+  },
+  {
+    name: "CDG (Caisse de Dépôt et de Gestion)",
+    aliases: ["cdg", "groupe cdg"],
+    domain: "cdg.ma",
+    website: "https://www.cdg.ma",
+    logoUrl: "https://icon.horse/icon/cdg.ma",
+    sector: "Banque d'Investissement & Développement",
+    location: "Maroc",
+    description: "Institution financière publique d'épargne et d'investissement long terme au Maroc.",
+  },
+  {
+    name: "CIH Bank",
+    aliases: ["cih", "credit immobilier et hotelier"],
+    domain: "cihbank.ma",
+    website: "https://www.cihbank.ma",
+    logoUrl: "https://icon.horse/icon/cihbank.ma",
+    sector: "Banque Digitale & Immobilier",
+    location: "Maroc",
+    description: "Banque de détail et pionnière de la banque digitale au Maroc.",
+  },
+  {
+    name: "Webhelp / Concentrix",
+    aliases: ["webhelp", "concentrix", "webhelp maroc"],
+    domain: "concentrix.com",
+    website: "https://www.concentrix.com",
+    logoUrl: "https://www.google.com/s2/favicons?domain=concentrix.com&sz=128",
+    sector: "Expérience Client & Technologie",
+    location: "Maroc",
+    description: "Leader mondial des solutions d'expérience client (CX) et technologies BPO.",
+  },
+  {
+    name: "Majorel / Teleperformance",
+    aliases: ["majorel", "teleperformance", "teleperformance maroc"],
+    domain: "teleperformance.com",
+    website: "https://www.teleperformance.com",
+    logoUrl: "https://www.google.com/s2/favicons?domain=teleperformance.com&sz=128",
+    sector: "Services Numériques & Relation Client",
+    location: "Maroc",
+    description: "Leader mondial de la gestion omnicanal de l'expérience client externalisée.",
+  },
+  {
+    name: "SQLI Maroc",
+    aliases: ["sqli"],
+    domain: "sqli.com",
+    website: "https://www.sqli.com",
+    logoUrl: "https://www.google.com/s2/favicons?domain=sqli.com&sz=128",
+    sector: "Agence Digitale & E-Commerce",
+    location: "Maroc",
+    description: "Groupe européen dédié à l'expérience digitale et aux plateformes e-commerce.",
+  },
+  {
+    name: "Capgemini Maroc",
+    aliases: ["capgemini ts", "capgemini casablanca"],
+    domain: "capgemini.com",
+    website: "https://www.capgemini.com",
+    logoUrl: "https://www.google.com/s2/favicons?domain=capgemini.com&sz=128",
+    sector: "Conseil en Technologies & SI",
+    location: "Maroc",
+    description: "Centre d'excellence Nearshore en ingénierie logicielle et cloud computing.",
+  },
+  {
+    name: "CGI Maroc",
+    aliases: ["cgi casablanca", "cgi"],
+    domain: "cgi.com",
+    website: "https://www.cgi.com",
+    logoUrl: "https://www.google.com/s2/favicons?domain=cgi.com&sz=128",
+    sector: "Conseil en Technologies & Services IT",
+    location: "Maroc",
+    description: "Leader canadien et mondial des services de conseil en technologies de l'information.",
+  },
+  {
+    name: "Alten Maroc",
+    aliases: ["alten delivery center maroc", "alten"],
+    domain: "alten.com",
+    website: "https://www.alten.com",
+    logoUrl: "https://www.google.com/s2/favicons?domain=alten.com&sz=128",
+    sector: "Ingénierie & Conseil IT",
+    location: "Maroc",
+    description: "Leader mondial de l'ingénierie et du conseil en technologies.",
+  },
+  {
+    name: "Saham Group",
+    aliases: ["saham"],
+    domain: "saham.com",
+    website: "https://saham.com",
+    logoUrl: "https://icon.horse/icon/saham.com",
+    sector: "Investissement & Services",
+    location: "Maroc",
+    description: "Groupe panafricain d'investissement opérant dans l'assurance et les services.",
+  },
+
+  // ==========================================
+  // ARABIE SAOUDITE
+  // ==========================================
+  {
+    name: "Saudi Aramco",
+    aliases: ["aramco", "saudi arabian oil"],
+    domain: "aramco.com",
+    website: "https://www.aramco.com",
+    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/b/b9/Saudi_Aramco_logo_without_star.png",
+    sector: "Énergie & Pétrole",
+    location: "Arabie Saoudite",
+    description: "Compagnie nationale pétrolière et gazière d'Arabie saoudite, leader mondial.",
+  },
+  {
+    name: "STC (Saudi Telecom Company)",
+    aliases: ["stc", "saudi telecom"],
+    domain: "stc.com.sa",
+    website: "https://www.stc.com.sa",
+    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/e/e3/STC-01.svg",
+    sector: "Télécommunications",
+    location: "Arabie Saoudite",
+    description: "Leader des télécommunications et technologies numériques au Moyen-Orient.",
+  },
+  {
+    name: "Arabian Fal",
+    aliases: ["arabianfal"],
+    domain: "arabianfal.com",
+    website: "https://arabianfal.com",
+    logoUrl: "https://icon.horse/icon/arabianfal.com",
+    sector: "Maintenance Industrielle & BTP",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Al-Dawaa Medical Services",
+    aliases: ["al-dawaa", "aldawaa", "al dawaa pharmacies"],
+    domain: "aldawaa.com",
+    website: "https://www.al-dawaa.com",
+    logoUrl: "https://icon.horse/icon/al-dawaa.com",
+    sector: "Santé & Pharmacies",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Al Ojaimi Group",
+    aliases: ["alojaimi", "al ojaimi"],
+    domain: "alojaimi.com",
+    website: "https://alojaimi.com",
+    logoUrl: "https://icon.horse/icon/alojaimi.com",
+    sector: "Énergie & BTP",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Rawabi Holding",
+    aliases: ["rawabi"],
+    domain: "rawabiholding.com",
+    website: "https://rawabiholding.com",
+    logoUrl: "https://icon.horse/icon/rawabiholding.com",
+    sector: "Pétrole, Énergie & Industrie",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "dnata KSA",
+    aliases: ["dnata"],
+    domain: "dnata.com",
+    website: "https://www.dnata.com",
+    logoUrl: "https://www.google.com/s2/favicons?domain=dnata.com&sz=128",
+    sector: "Aéronautique & Logistique",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Alesayi Motors",
+    aliases: ["alesayi"],
+    domain: "alesayi-motors.com",
+    website: "https://alesayi-motors.com",
+    logoUrl: "https://icon.horse/icon/alesayi-motors.com",
+    sector: "Automobile & Transport",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Al Arayan Group",
+    aliases: ["alarayan"],
+    domain: "alarayan.com",
+    website: "https://alarayan.com",
+    logoUrl: "https://icon.horse/icon/alarayan.com",
+    sector: "Industrie & Négoce",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "McDermott KSA",
+    aliases: ["mcdermott"],
+    domain: "mcdermott.com",
+    website: "https://www.mcdermott.com",
+    logoUrl: "https://www.google.com/s2/favicons?domain=mcdermott.com&sz=128",
+    sector: "Ingénierie & Construction Maritime",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "AYTB (Al Yusr Industrial)",
+    aliases: ["aytb", "al yusr"],
+    domain: "aytb.com",
+    website: "https://aytb.com",
+    logoUrl: "https://icon.horse/icon/aytb.com",
+    sector: "Services Industriels & Maintenance",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "GTE Corp",
+    aliases: ["gtecorp"],
+    domain: "gtecorp.com",
+    website: "https://gtecorp.com",
+    logoUrl: "https://icon.horse/icon/gtecorp.com",
+    sector: "Technologies & Équipements",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "NESR (National Energy Services)",
+    aliases: ["nesr"],
+    domain: "nesr.com",
+    website: "https://nesr.com",
+    logoUrl: "https://icon.horse/icon/nesr.com",
+    sector: "Services Pétroliers & Énergie",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Farm Superstores KSA",
+    aliases: ["farm superstores", "farm stores"],
+    domain: "farm.com.sa",
+    website: "https://farm.com.sa",
+    logoUrl: "https://icon.horse/icon/farm.com.sa",
+    sector: "Distribution & Agroalimentaire",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Al Humam Law Firm",
+    aliases: ["alhumam law", "alhumam"],
+    domain: "alhumamlaw.com",
+    website: "https://alhumamlaw.com",
+    logoUrl: "https://icon.horse/icon/alhumamlaw.com",
+    sector: "Conseil Juridique & Avocats",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Gulftek Saudi",
+    aliases: ["gulftek"],
+    domain: "gulfteksaudi.com",
+    website: "https://gulfteksaudi.com",
+    logoUrl: "https://icon.horse/icon/gulfteksaudi.com",
+    sector: "Énergie & Pétrochimie",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Catcosa",
+    aliases: ["catcosa ksa"],
+    domain: "catcosa.com",
+    website: "https://catcosa.com",
+    logoUrl: "https://icon.horse/icon/catcosa.com",
+    sector: "Services Maritimes & Logistique",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Tafear Contracting",
+    aliases: ["tafear"],
+    domain: "tafear.com",
+    website: "https://tafear.com",
+    logoUrl: "https://icon.horse/icon/tafear.com",
+    sector: "BTP & Construction",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "SRACO Company",
+    aliases: ["sraco"],
+    domain: "sraco.com.sa",
+    website: "https://sraco.com.sa",
+    logoUrl: "https://icon.horse/icon/sraco.com.sa",
+    sector: "Ingénierie & Facility Management",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "A. A. Turki Corporation (ATCO)",
+    aliases: ["atco", "atco ksa"],
+    domain: "atco.com.sa",
+    website: "https://atco.com.sa",
+    logoUrl: "https://icon.horse/icon/atco.com.sa",
+    sector: "Conglomérat Industriel & Services",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Yokogawa Saudi Arabia",
+    aliases: ["yokogawa"],
+    domain: "yokogawa.com",
+    website: "https://www.yokogawa.com",
+    logoUrl: "https://www.google.com/s2/favicons?domain=yokogawa.com&sz=128",
+    sector: "Automatisation & Ingénierie",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Shade Corporation",
+    aliases: ["shadeco"],
+    domain: "shadeco.com",
+    website: "https://shadeco.com",
+    logoUrl: "https://icon.horse/icon/shadeco.com",
+    sector: "BTP & Génie Civil",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Al Kafaa",
+    aliases: ["alkafaa"],
+    domain: "alkafaa.com",
+    website: "https://alkafaa.com",
+    logoUrl: "https://icon.horse/icon/alkafaa.com",
+    sector: "Équipements & Industrie",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "KBR AMCDE Saudi",
+    aliases: ["kbr"],
+    domain: "kbr.com",
+    website: "https://www.kbr.com",
+    logoUrl: "https://www.google.com/s2/favicons?domain=kbr.com&sz=128",
+    sector: "Ingénierie & Conseil",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Batook Specialities Food",
+    aliases: ["batook"],
+    domain: "batook.com",
+    website: "https://batook.com",
+    logoUrl: "https://icon.horse/icon/batook.com",
+    sector: "Agroalimentaire",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Shawarmer",
+    aliases: ["shawarmer ksa"],
+    domain: "shawarmer.com",
+    website: "https://shawarmer.com",
+    logoUrl: "https://icon.horse/icon/shawarmer.com",
+    sector: "Restauration & Franchise",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Archirodon KSA",
+    aliases: ["archirodon"],
+    domain: "archirodon.net",
+    website: "https://archirodon.net",
+    logoUrl: "https://icon.horse/icon/archirodon.net",
+    sector: "Infrastructures & Travaux Maritimes",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Bin Ajinah Group",
+    aliases: ["bin ajinah"],
+    domain: "binajinah.com",
+    website: "https://binajinah.com",
+    logoUrl: "https://icon.horse/icon/binajinah.com",
+    sector: "Transport & Logistique",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Nesma Holding",
+    aliases: ["nesma"],
+    domain: "nesma.com",
+    website: "https://nesma.com",
+    logoUrl: "https://icon.horse/icon/nesma.com",
+    sector: "Infrastructure, BTP & Télécoms",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Abdulla Fouad Group",
+    aliases: ["abdulla fouad"],
+    domain: "abdulla-fouad.com",
+    website: "https://abdulla-fouad.com",
+    logoUrl: "https://icon.horse/icon/abdulla-fouad.com",
+    sector: "Conglomérat Commercial & Médical",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Innosoft KSA",
+    aliases: ["innosoft"],
+    domain: "innosoft.sa",
+    website: "https://innosoft.sa",
+    logoUrl: "https://icon.horse/icon/innosoft.sa",
+    sector: "Technologies & Logiciels",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Bonyan Real Estate",
+    aliases: ["bonyan"],
+    domain: "bonyan.sa",
+    website: "https://bonyan.sa",
+    logoUrl: "https://icon.horse/icon/bonyan.sa",
+    sector: "Promotion Immobilière & Construction",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "National Housing Company (NHC)",
+    aliases: ["nhc"],
+    domain: "nhc.sa",
+    website: "https://nhc.sa",
+    logoUrl: "https://icon.horse/icon/nhc.sa",
+    sector: "Immobilier & Développement Urbain",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "ARTAR Real Estate",
+    aliases: ["artar"],
+    domain: "artar.com.sa",
+    website: "https://artar.com.sa",
+    logoUrl: "https://icon.horse/icon/artar.com.sa",
+    sector: "Promotion Immobilière",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Dar Wa Emaar",
+    aliases: ["darwaemaar"],
+    domain: "darwaemaar.com",
+    website: "https://darwaemaar.com",
+    logoUrl: "https://icon.horse/icon/darwaemaar.com",
+    sector: "Immobilier & Résidences",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Al Masah Group",
+    aliases: ["almasah"],
+    domain: "almasah.net",
+    website: "https://almasah.net",
+    logoUrl: "https://icon.horse/icon/almasah.net",
+    sector: "Santé, Optique & Distribution",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Almoosa Specialist Hospital",
+    aliases: ["almoosa hospital", "almoosa"],
+    domain: "almoosahospital.com",
+    website: "https://almoosahospital.com",
+    logoUrl: "https://icon.horse/icon/almoosahospital.com",
+    sector: "Hôpital & Soins Spécialisés",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Saudi German Health (SGH Group)",
+    aliases: ["sgh group", "saudi german hospital", "sgh"],
+    domain: "sghgroup.net",
+    website: "https://sghgroup.net",
+    logoUrl: "https://icon.horse/icon/sghgroup.net",
+    sector: "Réseau Hospitalier & Santé",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Dr. Sulaiman Al Habib Medical Group",
+    aliases: ["sulaiman al habib", "al habib hospital", "drsulaiman"],
+    domain: "drsulaimanalhabib.com",
+    website: "https://drsulaimanalhabib.com",
+    logoUrl: "https://icon.horse/icon/drsulaimanalhabib.com",
+    sector: "Hôpitaux & Centres Médicaux",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Johns Hopkins Aramco Healthcare (JHAH)",
+    aliases: ["jhah", "aramco healthcare"],
+    domain: "jhah.com",
+    website: "https://jhah.com",
+    logoUrl: "https://icon.horse/icon/jhah.com",
+    sector: "Santé de Pointe & Hôpital",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Al Ahsa Hospital",
+    aliases: ["alahsa"],
+    domain: "alahsahospital.com",
+    website: "https://alahsahospital.com",
+    logoUrl: "https://icon.horse/icon/alahsahospital.com",
+    sector: "Hôpital Général & Soins",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Al Mana General Hospitals",
+    aliases: ["almana hospital", "al mana"],
+    domain: "almanahospital.com",
+    website: "https://almanahospital.com",
+    logoUrl: "https://icon.horse/icon/almanahospital.com",
+    sector: "Groupe Hospitalier",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Family Care Hospital",
+    aliases: ["family care"],
+    domain: "familycare.com",
+    website: "https://familycare.com",
+    logoUrl: "https://icon.horse/icon/familycare.com",
+    sector: "Hôpital & Soins de Proximité",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Ram Clinics",
+    aliases: ["ram"],
+    domain: "ramclinics.com",
+    website: "https://ramclinics.com",
+    logoUrl: "https://icon.horse/icon/ramclinics.com",
+    sector: "Centres Médicaux & Dentaires",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Fakeeh Care",
+    aliases: ["fakeeh"],
+    domain: "fakeeh.care",
+    website: "https://fakeeh.care",
+    logoUrl: "https://icon.horse/icon/fakeeh.care",
+    sector: "Soins de Santé & Cliniques",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Mouwasat Medical Services",
+    aliases: ["mouwasat"],
+    domain: "mouwasat.com",
+    website: "https://mouwasat.com",
+    logoUrl: "https://icon.horse/icon/mouwasat.com",
+    sector: "Hôpitaux & Santé",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Dallah Hospital",
+    aliases: ["dallah"],
+    domain: "dallah-hospital.com",
+    website: "https://dallah-hospital.com",
+    logoUrl: "https://icon.horse/icon/dallah-hospital.com",
+    sector: "Hôpital & Chirurgie",
+    location: "Arabie Saoudite",
+  },
+  {
+    name: "Al Murjan Hospital",
+    aliases: ["almurjan"],
+    domain: "almurjanhospital.com",
+    website: "https://almurjanhospital.com",
+    logoUrl: "https://icon.horse/icon/almurjanhospital.com",
+    sector: "Hôpital & Centre Médical",
+    location: "Arabie Saoudite",
+  },
+
+  // ==========================================
+  // FRANCE & GLOBAL TECH
+  // ==========================================
+  {
+    name: "Cegid",
+    aliases: ["cegid group"],
+    domain: "cegid.com",
+    website: "https://www.cegid.com",
+    logoUrl: "https://icons.duckduckgo.com/ip3/cegid.com.ico",
+    sector: "Éditeur de Logiciels de Gestion & SaaS",
+    location: "France",
+    description: "Leader des solutions de gestion cloud pour les professionnels des RH, de la finance et de la paie.",
+  },
+  {
+    name: "Capgemini",
+    aliases: ["capgemini se"],
+    domain: "capgemini.com",
+    website: "https://www.capgemini.com",
+    logoUrl: "https://www.google.com/s2/favicons?domain=capgemini.com&sz=128",
+    sector: "Conseil en Technologies & SI",
+    location: "France",
+    description: "Leader mondial de la transformation digitale, du conseil et des services technologiques.",
+  },
+  {
+    name: "Sopra Steria",
+    aliases: ["sopra", "steria"],
+    domain: "soprasteria.com",
+    website: "https://www.soprasteria.com",
+    logoUrl: "https://www.google.com/s2/favicons?domain=soprasteria.com&sz=128",
+    sector: "Services Numériques & Conseil",
+    location: "France",
+    description: "Leader européen de la tech, du conseil, des services numériques et de l'édition de logiciels.",
+  },
+  {
+    name: "Atos",
+    aliases: ["eviden", "atos se"],
+    domain: "atos.net",
+    website: "https://atos.net",
+    logoUrl: "https://www.google.com/s2/favicons?domain=atos.net&sz=128",
+    sector: "Transformation Numérique & Cloud",
+    location: "France",
+    description: "Leader international de la transformation numérique, du cloud et de la cybersécurité.",
+  },
+  {
+    name: "Thales",
+    aliases: ["thales group"],
+    domain: "thalesgroup.com",
+    website: "https://www.thalesgroup.com",
+    logoUrl: "https://www.google.com/s2/favicons?domain=thalesgroup.com&sz=128",
+    sector: "Défense, Aéronautique & Sécurité",
+    location: "France",
+    description: "Leader mondial des hautes technologies pour l'aérospatial, le transport et la sécurité.",
+  },
+  {
+    name: "Orange",
+    aliases: ["orange business", "orange sa"],
+    domain: "orange.com",
+    website: "https://www.orange.com",
+    logoUrl: "https://www.google.com/s2/favicons?domain=orange.com&sz=128",
+    sector: "Télécommunications & IT",
+    location: "France",
+    description: "L'un des principaux opérateurs de télécommunications dans le monde.",
+  },
+  {
+    name: "BNP Paribas",
+    aliases: ["bnp"],
+    domain: "group.bnpparibas",
+    website: "https://group.bnpparibas",
+    logoUrl: "https://www.google.com/s2/favicons?domain=group.bnpparibas&sz=128",
+    sector: "Banque & Finance",
+    location: "France",
+    description: "Première banque de l'Union européenne et acteur bancaire international de premier plan.",
+  },
+  {
+    name: "Société Générale",
+    aliases: ["socgen", "societe generale"],
+    domain: "societegenerale.com",
+    website: "https://www.societegenerale.com",
+    logoUrl: "https://www.google.com/s2/favicons?domain=societegenerale.com&sz=128",
+    sector: "Banque & Finance",
+    location: "France",
+  },
+  {
+    name: "TotalEnergies",
+    aliases: ["total", "total energies"],
+    domain: "totalenergies.com",
+    website: "https://totalenergies.com",
+    logoUrl: "https://www.google.com/s2/favicons?domain=totalenergies.com&sz=128",
+    sector: "Énergie & Pétrole",
+    location: "France",
+  },
+  {
+    name: "Devoteam",
+    aliases: ["devoteam group"],
+    domain: "devoteam.com",
+    website: "https://www.devoteam.com",
+    logoUrl: "https://www.google.com/s2/favicons?domain=devoteam.com&sz=128",
+    sector: "Conseil en Stratégie Digitale & Cloud",
+    location: "France",
+  },
+  {
+    name: "Google",
+    aliases: ["alphabet"],
+    domain: "google.com",
+    website: "https://www.google.com",
+    logoUrl: "https://www.google.com/s2/favicons?domain=google.com&sz=128",
+    sector: "Technologies & Moteurs de recherche",
+    location: "International",
+  },
+  {
+    name: "Microsoft",
+    aliases: ["msft"],
+    domain: "microsoft.com",
+    website: "https://www.microsoft.com",
+    logoUrl: "https://www.google.com/s2/favicons?domain=microsoft.com&sz=128",
+    sector: "Logiciels, Cloud & IA",
+    location: "International",
+  },
+  {
+    name: "Amazon",
+    aliases: ["aws", "amazon web services"],
+    domain: "amazon.com",
+    website: "https://www.amazon.com",
+    logoUrl: "https://www.google.com/s2/favicons?domain=amazon.com&sz=128",
+    sector: "E-Commerce & Cloud Computing",
+    location: "International",
+  },
+  {
+    name: "Apple",
+    domain: "apple.com",
+    website: "https://www.apple.com",
+    logoUrl: "https://www.google.com/s2/favicons?domain=apple.com&sz=128",
+    sector: "Matériel informatique & Services",
+    location: "International",
+  },
+  {
+    name: "Meta",
+    aliases: ["facebook"],
+    domain: "meta.com",
+    website: "https://about.meta.com",
+    logoUrl: "https://www.google.com/s2/favicons?domain=meta.com&sz=128",
+    sector: "Réseaux Sociaux & Métavers",
+    location: "International",
+  },
+];
+
+/**
+ * Normalizes a company name for fuzzy searching and matching.
+ */
+function normalizeName(str: string): string {
+  return str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "")
+    .trim();
+}
+
+/**
+ * Searches the curated directory for matching companies.
+ */
+export function searchKnownCompanies(query: string, limit = 8): KnownCompany[] {
+  const cleanQ = normalizeName(query);
+  if (!cleanQ || cleanQ.length < 2) return [];
+
+  const matches: { company: KnownCompany; score: number }[] = [];
+
+  for (const comp of KNOWN_COMPANIES) {
+    const compNorm = normalizeName(comp.name);
+    const domainNorm = comp.domain.toLowerCase();
+
+    let score = 0;
+    if (compNorm === cleanQ || domainNorm === cleanQ) {
+      score = 100;
+    } else if (compNorm.startsWith(cleanQ)) {
+      score = 80;
+    } else if (compNorm.includes(cleanQ)) {
+      score = 60;
+    } else if (domainNorm.includes(cleanQ)) {
+      score = 50;
+    } else if (
+      comp.aliases?.some((a) => {
+        const aNorm = normalizeName(a);
+        return aNorm.includes(cleanQ) || cleanQ.includes(aNorm);
+      })
+    ) {
+      score = 40;
+    }
+
+    if (score > 0) {
+      matches.push({ company: comp, score });
+    }
+  }
+
+  return matches
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map((m) => m.company);
+}
+
+/**
+ * Looks up a verified logo for a company by name or domain.
+ */
+export function lookupKnownCompanyLogo(
+  name?: string | null,
+  domain?: string | null,
+): string | null {
+  if (!name && !domain) return null;
+
+  const cleanDomain = domain?.trim().toLowerCase().replace(/^www\./, "");
+  const cleanName = name ? normalizeName(name) : "";
+
+  for (const comp of KNOWN_COMPANIES) {
+    if (cleanDomain && comp.domain.toLowerCase() === cleanDomain) {
+      return comp.logoUrl;
+    }
+    if (cleanName) {
+      if (normalizeName(comp.name) === cleanName) return comp.logoUrl;
+      if (comp.aliases?.some((a) => normalizeName(a) === cleanName)) {
+        return comp.logoUrl;
+      }
+    }
+  }
+
+  return null;
+}

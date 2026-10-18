@@ -1,7 +1,9 @@
 import {
-  duckduckgoIconUrl,
   extractBestIconUrl,
+  googleFaviconUrl,
+  iconHorseUrl,
   logoDevUrl,
+  lookupKnownCompanyLogo,
   normalizeDomain,
 } from "./logo";
 
@@ -41,9 +43,15 @@ async function probeImage(url: string, timeoutMs = 4000): Promise<boolean> {
 }
 
 async function scrapeSiteIcon(domain: string): Promise<string | null> {
-  for (const scheme of ["https", "http"]) {
-    const origin = `${scheme}://${domain}`;
-    const response = await fetchWithTimeout(origin, 5000);
+  const origins = [
+    `https://www.${domain}`,
+    `https://${domain}`,
+    `http://www.${domain}`,
+    `http://${domain}`,
+  ];
+
+  for (const origin of origins) {
+    const response = await fetchWithTimeout(origin, 4000);
     if (!response || !response.ok) continue;
     const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
     if (!contentType.includes("html")) {
@@ -75,27 +83,52 @@ export async function resolveLogoForDomain(
 
   let resolved: string | null = null;
 
-  const logodev = logoDevUrl(domain);
-  if (logodev && (await probeImage(logodev))) {
-    resolved = logodev;
+  // 1. Curated built-in known company directory (0 network cost, instant verified logo)
+  const curated = lookupKnownCompanyLogo(null, domain);
+  if (curated) {
+    resolved = curated;
   }
 
+  // 2. Logo.dev if token configured
+  if (!resolved) {
+    const logodev = logoDevUrl(domain);
+    if (logodev && (await probeImage(logodev))) {
+      resolved = logodev;
+    }
+  }
+
+  // 3. Google S2 High-Res Favicon (100% Free, 0-API-Key)
+  if (!resolved) {
+    const googleS2 = googleFaviconUrl(domain, 128);
+    if (await probeImage(googleS2)) {
+      resolved = googleS2;
+    }
+  }
+
+  // 4. Icon Horse CDN (100% Free, 0-API-Key)
+  if (!resolved) {
+    const iconHorse = iconHorseUrl(domain);
+    if (await probeImage(iconHorse)) {
+      resolved = iconHorse;
+    }
+  }
+
+  // 5. Direct HTML Scraping for apple-touch-icon and high-res vector logos
   if (!resolved && !options?.quickOnly) {
     resolved = await scrapeSiteIcon(domain);
   }
 
-  if (!resolved) {
-    const ddg = duckduckgoIconUrl(domain);
-    if (await probeImage(ddg)) resolved = ddg;
-  }
-
+  // 6. Root favicon.ico fallback
   if (!resolved && !options?.quickOnly) {
-    for (const scheme of ["https", "http"]) {
-      const rootFavicon = `${scheme}://${domain}/favicon.ico`;
-      if (await probeImage(rootFavicon)) {
-        resolved = rootFavicon;
-        break;
+    for (const host of [`www.${domain}`, domain]) {
+      for (const scheme of ["https", "http"]) {
+        const rootFavicon = `${scheme}://${host}/favicon.ico`;
+        if (await probeImage(rootFavicon)) {
+          resolved = rootFavicon;
+          break;
+        }
       }
+      if (resolved) break;
     }
   }
 

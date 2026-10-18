@@ -4,7 +4,15 @@ import { useState } from "react";
 import { Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { initialsOf } from "@/lib/tracker/format";
-import { domainFromWebsite, duckduckgoIconUrl, logoDevUrl } from "@/lib/tracker/logo";
+import {
+  domainFromWebsite,
+  getCompanyBrandGradient,
+  googleFaviconUrl,
+  iconHorseUrl,
+  logoDevUrl,
+  lookupKnownCompanyLogo,
+  unavatarUrl,
+} from "@/lib/tracker/logo";
 
 interface CompanyLogoProps {
   name: string;
@@ -22,12 +30,35 @@ export default function CompanyLogo({
   className,
 }: CompanyLogoProps) {
   const resolvedDomain = domain ?? domainFromWebsite(website);
+
   const sources: string[] = [];
-  if (logoUrl) sources.push(logoUrl);
+
+  // 1. Check curated high-resolution company directory first (Maroc, Saudi, France, Global)
+  const knownLogo = lookupKnownCompanyLogo(name, resolvedDomain);
+  if (knownLogo) sources.push(knownLogo);
+
+  // 2. Custom logo URL passed as prop
+  if (logoUrl && !sources.includes(logoUrl)) {
+    sources.push(logoUrl);
+  }
+
+  // 3. Domain-based resolution cascade (100% free, 0 API key)
   if (resolvedDomain) {
+    // If user configured a valid logo.dev token
     const logodev = logoDevUrl(resolvedDomain);
-    if (logodev) sources.push(logodev);
-    sources.push(duckduckgoIconUrl(resolvedDomain));
+    if (logodev && !sources.includes(logodev)) sources.push(logodev);
+
+    // Google S2 Favicon (High-res 128px, free, clean 404 response on miss)
+    const googleS2 = googleFaviconUrl(resolvedDomain, 128);
+    if (!sources.includes(googleS2)) sources.push(googleS2);
+
+    // Icon Horse CDN (Free, extracts real high-res site icons)
+    const iconHorse = iconHorseUrl(resolvedDomain);
+    if (!sources.includes(iconHorse)) sources.push(iconHorse);
+
+    // Unavatar CDN (Free multi-provider fallback)
+    const unavatar = unavatarUrl(resolvedDomain);
+    if (!sources.includes(unavatar)) sources.push(unavatar);
   }
 
   const sourcesKey = sources.join("|");
@@ -47,7 +78,7 @@ export default function CompanyLogo({
         alt={`${name} logo`}
         className={cn(
           sizeClass,
-          "shrink-0 rounded-md border border-gray-200 bg-white object-contain p-1",
+          "shrink-0 rounded-lg border border-gray-200/80 bg-white object-contain p-1 shadow-sm transition-transform hover:scale-105",
         )}
         onError={() =>
           setState((current) =>
@@ -60,21 +91,27 @@ export default function CompanyLogo({
     );
   }
 
+  // Premium Branded Gradient Avatar for companies without logos
+  const brand = getCompanyBrandGradient(name);
+
   return (
     <div
       className={cn(
         sizeClass,
-        "flex shrink-0 items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-gray-400",
+        "relative flex shrink-0 items-center justify-center rounded-lg bg-gradient-to-br shadow-sm transition-transform hover:scale-105 ring-1 ring-inset",
+        brand.bg,
+        brand.ring,
       )}
       title={name}
     >
       {name ? (
-        <span className="text-[11px] font-semibold text-gray-600">
+        <span className={cn("text-[11px] font-bold tracking-tight", brand.text)}>
           {initialsOf(name)}
         </span>
       ) : (
-        <Building2 className="h-4 w-4" />
+        <Building2 className="h-4 w-4 text-white/90" />
       )}
+      <div className="absolute inset-0 rounded-lg bg-white/10 opacity-0 hover:opacity-100 transition-opacity" />
     </div>
   );
 }
