@@ -197,11 +197,11 @@ export default function InteractiveDashboardCharts({
   // 3. Channels Distribution
   const channelBreakdown = useMemo(() => {
     const channels = [
-      { name: "Direct Dispatch (SMTP)", count: Math.round(totalCount * 0.42) || 26, pct: 42, color: "#ff5722" },
-      { name: "Carrier Portal", count: Math.round(totalCount * 0.28) || 17, pct: 28, color: "#3b82f6" },
-      { name: "Freight API", count: Math.round(totalCount * 0.16) || 10, pct: 16, color: "#10b981" },
-      { name: "LinkedIn Sync", count: Math.round(totalCount * 0.10) || 6, pct: 10, color: "#0ea5e9" },
-      { name: "Internal Queue (n8n)", count: Math.round(totalCount * 0.04) || 2, pct: 4, color: "#8b5cf6" },
+      { name: "Candidature Directe RH (Email / SMTP)", count: Math.round(totalCount * 0.45) || 28, pct: 45, color: "#ff5722" },
+      { name: "LinkedIn & Réseaux Pro", count: Math.round(totalCount * 0.25) || 16, pct: 25, color: "#0ea5e9" },
+      { name: "Portails Recruteurs & ESN", count: Math.round(totalCount * 0.15) || 9, pct: 15, color: "#3b82f6" },
+      { name: "Cabinets & Chasseurs de Têtes", count: Math.round(totalCount * 0.10) || 6, pct: 10, color: "#10b981" },
+      { name: "Workflow Automatisé (n8n)", count: Math.round(totalCount * 0.05) || 3, pct: 5, color: "#8b5cf6" },
     ];
     return channels;
   }, [totalCount]);
@@ -700,10 +700,10 @@ export default function InteractiveDashboardCharts({
                 </span>
                 <div>
                   <h3 className="text-sm font-bold text-gray-900">
-                    Canaux de Dispatch & Intégrations
+                    Canaux de Prospection & Prises de Contact
                   </h3>
                   <p className="text-[11px] text-gray-500">
-                    Répartition des soumissions par connecteur et flux SMTP
+                    Répartition des soumissions par canal de contact et flux de candidature
                   </p>
                 </div>
               </div>
@@ -744,8 +744,8 @@ export default function InteractiveDashboardCharts({
             <div className="flex items-center gap-2.5">
               <Flame className="h-4 w-4 text-[#ff5722] shrink-0" />
               <p className="text-gray-700">
-                <span className="font-bold text-gray-900">Direct Dispatch</span> génère{" "}
-                <span className="font-semibold text-[#ff5722]">42%</span> de vos envois avec un taux de délivrabilité de{" "}
+                <span className="font-bold text-gray-900">L&apos;envoi direct RH</span> génère{" "}
+                <span className="font-semibold text-[#ff5722]">45%</span> de vos contacts avec un taux de délivrabilité de{" "}
                 <span className="font-semibold text-emerald-600">100%</span>.
               </p>
             </div>

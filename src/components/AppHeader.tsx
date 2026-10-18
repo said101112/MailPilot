@@ -57,12 +57,16 @@ export default function AppHeader() {
     const fetchUser = async () => {
       const { data } = await supabase.auth.getUser();
       if (data?.user) {
-        const name =
-          data.user.user_metadata?.full_name ||
-          data.user.email?.split("@")[0] ||
-          readCandidateName();
-        const formattedName = name.charAt(0).toUpperCase() + name.slice(1);
-        setCandidateName(formattedName);
+        let name = data.user.user_metadata?.full_name;
+        if (!name) {
+          const local = (data.user.email?.split("@")[0] || "").toLowerCase();
+          if (local.includes("nichan") || local.includes("said")) {
+            name = "Said Nichan";
+          } else {
+            name = readCandidateName();
+          }
+        }
+        setCandidateName(name);
       } else {
         setCandidateName(readCandidateName());
       }

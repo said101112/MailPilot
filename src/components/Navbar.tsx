@@ -130,12 +130,16 @@ export default function Navbar() {
     const syncProfile = async () => {
       const { data } = await supabase.auth.getUser();
       if (data?.user) {
-        const name =
-          data.user.user_metadata?.full_name ||
-          data.user.email?.split("@")[0] ||
-          readCandidateName();
-        const formatted = name.charAt(0).toUpperCase() + name.slice(1);
-        setCandidateName(formatted);
+        let name = data.user.user_metadata?.full_name;
+        if (!name) {
+          const local = (data.user.email?.split("@")[0] || "").toLowerCase();
+          if (local.includes("nichan") || local.includes("said")) {
+            name = "Said Nichan";
+          } else {
+            name = readCandidateName();
+          }
+        }
+        setCandidateName(name);
       } else {
         setCandidateName(readCandidateName());
       }
