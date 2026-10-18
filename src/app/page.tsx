@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { readCandidateName } from "@/lib/workspace";
+import InteractiveDashboardCharts from "@/components/dashboard/InteractiveDashboardCharts";
 
 interface ActivityItem {
   id: string;
@@ -63,6 +64,7 @@ export default function Home() {
   const [applicationCount, setApplicationCount] = useState(0);
   const [successRate, setSuccessRate] = useState(100);
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
+  const [allApplications, setAllApplications] = useState<ActivityItem[]>([]);
   const [queueCount, setQueueCount] = useState(0);
   const [processingCount, setProcessingCount] = useState(0);
 
@@ -84,15 +86,20 @@ export default function Home() {
     }
 
     async function fetchDashboardData() {
-      const [recentResponse, statusResponse] = await Promise.all([
+      const [recentResponse, statusResponse, allAppsResponse] = await Promise.all([
         supabase
           .from("applications")
           .select("id, company, position, email, status, created_at", {
             count: "exact",
           })
           .order("created_at", { ascending: false })
-          .limit(5),
+          .limit(8),
         supabase.from("applications").select("status"),
+        supabase
+          .from("applications")
+          .select("id, company, position, email, status, created_at")
+          .order("created_at", { ascending: false })
+          .limit(300),
       ]);
 
       if (!recentResponse.error) {
@@ -100,6 +107,10 @@ export default function Home() {
         if (recentResponse.data && recentResponse.data.length > 0) {
           setRecentActivity(recentResponse.data);
         }
+      }
+
+      if (!allAppsResponse.error && allAppsResponse.data) {
+        setAllApplications(allAppsResponse.data);
       }
 
       if (
@@ -231,6 +242,13 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* 2.5. Interactive Statistics & Graphs (Timeline, Delivery Health Donut, Channels) */}
+      <InteractiveDashboardCharts
+        applications={allApplications}
+        totalCount={applicationCount}
+        successRate={successRate}
+      />
 
       {/* 3. Middle Section: Real Project Data (Recent Applications & Quick Actions) */}
       <div className="mb-10 grid grid-cols-1 gap-6 lg:grid-cols-3">
