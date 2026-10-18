@@ -11,7 +11,7 @@ export default function BrandLogo({
   compact = false,
 }: BrandLogoProps) {
   return (
-    <div className={cn("flex items-center gap-2.5", className)}>
+    <div className={cn("flex items-center gap-2 sm:gap-2.5 min-w-0 shrink-0", className)}>
       {/* Modern Email Automation Logo Mark */}
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#ff5722] text-white shadow-xs">
         <svg

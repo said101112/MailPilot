@@ -137,32 +137,32 @@ export default function FollowUpsPage() {
   }
 
   const renderRow = (row: FollowUpRow) => (
-    <div key={row.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
-      <div className="flex min-w-0 items-center gap-3">
+    <div key={row.id} className="flex flex-wrap items-center justify-between gap-3 p-3.5 sm:px-5 sm:py-3">
+      <div className="flex min-w-0 items-center gap-3 flex-1">
         <CompanyLogo
           name={row.application?.company?.name ?? "?"}
           logoUrl={row.application?.company?.logo_url}
-          className="h-9 w-9"
+          className="h-9 w-9 shrink-0"
         />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <Link
             href={`/tracker/applications/${row.application_id}`}
-            className="truncate text-xs font-semibold text-gray-900 hover:text-[#ff5722]"
+            className="truncate block text-xs font-semibold text-gray-900 hover:text-[#ff5722]"
           >
             {row.application?.company?.name ?? "—"} · {row.application?.position ?? ""}
           </Link>
-          <p className="text-[11px] text-gray-500">
+          <p className="text-[11px] text-gray-500 truncate">
             {formatDate(row.due_date)}
             {row.channel ? ` · ${CHANNEL_LABELS[row.channel] ?? row.channel}` : ""}
             {row.contact?.full_name ? ` · ${row.contact.full_name}` : ""}
           </p>
-          {row.reason && <p className="mt-0.5 text-[11px] text-gray-500">{row.reason}</p>}
+          {row.reason && <p className="mt-0.5 text-[11px] text-gray-500 truncate">{row.reason}</p>}
         </div>
       </div>
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5 flex-wrap w-full sm:w-auto justify-end">
         <button
           type="button"
-          className="editorial-button-primary h-8 px-3 text-xs"
+          className="editorial-button-primary h-8 px-3 text-xs flex-1 sm:flex-initial"
           onClick={() => void complete(row)}
         >
           <Check className="mr-1 inline h-3.5 w-3.5" />
@@ -170,7 +170,7 @@ export default function FollowUpsPage() {
         </button>
         <button
           type="button"
-          className="editorial-button-secondary h-8 px-3 text-xs"
+          className="editorial-button-secondary h-8 px-3 text-xs flex-1 sm:flex-initial"
           onClick={() => {
             setEditing(row);
             setModalOpen(true);
@@ -180,7 +180,7 @@ export default function FollowUpsPage() {
         </button>
         <button
           type="button"
-          className="editorial-button-secondary h-8 px-3 text-xs"
+          className="editorial-button-secondary h-8 px-2.5 sm:px-3 text-xs"
           onClick={() => void cancel(row)}
           title="Annuler"
         >
@@ -212,7 +212,7 @@ export default function FollowUpsPage() {
         </div>
         <button
           type="button"
-          className="editorial-button-primary h-8 px-3 text-xs"
+          className="editorial-button-primary h-8 px-3 text-xs w-full sm:w-auto"
           onClick={() => {
             setEditing(null);
             setPreselectAppId(null);

@@ -152,7 +152,8 @@ export default function ContactsPage() {
         </div>
       ) : (
         <div className="mt-4 rounded-lg border border-gray-200 bg-white">
-          <div className="overflow-x-auto">
+          {/* Desktop Table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="min-w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/75 text-[11px] font-semibold text-gray-500">
@@ -258,6 +259,91 @@ export default function ContactsPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Cards (Shown on mobile screens < md) */}
+          <div className="md:hidden divide-y divide-gray-100">
+            {filtered.map((contact) => (
+              <div key={contact.id} className="p-3.5 space-y-2.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-xs text-gray-900">{contact.full_name}</p>
+                    <p className="text-[11px] text-gray-500">{contact.role ?? "Contact recruteur"}</p>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      className="editorial-icon-button h-7 w-7"
+                      title="Modifier"
+                      onClick={() => {
+                        setEditing(contact);
+                        setModalOpen(true);
+                      }}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      className="editorial-icon-button h-7 w-7 text-red-500"
+                      title="Supprimer"
+                      onClick={() => void handleDelete(contact)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {contact.company && (
+                  <Link
+                    href={`/tracker/companies/${contact.company.id}`}
+                    className="flex items-center gap-2 text-xs font-medium text-gray-700 hover:text-[#ff5722]"
+                  >
+                    <CompanyLogo
+                      name={contact.company.name}
+                      logoUrl={contact.company.logo_url}
+                      className="h-5 w-5 shrink-0"
+                    />
+                    <span className="truncate">{contact.company.name}</span>
+                  </Link>
+                )}
+
+                <div className="flex items-center justify-between pt-1 border-t border-gray-50 text-[11px]">
+                  <div className="flex items-center gap-1.5">
+                    {contact.email && (
+                      <a href={`mailto:${contact.email}`} className="editorial-icon-button h-7 w-7" title={contact.email}>
+                        <Mail className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                    {contact.phone && (
+                      <a href={`tel:${contact.phone}`} className="editorial-icon-button h-7 w-7" title={contact.phone}>
+                        <Phone className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                    {contact.linkedin_url && (
+                      <a href={contact.linkedin_url} target="_blank" rel="noreferrer" className="editorial-icon-button h-7 w-7" title="LinkedIn">
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                    {contact.whatsapp && (
+                      <a
+                        href={`https://wa.me/${contact.whatsapp.replace(/\D/g, "")}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="editorial-icon-button h-7 w-7"
+                        title="WhatsApp"
+                      >
+                        <MessageSquare className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                  </div>
+                  {contact.next_action && (
+                    <span className="text-[10.5px] text-amber-600 font-medium truncate max-w-[140px]">
+                      {contact.next_action}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

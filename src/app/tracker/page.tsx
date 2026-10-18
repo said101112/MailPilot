@@ -92,14 +92,14 @@ function StatCard({
 function BarRow({ label, value, max, suffix }: { label: string; value: number; max: number; suffix?: string }) {
   const width = max > 0 ? Math.max(4, Math.round((value / max) * 100)) : 0;
   return (
-    <div className="flex items-center gap-3">
-      <span className="w-36 shrink-0 truncate text-[11px] text-gray-600" title={label}>
+    <div className="flex items-center gap-2 sm:gap-3">
+      <span className="w-24 sm:w-36 shrink-0 truncate text-[11px] text-gray-600" title={label}>
         {label}
       </span>
       <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
         <div className="h-full rounded-full bg-[#ff5722]" style={{ width: `${width}%` }} />
       </div>
-      <span className="w-12 shrink-0 text-right text-[11px] font-semibold text-gray-700">
+      <span className="w-10 sm:w-12 shrink-0 text-right text-[11px] font-semibold text-gray-700">
         {value}
         {suffix}
       </span>

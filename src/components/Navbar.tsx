@@ -199,12 +199,13 @@ export default function Navbar() {
   return (
     <>
       {/* Mobile Top Navbar */}
-      <div className="fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between border-b border-gray-200 bg-white px-4 lg:hidden">
+      <div className="fixed inset-x-0 top-0 z-40 flex h-14 w-full max-w-full items-center justify-between border-b border-gray-200 bg-white px-3 sm:px-4 lg:hidden">
         <BrandLogo />
         <button
-          className="flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50 active:bg-gray-100"
           onClick={() => setMobileOpen((value) => !value)}
           type="button"
+          aria-label="Menu"
         >
           {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
         </button>
@@ -221,8 +222,8 @@ export default function Navbar() {
       {/* Mobile Drawer */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-60 flex-col border-r border-gray-200 bg-white px-3 pb-4 pt-4 transition-transform duration-200 lg:hidden",
-          mobileOpen ? "translate-x-0" : "-translate-x-full",
+          "fixed inset-y-0 left-0 z-50 flex w-60 max-w-[80vw] flex-col border-r border-gray-200 bg-white px-3 pb-4 pt-4 transition-transform duration-200 lg:hidden shadow-xl",
+          mobileOpen ? "translate-x-0" : "-translate-x-full pointer-events-none",
         )}
       >
         <div className="flex items-center justify-between px-2">

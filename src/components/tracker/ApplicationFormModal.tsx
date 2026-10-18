@@ -222,7 +222,7 @@ export default function ApplicationFormModal({
           <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden">
             <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 space-y-5">
               {!isEdit && onOpenSmartPaste && (
-                <div className="flex items-center justify-between rounded-lg border border-[#ff5722]/20 bg-[#fff3ef] p-3 text-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-lg border border-[#ff5722]/20 bg-[#fff3ef] p-3 text-xs">
                   <div className="flex items-center gap-2">
                     <Sparkles className="h-4 w-4 text-[#ff5722] shrink-0" />
                     <span className="text-gray-700">
@@ -235,7 +235,7 @@ export default function ApplicationFormModal({
                       onClose();
                       onOpenSmartPaste();
                     }}
-                    className="font-semibold text-[#ff5722] hover:underline"
+                    className="font-semibold text-[#ff5722] hover:underline text-left sm:text-right shrink-0"
                   >
                     ⚡ Remplir automatiquement par texte
                   </button>

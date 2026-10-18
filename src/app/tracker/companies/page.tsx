@@ -90,16 +90,16 @@ export default function CompaniesPage() {
 
   return (
     <div className="page-shell">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">Entreprises</h1>
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-0.5 text-xs text-gray-500">
             {companies.length} entreprise(s) · logos, contacts et candidatures centralisés.
           </p>
         </div>
         <button
           type="button"
-          className="editorial-button-primary h-8 px-3 text-xs"
+          className="editorial-button-primary h-8 px-3 text-xs w-full sm:w-auto flex items-center justify-center self-start sm:self-auto shrink-0"
           onClick={() => {
             setEditing(null);
             setModalOpen(true);
@@ -110,11 +110,11 @@ export default function CompaniesPage() {
         </button>
       </div>
 
-      <div className="mt-5 rounded-lg border border-gray-200 bg-white px-5 py-3">
-        <div className="relative max-w-sm">
+      <div className="mt-4 rounded-lg border border-gray-200 bg-white p-2.5 sm:px-5 sm:py-3">
+        <div className="relative w-full max-w-sm">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
           <input
-            className="editorial-input w-full pl-9"
+            className="editorial-input w-full pl-9 text-xs"
             placeholder="Rechercher une entreprise..."
             value={search}
             onChange={(event) => setSearch(event.target.value)}
@@ -140,25 +140,25 @@ export default function CompaniesPage() {
           />
         </div>
       ) : (
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((company) => {
             const stats = statsByCompany.get(company.id) ?? { total: 0, active: 0 };
             return (
               <Link
                 key={company.id}
                 href={`/tracker/companies/${company.id}`}
-                className="rounded-lg border border-gray-200 bg-white p-4 transition-colors hover:border-[#ff5722]"
+                className="group block min-w-0 w-full rounded-lg border border-gray-200 bg-white p-3.5 sm:p-4 transition-colors hover:border-[#ff5722]"
               >
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-2.5 sm:gap-3 min-w-0">
                   <CompanyLogo
                     name={company.name}
                     logoUrl={company.logo_url}
                     domain={company.domain}
                     website={company.website}
-                    className="h-11 w-11"
+                    className="h-10 w-10 sm:h-11 sm:w-11 shrink-0"
                   />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-gray-900">{company.name}</p>
+                  <div className="min-w-0 flex-1 overflow-hidden">
+                    <p className="truncate text-sm font-semibold text-gray-900 group-hover:text-[#ff5722] transition-colors">{company.name}</p>
                     <p className="truncate text-[11px] text-gray-500">
                       {[company.sector, company.location].filter(Boolean).join(" · ") ||
                         company.website ||
@@ -167,21 +167,23 @@ export default function CompaniesPage() {
                   </div>
                 </div>
                 {company.description && (
-                  <p className="mt-2 line-clamp-2 text-[11px] leading-relaxed text-gray-500">
+                  <p className="mt-2 line-clamp-2 text-[11px] leading-relaxed text-gray-500 break-words">
                     {company.description}
                   </p>
                 )}
-                <div className="mt-3 flex items-center gap-4 border-t border-gray-100 pt-3 text-[11px] text-gray-500">
-                  <span className="flex items-center gap-1">
-                    <Building2 className="h-3 w-3" />
-                    {stats.total} candidature(s)
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Users className="h-3 w-3" />
-                    {contactsCount[company.id] ?? 0} contact(s)
-                  </span>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-2.5 text-[11px] text-gray-500">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="flex items-center gap-1 shrink-0">
+                      <Building2 className="h-3 w-3 text-gray-400" />
+                      {stats.total} candidature(s)
+                    </span>
+                    <span className="flex items-center gap-1 shrink-0">
+                      <Users className="h-3 w-3 text-gray-400" />
+                      {contactsCount[company.id] ?? 0} contact(s)
+                    </span>
+                  </div>
                   {stats.active > 0 && (
-                    <span className="ml-auto rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700">
+                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700 shrink-0">
                       {stats.active} en cours
                     </span>
                   )}

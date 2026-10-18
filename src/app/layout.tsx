@@ -24,11 +24,11 @@ export default function RootLayout({
         suppressHydrationWarning
         className={`${inter.variable} min-h-screen bg-[var(--editorial-background)] antialiased`}
       >
-        <div className="flex min-h-screen">
+        <div className="flex min-h-screen w-full max-w-full overflow-x-hidden">
           <Navbar />
-          <main className="flex min-h-screen min-w-0 flex-1 flex-col bg-[var(--editorial-background)] pt-14 lg:pt-0">
+          <main className="flex min-h-screen min-w-0 w-full max-w-full flex-1 flex-col bg-[var(--editorial-background)] pt-14 lg:pt-0 overflow-x-hidden">
             <AppHeader />
-            <div className="min-w-0 flex-1">{children}</div>
+            <div className="min-w-0 w-full max-w-full flex-1 overflow-x-hidden">{children}</div>
           </main>
         </div>
         <Toaster position="bottom-right" richColors />
