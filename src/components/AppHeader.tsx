@@ -6,6 +6,8 @@ import {
   Bell,
   CircleHelp,
   LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
   Settings,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -13,7 +15,10 @@ import { PROFILE_DEFAULT_NAME } from "@/lib/brand";
 import { supabase } from "@/lib/supabase";
 import {
   WORKSPACE_PROFILE_EVENT,
+  WORKSPACE_SIDEBAR_EVENT,
   readCandidateName,
+  readSidebarCollapsed,
+  toggleSidebarCollapsed,
 } from "@/lib/workspace";
 
 const pageTitles: Record<string, string> = {
@@ -45,6 +50,7 @@ export default function AppHeader() {
   const pathname = usePathname();
   const [candidateName, setCandidateName] = useState(PROFILE_DEFAULT_NAME);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const title = useMemo(() => resolvePageTitle(pathname), [pathname]);
 
@@ -52,6 +58,18 @@ export default function AppHeader() {
     const parts = candidateName.trim().split(/\s+/).filter(Boolean);
     return ((parts[0]?.[0] ?? "S") + (parts[1]?.[0] ?? "N")).toUpperCase();
   }, [candidateName]);
+
+  useEffect(() => {
+    const syncSidebar = () => setIsSidebarCollapsed(readSidebarCollapsed());
+    syncSidebar();
+    window.addEventListener(WORKSPACE_SIDEBAR_EVENT, syncSidebar);
+    window.addEventListener("storage", syncSidebar);
+
+    return () => {
+      window.removeEventListener(WORKSPACE_SIDEBAR_EVENT, syncSidebar);
+      window.removeEventListener("storage", syncSidebar);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -89,8 +107,23 @@ export default function AppHeader() {
   return (
     <header className="hidden lg:block shrink-0 sticky top-0 z-30 border-b border-gray-200 bg-white">
       <div className="mx-auto flex h-14 w-full items-center justify-between px-6">
-        {/* Hunter style: Simple clean Page Title */}
-        <h1 className="text-base font-semibold text-gray-900">{title}</h1>
+        {/* Left: Professional Sidebar Collapse Toggle + Page Title */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => toggleSidebarCollapsed()}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-900 shadow-2xs transition cursor-pointer"
+            title={isSidebarCollapsed ? "Ouvrir la barre latérale" : "Réduire la barre latérale"}
+            type="button"
+          >
+            {isSidebarCollapsed ? (
+              <PanelLeftOpen className="h-4 w-4 text-gray-700" />
+            ) : (
+              <PanelLeftClose className="h-4 w-4 text-gray-700" />
+            )}
+          </button>
+          <div className="h-4 w-px bg-gray-200" />
+          <h1 className="text-base font-semibold text-gray-900">{title}</h1>
+        </div>
 
         {/* Right actions: Subtle utilities matching Hunter */}
         <div className="flex items-center gap-3">

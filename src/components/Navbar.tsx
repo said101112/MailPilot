@@ -307,30 +307,10 @@ export default function Navbar() {
         {/* Logo area */}
         <div className={cn("px-4 pt-4 pb-4", isCollapsed && "px-2")}>
           <div className="flex items-center justify-between">
-            <Link href="/" title="RoutePilot">
+            <Link href="/" title="MailPilot">
               <BrandLogo compact={isCollapsed} />
             </Link>
-            {!isCollapsed && (
-              <button
-                className="flex h-6 w-6 items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-                onClick={() => toggleSidebarCollapsed()}
-                title="Collapse sidebar"
-                type="button"
-              >
-                <ChevronLeft className="h-3.5 w-3.5" />
-              </button>
-            )}
           </div>
-          {isCollapsed && (
-            <button
-              className="mt-3 flex h-7 w-full items-center justify-center rounded-md text-gray-400 hover:bg-gray-100"
-              onClick={() => toggleSidebarCollapsed()}
-              title="Expand sidebar"
-              type="button"
-            >
-              <ChevronRight className="h-3.5 w-3.5" />
-            </button>
-          )}
         </div>
 
         {/* Navigation Sections */}
