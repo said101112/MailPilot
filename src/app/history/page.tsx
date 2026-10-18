@@ -108,6 +108,8 @@ export default function HistoryPage() {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       void fetchHistory();
+      // Auto-trigger background liaison so user never has to click manually
+      void syncAllHistoryApplications().catch(() => undefined);
     }, 0);
 
     return () => {

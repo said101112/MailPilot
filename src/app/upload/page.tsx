@@ -40,6 +40,7 @@ import { readCandidateName, readStoredCv } from "@/lib/workspace";
 import CvUploadCard from "@/components/CvUploadCard";
 import {
   syncEmailDispatchToTracker,
+  syncAllHistoryApplications,
   inferCompanyFromEmail,
 } from "@/lib/tracker/syncService";
 
@@ -559,6 +560,19 @@ export default function UploadPage() {
       toast.warning(`Queue completed: ${successCount} drafts created, ${failCount} failed.`);
     } else {
       toast.success(`Queue complete: ${successCount} drafts created in Gmail.`);
+    }
+
+    // Automatically trigger Tracker synchronization in background without user having to click
+    if (successCount > 0) {
+      void syncAllHistoryApplications()
+        .then((res) => {
+          if (res.applicationsCreated > 0 || res.companiesCreated > 0) {
+            toast.success(
+              `Liaison Tracker automatique : ${res.companiesCreated} entreprise(s) et ${res.contactsCreated} contact(s) créés/liés.`
+            );
+          }
+        })
+        .catch((err) => console.warn("Background auto-sync failed:", err));
     }
   };
 
