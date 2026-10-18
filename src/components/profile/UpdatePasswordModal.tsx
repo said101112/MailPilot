@@ -26,8 +26,10 @@ export default function UpdatePasswordModal({
   onClose,
   userEmail,
 }: UpdatePasswordModalProps) {
+  const [currentPassword, setCurrentPassword] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -41,34 +43,73 @@ export default function UpdatePasswordModal({
   const hasNumber = /[0-9]/.test(password);
   const hasSpecial = /[^A-Za-z0-9]/.test(password);
   const isMatch = password.length > 0 && password === confirmPassword;
-  const isStrong = hasMinLength && hasUppercase && hasNumber && hasSpecial;
+  const isDifferentFromOld = currentPassword.length > 0 && password.length > 0 && currentPassword !== password;
 
   async function handleUpdatePassword(e: React.FormEvent) {
     e.preventDefault();
     setErrorMsg(null);
     setSuccessMsg(null);
 
+    if (!currentPassword.trim()) {
+      setErrorMsg("Veuillez saisir votre mot de passe actuel pour des raisons de sécurité.");
+      return;
+    }
+
     if (!hasMinLength) {
-      setErrorMsg("Le mot de passe doit comporter au moins 8 caractères.");
+      setErrorMsg("Le nouveau mot de passe doit comporter au moins 8 caractères.");
       return;
     }
     if (password !== confirmPassword) {
-      setErrorMsg("Les mots de passe ne correspondent pas.");
+      setErrorMsg("La confirmation ne correspond pas au nouveau mot de passe.");
+      return;
+    }
+
+    if (currentPassword === password) {
+      setErrorMsg("Le nouveau mot de passe doit être différent de l'ancien mot de passe.");
       return;
     }
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({
+      // 1. Resolve user email if not provided
+      let email = userEmail;
+      if (!email) {
+        const { data: userData } = await supabase.auth.getUser();
+        email = userData?.user?.email;
+      }
+
+      if (!email) {
+        setErrorMsg("Impossible de retrouver l'adresse email du compte connecté.");
+        setLoading(false);
+        return;
+      }
+
+      // 2. Re-authenticate: verify that the OLD password is valid
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: currentPassword,
+      });
+
+      if (signInError) {
+        setErrorMsg(
+          "L'ancien mot de passe est incorrect. Veuillez saisir le mot de passe actuellement enregistré dans Supabase.",
+        );
+        setLoading(false);
+        return;
+      }
+
+      // 3. Old password is confirmed! Now safely update to the new strong password
+      const { error: updateError } = await supabase.auth.updateUser({
         password: password,
       });
 
-      if (error) {
-        setErrorMsg(error.message);
+      if (updateError) {
+        setErrorMsg(updateError.message);
       } else {
         setSuccessMsg(
-          "Mot de passe mis à jour avec succès dans Supabase ! Vos futures connexions utiliseront ce mot de passe fort.",
+          "Ancien mot de passe vérifié et nouveau mot de passe enregistré avec succès dans Supabase !",
         );
+        setCurrentPassword("");
         setPassword("");
         setConfirmPassword("");
       }
@@ -94,7 +135,7 @@ export default function UpdatePasswordModal({
                 Sécurité du compte Supabase
               </h2>
               <p className="text-xs text-gray-500">
-                Mettez à jour votre mot de passe pour sécuriser votre compte
+                Vérification d&apos;identité et mise à jour de sécurité
               </p>
             </div>
           </div>
@@ -109,7 +150,7 @@ export default function UpdatePasswordModal({
         <div className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
           {userEmail && (
             <div className="rounded-lg bg-gray-50 border border-gray-200/80 px-3.5 py-2.5 text-xs flex items-center justify-between">
-              <span className="text-gray-500">Utilisateur connecté :</span>
+              <span className="text-gray-500">Compte à sécuriser :</span>
               <span className="font-semibold text-gray-800">{userEmail}</span>
             </div>
           )}
@@ -130,7 +171,7 @@ export default function UpdatePasswordModal({
             <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs text-red-800 flex items-start gap-2.5">
               <ShieldAlert className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold text-red-900">Impossible de mettre à jour :</p>
+                <p className="font-semibold text-red-900">Vérification refusée :</p>
                 <p className="mt-0.5">{errorMsg}</p>
               </div>
             </div>
@@ -138,6 +179,38 @@ export default function UpdatePasswordModal({
 
           {/* Form */}
           <form onSubmit={handleUpdatePassword} className="space-y-4">
+            {/* 1. Ancien Mot de Passe (Vérification de Sécurité) */}
+            <div className="rounded-xl border border-amber-200/80 bg-amber-50/50 p-3.5 space-y-1.5">
+              <label className="block text-xs font-bold text-amber-950 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Lock className="h-3.5 w-3.5 text-amber-700" />
+                  Ancien mot de passe (Actuel)
+                </span>
+                <span className="text-[10.5px] font-medium text-amber-700">Requis pour valider</span>
+              </label>
+              <div className="relative">
+                <input
+                  type={showCurrentPassword ? "text" : "password"}
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Tapez votre mot de passe actuel dans Supabase"
+                  className="w-full rounded-lg border border-amber-300/80 bg-white px-3.5 py-2 pr-10 text-xs text-gray-900 focus:border-[#ff5722] focus:outline-hidden focus:ring-1 focus:ring-[#ff5722]"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              <p className="text-[11px] text-amber-800/80">
+                Protège votre compte : personne ne peut modifier votre mot de passe sans connaître l&apos;ancien.
+              </p>
+            </div>
+
+            {/* 2. Nouveau Mot de Passe */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">
                 Nouveau mot de passe fort
@@ -147,7 +220,7 @@ export default function UpdatePasswordModal({
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Min. 8 caractères, majuscule, chiffre..."
+                  placeholder="Min. 8 caractères, majuscule, chiffre, symbole..."
                   className="w-full rounded-lg border border-gray-300 px-3.5 py-2 pr-10 text-xs text-gray-900 focus:border-[#ff5722] focus:outline-hidden focus:ring-1 focus:ring-[#ff5722]"
                   required
                 />
@@ -161,6 +234,7 @@ export default function UpdatePasswordModal({
               </div>
             </div>
 
+            {/* 3. Confirmation */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">
                 Confirmer le nouveau mot de passe
@@ -169,7 +243,7 @@ export default function UpdatePasswordModal({
                 type={showPassword ? "text" : "password"}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Répétez le mot de passe"
+                placeholder="Répétez le nouveau mot de passe"
                 className="w-full rounded-lg border border-gray-300 px-3.5 py-2 text-xs text-gray-900 focus:border-[#ff5722] focus:outline-hidden focus:ring-1 focus:ring-[#ff5722]"
                 required
               />
@@ -206,15 +280,15 @@ export default function UpdatePasswordModal({
 
             <button
               type="submit"
-              disabled={loading || !hasMinLength || !isMatch}
-              className="w-full flex items-center justify-center gap-2 rounded-lg bg-[#ff5722] hover:bg-[#e04822] text-white py-2.5 text-xs font-semibold shadow-xs disabled:opacity-50 transition"
+              disabled={loading || !currentPassword.trim() || !hasMinLength || !isMatch}
+              className="w-full flex items-center justify-center gap-2 rounded-lg bg-[#ff5722] hover:bg-[#e04822] text-white py-2.5 text-xs font-semibold shadow-xs disabled:opacity-50 transition cursor-pointer"
             >
               {loading ? (
-                <span>Mise à jour en cours...</span>
+                <span>Vérification de l&apos;ancien mot de passe...</span>
               ) : (
                 <>
                   <ShieldCheck className="h-4 w-4" />
-                  <span>Mettre à jour mon mot de passe</span>
+                  <span>Valider l&apos;ancien mot de passe &amp; Mettre à jour</span>
                 </>
               )}
             </button>
@@ -226,7 +300,7 @@ export default function UpdatePasswordModal({
               <div className="flex items-center justify-between mb-1.5">
                 <span className="font-bold flex items-center gap-1.5">
                   <Lock className="h-3.5 w-3.5 text-blue-600" />
-                  Méthode alternative via Supabase Dashboard
+                  Vous avez oublié l&apos;ancien mot de passe ?
                 </span>
                 <a
                   href="https://supabase.com/dashboard/project/lulrhipthiagtaarigmf/auth/users"
@@ -234,13 +308,13 @@ export default function UpdatePasswordModal({
                   rel="noreferrer"
                   className="font-semibold text-blue-700 hover:underline inline-flex items-center gap-1 text-[11px]"
                 >
-                  Ouvrir Supabase
+                  Console Supabase
                   <ExternalLink className="h-3 w-3" />
                 </a>
               </div>
               <p className="text-blue-800/80 text-[11.5px] leading-relaxed">
-                Vous pouvez également réinitialiser votre mot de passe directement dans votre console Supabase :
-                rendez-vous dans <strong>Authentication → Users</strong>, cliquez sur les <code>...</code> à côté de votre adresse email, puis choisissez <strong>&quot;Update user&quot;</strong> ou <strong>&quot;Send password reset&quot;</strong>.
+                Si vous avez oublié l&apos;ancien mot de passe, utilisez la console Supabase Cloud :
+                rendez-vous dans <strong>Authentication &rarr; Users</strong>, cliquez sur les <code>...</code> à côté de votre email, et choisissez <strong>&quot;Update user&quot;</strong> ou <strong>&quot;Send password reset&quot;</strong>.
               </p>
             </div>
           </div>
