@@ -135,7 +135,11 @@ export default function CompaniesPage() {
       // 1. Country Category filter
       if (countryFilter !== "all") {
         const country = resolveCountryCategory(company.location, company.domain || company.name);
-        if (country !== countryFilter) return false;
+        if (countryFilter === "non_saudi") {
+          if (country === "saudi") return false;
+        } else if (country !== countryFilter) {
+          return false;
+        }
       }
 
       // 2. Search query

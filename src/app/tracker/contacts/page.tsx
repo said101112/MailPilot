@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   ChevronLeft,
   ChevronRight,
+  Download,
   ExternalLink,
   Mail,
   MessageSquare,
@@ -21,6 +22,7 @@ import { toast } from "sonner";
 import { EmptyState, LoadingBlock } from "@/components/tracker/Feedback";
 import CompanyLogo from "@/components/tracker/CompanyLogo";
 import ContactFormModal from "@/components/tracker/ContactFormModal";
+import ExportContactsModal from "@/components/tracker/ExportContactsModal";
 import EditorialSelect from "@/components/tracker/EditorialSelect";
 import { formatRelativeTime } from "@/lib/tracker/format";
 import { deleteContact, listCompanies, listContacts } from "@/lib/tracker/queries";
@@ -69,6 +71,7 @@ export default function ContactsPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [modalOpen, setModalOpen] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
   const [editing, setEditing] = useState<ContactRow | null>(null);
 
   const load = useCallback(async () => {
@@ -168,13 +171,17 @@ export default function ContactsPage() {
         return false;
       }
 
-      // 2. Country Category filter (Saudi, Maroc, France, Other)
+      // 2. Country Category filter (Saudi, Maroc, France, Other, non_saudi)
       if (countryFilter !== "all") {
         const detected = resolveCountryCategory(
           contact.company?.location,
           contact.email || contact.company?.name
         );
-        if (detected !== countryFilter) return false;
+        if (countryFilter === "non_saudi") {
+          if (detected === "saudi") return false;
+        } else if (detected !== countryFilter) {
+          return false;
+        }
       }
 
       // 3. Role filter
@@ -291,6 +298,15 @@ export default function ContactsPage() {
           >
             <span className="text-sm leading-none">🇸🇦</span>
             <span>{syncingSaudi ? "Synchronisation..." : "Attacher contacts Saudi (60)"}</span>
+          </button>
+          <button
+            type="button"
+            className="editorial-button-secondary h-8 px-3 text-xs flex items-center gap-1.5"
+            onClick={() => setExportModalOpen(true)}
+            title="Exporter les contacts en CSV (Emails & Entreprises)"
+          >
+            <Download className="h-3.5 w-3.5 text-gray-600" />
+            <span>Exporter CSV</span>
           </button>
           <button
             type="button"
@@ -794,6 +810,16 @@ export default function ContactsPage() {
           onSaved={() => void load()}
           companies={companies}
           editingContact={editing}
+        />
+      )}
+
+      {exportModalOpen && (
+        <ExportContactsModal
+          open
+          onClose={() => setExportModalOpen(false)}
+          contacts={contacts}
+          filteredContacts={filtered}
+          isFiltered={isFiltered}
         />
       )}
     </div>

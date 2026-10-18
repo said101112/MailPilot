@@ -9,6 +9,7 @@ export interface CountryBadgeData {
 
 export const COUNTRY_OPTIONS = [
   { value: "all", label: "Tous les pays" },
+  { value: "non_saudi", label: "🌐 Hors Arabie Saoudite (Maroc, France, etc.)" },
   { value: "saudi", label: "🇸🇦 Arabie Saoudite (Saudi)" },
   { value: "morocco", label: "🇲🇦 Maroc" },
   { value: "france", label: "🇫🇷 France" },
