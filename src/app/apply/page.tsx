@@ -6,8 +6,11 @@ import {
   BrainCircuit,
   CheckCircle2,
   ChevronDown,
+  Edit3,
+  FileText,
   Loader2,
   Mail,
+  RotateCcw,
   Send,
   Sparkles,
   TriangleAlert,
@@ -51,13 +54,19 @@ export default function ApplyPage() {
     
   const [email, setEmail] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState(DEFAULT_TEMPLATES[0].id);
+  const [customSubject, setCustomSubject] = useState(DEFAULT_TEMPLATES[0].subject);
+  const [customMessage, setCustomMessage] = useState(DEFAULT_TEMPLATES[0].message);
+  const [showMessageEditor, setShowMessageEditor] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   useEffect(() => {
     const syncInitialState = () => {
       const nextTemplates = getStoredTemplates();
       setTemplates(nextTemplates);
-      setSelectedTemplateId(nextTemplates[0]?.id ?? DEFAULT_TEMPLATES[0].id);
+      const initialTpl = nextTemplates[0] ?? DEFAULT_TEMPLATES[0];
+      setSelectedTemplateId(initialTpl.id);
+      setCustomSubject(initialTpl.subject);
+      setCustomMessage(initialTpl.message);
     };
 
     const syncTemplates = () => {
@@ -82,6 +91,25 @@ export default function ApplyPage() {
       window.removeEventListener("storage", syncTemplates);
     };
   }, []);
+
+  const handleSelectTemplate = (templateId: string) => {
+    setSelectedTemplateId(templateId);
+    setIsDropdownOpen(false);
+    const chosen = templates.find((t) => t.id === templateId) || DEFAULT_TEMPLATES[0];
+    if (chosen) {
+      setCustomSubject(chosen.subject);
+      setCustomMessage(chosen.message);
+    }
+  };
+
+  const handleResetTemplate = () => {
+    const current = templates.find((t) => t.id === selectedTemplateId) || DEFAULT_TEMPLATES[0];
+    if (current) {
+      setCustomSubject(current.subject);
+      setCustomMessage(current.message);
+      toast.info("Objet et message réinitialisés au modèle d'origine.");
+    }
+  };
 
   useEffect(() => {
     const loadIntegrationStatus = async () => {
@@ -164,12 +192,16 @@ export default function ApplyPage() {
         throw new Error("User is not authenticated.");
       }
 
-      const template = templates.find(t => t.id === selectedTemplateId) || DEFAULT_TEMPLATES[0];
+      const template = templates.find((t) => t.id === selectedTemplateId) || DEFAULT_TEMPLATES[0];
       const { base64: cvBase64, fileName: cvFileName } = readStoredCv();
-      
-      const candidateName = user.user_metadata?.full_name || user.email?.split("@")[0] || PROFILE_DEFAULT_NAME;
-      // Capitalize
+
+      const candidateName =
+        user.user_metadata?.full_name || user.email?.split("@")[0] || PROFILE_DEFAULT_NAME;
       const formattedName = candidateName.charAt(0).toUpperCase() + candidateName.slice(1);
+
+      const inferred = inferCompanyFromEmail(email);
+      const companyToSave = inferred?.name || null;
+      const companyDisplayName = companyToSave || "your company";
 
       // Replace generic tags with clean phrasing
       const replace = (text: string) =>
@@ -177,12 +209,22 @@ export default function ApplyPage() {
           .replace(/in the \[Position\] role/gi, "in the open position")
           .replace(/\[Position\] role/gi, "open position")
           .replace(/\[Position\]/g, "open position")
-          .replace(/\[Company\]/g, "your company")
+          .replace(/\{position\}/gi, "open position")
+          .replace(/\[Company\]/g, companyDisplayName)
+          .replace(/\{company\}/gi, companyDisplayName)
           .replace(/\[MyName\]/g, formattedName)
+          .replace(/\{name\}/gi, formattedName)
           .replace(/\[HR Name\]/g, "Hiring Manager");
 
-      const processedSubject = replace(template.subject);
-      const processedMessage = replace(template.message);
+      const finalSubject = (customSubject.trim() || template.subject).trim();
+      const finalMessage = (customMessage.trim() || template.message).trim();
+
+      if (!finalSubject) {
+        throw new Error("L'objet de l'email ne peut pas être vide.");
+      }
+
+      const processedSubject = replace(finalSubject);
+      const processedMessage = replace(finalMessage);
 
       await sendApplication({
         company: "Direct Apply",
@@ -196,9 +238,6 @@ export default function ApplyPage() {
         notes: "",
         jobUrl: "",
       });
-
-      const inferred = inferCompanyFromEmail(email);
-      const companyToSave = inferred?.name || null;
 
       const { error } = await supabase.from("applications").insert([
         {
@@ -358,10 +397,7 @@ export default function ApplyPage() {
                               ? "bg-[var(--editorial-primary-soft)] text-[var(--editorial-primary)]"
                               : "text-[var(--editorial-text)] hover:bg-[var(--editorial-background-soft)]"
                           )}
-                          onClick={() => {
-                            setSelectedTemplateId(template.id);
-                            setIsDropdownOpen(false);
-                          }}
+                          onClick={() => handleSelectTemplate(template.id)}
                           type="button"
                         >
                           <span className="truncate">{template.name}</span>
@@ -369,6 +405,70 @@ export default function ApplyPage() {
                       ))}
                     </div>
                   </>
+                )}
+              </div>
+
+              {/* Editable Email Subject */}
+              <div className="space-y-1.5 pt-1">
+                <div className="flex items-center justify-between">
+                  <label className="editorial-label flex items-center gap-1.5">
+                    <FileText className="h-3.5 w-3.5 text-gray-500" />
+                    <span>Objet de l&apos;email *</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleResetTemplate}
+                    className="text-[11px] text-gray-400 hover:text-gray-700 flex items-center gap-1 transition"
+                    title="Réinitialiser l'objet et le message au modèle d'origine"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    <span>Réinitialiser</span>
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  className="editorial-input w-full font-medium text-xs text-gray-900"
+                  value={customSubject}
+                  onChange={(e) => setCustomSubject(e.target.value)}
+                  placeholder="Ex : Candidature Stage PFE / Data Science..."
+                  required
+                />
+                <p className="text-[10px] text-gray-400">
+                  Modifiez librement l&apos;objet avant de créer le brouillon dans Gmail.
+                </p>
+              </div>
+
+              {/* Editable Message / Cover Letter */}
+              <div className="space-y-1.5 pt-1">
+                <div className="flex items-center justify-between">
+                  <label className="editorial-label flex items-center gap-1.5">
+                    <Edit3 className="h-3.5 w-3.5 text-gray-500" />
+                    <span>Corps de l&apos;email / Message</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowMessageEditor(!showMessageEditor)}
+                    className="text-[11px] font-semibold text-[#ff5722] hover:underline"
+                  >
+                    {showMessageEditor ? "Masquer le texte" : "Personnaliser le texte"}
+                  </button>
+                </div>
+
+                {showMessageEditor ? (
+                  <textarea
+                    className="editorial-textarea min-h-[140px] w-full text-xs font-mono"
+                    value={customMessage}
+                    onChange={(e) => setCustomMessage(e.target.value)}
+                    placeholder="Tapez ou modifiez le contenu de votre email ici..."
+                  />
+                ) : (
+                  <div
+                    onClick={() => setShowMessageEditor(true)}
+                    className="rounded-lg border border-gray-200 bg-gray-50/60 p-2.5 text-xs text-gray-600 line-clamp-3 cursor-pointer hover:bg-gray-100/70 transition"
+                    title="Cliquer pour modifier le corps de l'email"
+                  >
+                    {customMessage || "Aucun message..."}
+                  </div>
                 )}
               </div>
             </div>
