@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { CalendarClock, MapPin, Plus, Video } from "lucide-react";
+import { CalendarClock, MapPin, Plus, Sparkles, Video } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { EmptyState, LoadingBlock } from "@/components/tracker/Feedback";
@@ -181,14 +181,23 @@ export default function InterviewsPage() {
             {upcoming.length} à venir · {past.length} terminé(s).
           </p>
         </div>
-        <button
-          type="button"
-          className="editorial-button-primary h-8 px-3 text-xs w-full sm:w-auto"
-          onClick={() => setModalOpen(true)}
-        >
-          <Plus className="mr-1.5 inline h-3.5 w-3.5" />
-          Programmer un entretien
-        </button>
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <Link
+            href="/tracker/prep"
+            className="editorial-button-secondary h-8 px-3 text-xs flex items-center justify-center gap-1.5 w-full sm:w-auto text-[#ff5722] hover:text-[#e64a19] border-orange-200 bg-[#fff3ef] font-semibold"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            <span>Mon Aide-Mémoire & Questions</span>
+          </Link>
+          <button
+            type="button"
+            className="editorial-button-primary h-8 px-3 text-xs w-full sm:w-auto"
+            onClick={() => setModalOpen(true)}
+          >
+            <Plus className="mr-1.5 inline h-3.5 w-3.5" />
+            Programmer un entretien
+          </button>
+        </div>
       </div>
 
       <div className="mt-5 rounded-lg border border-gray-200 bg-white">

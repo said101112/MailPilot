@@ -17,6 +17,7 @@ import {
   MessageSquarePlus,
   Network,
   Send,
+  Sparkles,
   Upload,
   Users,
   X,
@@ -88,6 +89,11 @@ const hunterNavSections = [
         name: "Entretiens",
         href: "/tracker/interviews",
         icon: CalendarClock,
+      },
+      {
+        name: "Aide-Mémoire (Prep)",
+        href: "/tracker/prep",
+        icon: Sparkles,
       },
       {
         name: "Relances",
