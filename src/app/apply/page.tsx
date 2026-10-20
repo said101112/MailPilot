@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   AlertCircle,
   BrainCircuit,
+  Check,
   CheckCircle2,
   ChevronDown,
   Edit3,
@@ -55,9 +56,12 @@ export default function ApplyPage() {
     
   const [email, setEmail] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState(DEFAULT_TEMPLATES[0].id);
-  const [isCustomizing, setIsCustomizing] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCustomized, setIsCustomized] = useState(false);
   const [customSubject, setCustomSubject] = useState(DEFAULT_TEMPLATES[0].subject);
   const [customMessage, setCustomMessage] = useState(DEFAULT_TEMPLATES[0].message);
+  const [tempSubject, setTempSubject] = useState(DEFAULT_TEMPLATES[0].subject);
+  const [tempMessage, setTempMessage] = useState(DEFAULT_TEMPLATES[0].message);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   useEffect(() => {
@@ -68,6 +72,8 @@ export default function ApplyPage() {
       setSelectedTemplateId(initialTpl.id);
       setCustomSubject(initialTpl.subject);
       setCustomMessage(initialTpl.message);
+      setTempSubject(initialTpl.subject);
+      setTempMessage(initialTpl.message);
     };
 
     const syncTemplates = () => {
@@ -100,23 +106,48 @@ export default function ApplyPage() {
     if (chosen) {
       setCustomSubject(chosen.subject);
       setCustomMessage(chosen.message);
+      setTempSubject(chosen.subject);
+      setTempMessage(chosen.message);
+      setIsCustomized(false);
     }
   };
 
-  const handleStartCustomizing = () => {
-    const chosen = templates.find((t) => t.id === selectedTemplateId) || DEFAULT_TEMPLATES[0];
-    setCustomSubject(chosen.subject);
-    setCustomMessage(chosen.message);
-    setIsCustomizing(true);
+  const handleOpenCustomModal = () => {
+    const current = templates.find((t) => t.id === selectedTemplateId) || DEFAULT_TEMPLATES[0];
+    setTempSubject(isCustomized ? customSubject : (customSubject || current.subject));
+    setTempMessage(isCustomized ? customMessage : (customMessage || current.message));
+    setIsModalOpen(true);
   };
 
-  const handleResetTemplate = () => {
+  const handleSaveCustomization = () => {
+    if (!tempSubject.trim()) {
+      toast.error("L'objet de l'email ne peut pas être vide.");
+      return;
+    }
+    setCustomSubject(tempSubject.trim());
+    setCustomMessage(tempMessage);
+    setIsCustomized(true);
+    setIsModalOpen(false);
+    toast.success("Email personnalisé pour cette candidature !");
+  };
+
+  const handleResetInModal = () => {
     const current = templates.find((t) => t.id === selectedTemplateId) || DEFAULT_TEMPLATES[0];
     if (current) {
-      setCustomSubject(current.subject);
-      setCustomMessage(current.message);
-      toast.info("Objet et message réinitialisés au modèle d'origine.");
+      setTempSubject(current.subject);
+      setTempMessage(current.message);
+      toast.info("Champs réinitialisés avec le modèle par défaut.");
     }
+  };
+
+  const handleCancelCustomization = () => {
+    const current = templates.find((t) => t.id === selectedTemplateId) || DEFAULT_TEMPLATES[0];
+    setCustomSubject(current.subject);
+    setCustomMessage(current.message);
+    setTempSubject(current.subject);
+    setTempMessage(current.message);
+    setIsCustomized(false);
+    toast.info("Personnalisation annulée (modèle d'origine actif).");
   };
 
   useEffect(() => {
@@ -224,10 +255,10 @@ export default function ApplyPage() {
           .replace(/\{name\}/gi, formattedName)
           .replace(/\[HR Name\]/g, "Hiring Manager");
 
-      const finalSubject = isCustomizing
+      const finalSubject = isCustomized
         ? (customSubject.trim() || template.subject).trim()
         : template.subject;
-      const finalMessage = isCustomizing
+      const finalMessage = isCustomized
         ? (customMessage.trim() || template.message).trim()
         : template.message;
 
@@ -280,7 +311,7 @@ export default function ApplyPage() {
       toast.success("Draft created in Gmail! Check your Gmail drafts.");
       setEmail("");
       setEmailCheck(validateEmailFormat(""));
-      setIsCustomizing(false);
+      setIsCustomized(false);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to send application.";
       toast.error(message);
@@ -421,12 +452,12 @@ export default function ApplyPage() {
                 )}
               </div>
 
-              {/* Option to customize subject & message for this specific post */}
-              {!isCustomizing ? (
-                <div className="pt-0.5">
+              {/* Option to customize subject & message in a centered modal */}
+              <div className="pt-0.5">
+                {!isCustomized ? (
                   <button
                     type="button"
-                    onClick={handleStartCustomizing}
+                    onClick={handleOpenCustomModal}
                     className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-[#ff5722] transition group cursor-pointer"
                   >
                     <Edit3 className="h-3.5 w-3.5 text-gray-400 group-hover:text-[#ff5722] transition-colors" />
@@ -434,70 +465,42 @@ export default function ApplyPage() {
                       Personnaliser l&apos;objet et le message pour ce poste
                     </span>
                   </button>
-                </div>
-              ) : (
-                <div className="space-y-3.5 rounded-xl border border-orange-200/90 bg-[#fffaf8] p-3.5 animate-in fade-in duration-200">
-                  <div className="flex items-center justify-between border-b border-orange-100/80 pb-2">
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-900">
-                      <Edit3 className="h-3.5 w-3.5 text-[#ff5722]" />
-                      <span>Édition personnalisée (pour ce poste uniquement)</span>
+                ) : (
+                  <div className="flex items-center justify-between rounded-xl border border-orange-200 bg-orange-50/70 px-3.5 py-2.5 text-xs">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#ff5722] text-white text-[11px] font-bold">
+                        ✓
+                      </span>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-gray-900 truncate">
+                          Email personnalisé pour ce poste
+                        </p>
+                        <p className="text-[11px] text-gray-500 truncate max-w-[240px]">
+                          Objet : {customSubject}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
                       <button
                         type="button"
-                        onClick={handleResetTemplate}
-                        className="text-[11px] text-gray-500 hover:text-gray-800 flex items-center gap-1 transition cursor-pointer"
-                        title="Réinitialiser l'objet et le message au modèle d'origine"
+                        onClick={handleOpenCustomModal}
+                        className="font-medium text-[#ff5722] hover:text-[#e64a19] transition cursor-pointer"
                       >
-                        <RotateCcw className="h-3 w-3" />
-                        <span>Réinitialiser</span>
+                        Modifier
                       </button>
+                      <span className="text-gray-300">|</span>
                       <button
                         type="button"
-                        onClick={() => setIsCustomizing(false)}
-                        className="text-[11px] text-gray-500 hover:text-red-600 flex items-center gap-0.5 transition cursor-pointer"
-                        title="Annuler les modifications et revenir au formulaire standard"
+                        onClick={handleCancelCustomization}
+                        className="text-gray-500 hover:text-gray-800 transition cursor-pointer"
+                        title="Annuler la personnalisation et réactiver le modèle par défaut"
                       >
-                        <X className="h-3.5 w-3.5" />
-                        <span>Fermer</span>
+                        Réinitialiser
                       </button>
                     </div>
                   </div>
-
-                  {/* Objet de l'email */}
-                  <div className="space-y-1">
-                    <label className="editorial-label flex items-center gap-1 text-[11px]">
-                      <FileText className="h-3 w-3 text-gray-500" />
-                      <span>Objet de l&apos;email *</span>
-                    </label>
-                    <input
-                      type="text"
-                      className="editorial-input w-full bg-white font-medium text-xs text-gray-900"
-                      value={customSubject}
-                      onChange={(e) => setCustomSubject(e.target.value)}
-                      placeholder="Ex : Candidature Stage PFE / Data Science..."
-                      required
-                    />
-                  </div>
-
-                  {/* Corps de l'email */}
-                  <div className="space-y-1">
-                    <label className="editorial-label flex items-center gap-1 text-[11px]">
-                      <span>Corps de l&apos;email / Message *</span>
-                    </label>
-                    <textarea
-                      className="editorial-textarea min-h-[140px] w-full bg-white text-xs font-mono leading-relaxed"
-                      value={customMessage}
-                      onChange={(e) => setCustomMessage(e.target.value)}
-                      placeholder="Tapez ou modifiez le contenu de votre email..."
-                      required
-                    />
-                  </div>
-                  <p className="text-[10px] text-gray-400">
-                    Ces modifications s&apos;appliquent seulement à cet envoi et ne modifient pas votre template enregistré.
-                  </p>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             <button
@@ -558,6 +561,116 @@ export default function ApplyPage() {
 
         </div>
       </div>
+
+      {/* Modal in the middle of the screen for customizing email */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div
+            className="fixed inset-0"
+            onClick={() => setIsModalOpen(false)}
+          />
+          <div className="relative w-full max-w-xl rounded-2xl bg-white shadow-2xl border border-gray-100 overflow-hidden z-10 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 bg-gray-50/60">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#fff3ef] text-[#ff5722]">
+                  <Edit3 className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900">
+                    Personnaliser l&apos;email pour ce poste
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    Modifie l&apos;objet et le corps sans altérer votre modèle enregistré
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="rounded-lg p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4 overflow-y-auto">
+              <div className="rounded-lg bg-orange-50/70 border border-orange-100 p-3 text-xs text-orange-950 flex items-start gap-2.5">
+                <Sparkles className="h-4 w-4 text-[#ff5722] shrink-0 mt-0.5" />
+                <span>
+                  Cet ajustement est appliqué uniquement à cette candidature directe. Votre modèle d&apos;origine reste intact.
+                </span>
+              </div>
+
+              {/* Objet / Subject */}
+              <div className="space-y-1.5">
+                <label className="editorial-label flex items-center gap-1.5 text-xs text-gray-700 font-medium">
+                  <FileText className="h-3.5 w-3.5 text-gray-400" />
+                  <span>Objet de l&apos;email *</span>
+                </label>
+                <input
+                  type="text"
+                  className="editorial-input w-full bg-white text-sm"
+                  value={tempSubject}
+                  onChange={(e) => setTempSubject(e.target.value)}
+                  placeholder="Ex : Candidature Stage PFE / Data Science..."
+                  required
+                />
+              </div>
+
+              {/* Message / Body */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="editorial-label text-xs text-gray-700 font-medium">
+                    Corps de l&apos;email / Message *
+                  </label>
+                  <span className="text-[11px] text-gray-400">
+                    Variables : [Company], [Position], [MyName]
+                  </span>
+                </div>
+                <textarea
+                  className="editorial-textarea min-h-[220px] w-full bg-white text-xs font-mono leading-relaxed p-3"
+                  value={tempMessage}
+                  onChange={(e) => setTempMessage(e.target.value)}
+                  placeholder="Tapez ou adaptez le message pour cette entreprise..."
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between border-t border-gray-100 px-6 py-4 bg-gray-50/80">
+              <button
+                type="button"
+                onClick={handleResetInModal}
+                className="inline-flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-900 transition font-medium cursor-pointer"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                <span>Réinitialiser au modèle</span>
+              </button>
+
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition shadow-xs cursor-pointer"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveCustomization}
+                  className="rounded-lg bg-[#ff5722] px-4 py-2 text-xs font-medium text-white hover:bg-[#e64a19] transition shadow-xs inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Check className="h-3.5 w-3.5" />
+                  <span>Valider la personnalisation</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
