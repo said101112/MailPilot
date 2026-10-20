@@ -55,6 +55,9 @@ export default function FollowUpsPage() {
   const [preselectAppId, setPreselectAppId] = useState<string | null>(null);
   const [silenceDays, setSilenceDays] = useState(DEFAULT_SILENCE_DAYS);
 
+  // Timeline Tab state: "today" (J+7 to J+9), "overdue" (+10j), "upcoming" (J+4 to J+6), "all" (>= silenceDays)
+  const [timelineTab, setTimelineTab] = useState<"today" | "overdue" | "upcoming" | "all">("today");
+
   // Bulk Relance, Template & Filter states for silent applications
   const [selectedAppIds, setSelectedAppIds] = useState<Set<string>>(new Set());
   const [bulkRelanceOpen, setBulkRelanceOpen] = useState(false);
@@ -120,13 +123,43 @@ export default function FollowUpsPage() {
     return { overdue: overdueRows, dueToday: todayRows, upcoming: upcomingRows };
   }, [followUps, today]);
 
+  // Compute smart timeline counts across waiting applications
+  const timelineCounts = useMemo(() => {
+    let todayCount = 0;
+    let overdueCount = 0;
+    let upcomingCount = 0;
+    let allCount = 0;
+
+    applications
+      .filter((app) => WAITING_STATUSES.has(app.status))
+      .forEach((app) => {
+        const reference = app.last_interaction_at ?? app.applied_at ?? app.created_at;
+        const days = daysBetween(reference);
+        if (days >= silenceDays) allCount++;
+        if (days >= 7 && days <= 9) todayCount++;
+        else if (days >= 10) overdueCount++;
+        else if (days >= 4 && days <= 6) upcomingCount++;
+      });
+
+    return {
+      today: todayCount,
+      overdue: overdueCount,
+      upcoming: upcomingCount,
+      all: allCount,
+    };
+  }, [applications, silenceDays]);
+
   const silentCompanies = useMemo(() => {
     const map = new Map<string, number>();
     applications
       .filter((app) => WAITING_STATUSES.has(app.status))
       .filter((app) => {
         const reference = app.last_interaction_at ?? app.applied_at ?? app.created_at;
-        return daysBetween(reference) >= silenceDays;
+        const days = daysBetween(reference);
+        if (timelineTab === "today") return days >= 7 && days <= 9;
+        if (timelineTab === "overdue") return days >= 10;
+        if (timelineTab === "upcoming") return days >= 4 && days <= 6;
+        return days >= silenceDays;
       })
       .forEach((app) => {
         const name = (app.company?.name || "Sans entreprise").trim();
@@ -135,7 +168,7 @@ export default function FollowUpsPage() {
     return Array.from(map.entries())
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [applications, silenceDays]);
+  }, [applications, silenceDays, timelineTab]);
 
   const silentApplications = useMemo(
     () =>
@@ -143,14 +176,18 @@ export default function FollowUpsPage() {
         .filter((app) => WAITING_STATUSES.has(app.status))
         .filter((app) => {
           const reference = app.last_interaction_at ?? app.applied_at ?? app.created_at;
-          return daysBetween(reference) >= silenceDays;
+          const days = daysBetween(reference);
+          if (timelineTab === "today") return days >= 7 && days <= 9;
+          if (timelineTab === "overdue") return days >= 10;
+          if (timelineTab === "upcoming") return days >= 4 && days <= 6;
+          return days >= silenceDays;
         })
         .sort((a, b) => {
           const refA = a.last_interaction_at ?? a.applied_at ?? a.created_at;
           const refB = b.last_interaction_at ?? b.applied_at ?? b.created_at;
           return refA.localeCompare(refB);
         }),
-    [applications, silenceDays],
+    [applications, silenceDays, timelineTab],
   );
 
   const filteredSilentApplications = useMemo(
@@ -375,28 +412,25 @@ export default function FollowUpsPage() {
       ))}
 
       <div className="mt-4 rounded-lg border border-gray-200 bg-white shadow-2xs">
-        <div className="flex flex-col gap-3 border-b border-gray-100 p-4 sm:p-5">
+        <div className="flex flex-col gap-3.5 border-b border-gray-100 p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-sm font-semibold text-gray-900">
-                  Candidatures sans réponse (+{silenceDays}j)
+                  Timeline des relances & Suivi intelligent
                 </h2>
                 <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-900">
                   {filteredSilentApplications.length}
                 </span>
               </div>
               <p className="text-xs text-gray-500 mt-0.5">
-                Envoyées ou en attente depuis plus de{" "}
-                <input
-                  type="number"
-                  min={1}
-                  max={90}
-                  className="editorial-input mx-1 inline-block w-14 px-1.5 py-0.5 text-center text-xs font-semibold"
-                  value={silenceDays}
-                  onChange={(event) => updateSilenceDays(Number(event.target.value))}
-                />{" "}
-                jours. Prêtes pour une relance immédiate en 1 clic.
+                {timelineTab === "today"
+                  ? "🎯 Fenêtre idéale : candidatures sans réponse depuis 7 à 9 jours (moment recommandé pour relancer)."
+                  : timelineTab === "overdue"
+                    ? "⚠️ Relances en retard : plus de 10 jours sans nouvelle. 2ème relance recommandée."
+                    : timelineTab === "upcoming"
+                      ? "⏳ Bientôt à relancer : postulées il y a 4 à 6 jours (à surveiller d'ici 1 à 3 jours)."
+                      : `📋 Toutes les candidatures en attente depuis au moins ${silenceDays} jours.`}
               </p>
             </div>
 
@@ -422,6 +456,86 @@ export default function FollowUpsPage() {
                 </button>
               )}
             </div>
+          </div>
+
+          {/* Timeline Navigation Tabs */}
+          <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-gray-100/80 border border-gray-200/70 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={() => {
+                setTimelineTab("today");
+                clearSilentSelection();
+              }}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                timelineTab === "today"
+                  ? "bg-white text-gray-900 shadow-xs border border-gray-200/80"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-white/50"
+              )}
+            >
+              <span className="flex h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+              <span>À relancer aujourd&apos;hui (J+7)</span>
+              <span className="rounded-full bg-red-100 px-1.5 py-0.2 text-[10px] font-bold text-red-800">
+                {timelineCounts.today}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setTimelineTab("overdue");
+                clearSilentSelection();
+              }}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                timelineTab === "overdue"
+                  ? "bg-white text-gray-900 shadow-xs border border-gray-200/80"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-white/50"
+              )}
+            >
+              <span>⚠️ En retard (+10j)</span>
+              <span className="rounded-full bg-amber-100 px-1.5 py-0.2 text-[10px] font-bold text-amber-800">
+                {timelineCounts.overdue}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setTimelineTab("upcoming");
+                clearSilentSelection();
+              }}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                timelineTab === "upcoming"
+                  ? "bg-white text-gray-900 shadow-xs border border-gray-200/80"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-white/50"
+              )}
+            >
+              <span>⏳ Bientôt (J+4 à J+6)</span>
+              <span className="rounded-full bg-blue-100 px-1.5 py-0.2 text-[10px] font-bold text-blue-800">
+                {timelineCounts.upcoming}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setTimelineTab("all");
+                clearSilentSelection();
+              }}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                timelineTab === "all"
+                  ? "bg-white text-gray-900 shadow-xs border border-gray-200/80"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-white/50"
+              )}
+            >
+              <span>Toutes (+{silenceDays}j)</span>
+              <span className="rounded-full bg-gray-200 px-1.5 py-0.2 text-[10px] font-bold text-gray-700">
+                {timelineCounts.all}
+              </span>
+            </button>
           </div>
 
           {/* Filter Toolbar for silent candidatures */}
@@ -570,9 +684,24 @@ export default function FollowUpsPage() {
                         )}
                       </div>
                       <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-500 mt-0.5">
-                        <span className="font-semibold text-amber-800 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
-                          Sans réponse depuis {days} jour(s)
-                        </span>
+                        {days >= 7 && days <= 9 ? (
+                          <span className="font-semibold text-red-800 bg-red-50 px-2 py-0.5 rounded-md border border-red-200 inline-flex items-center gap-1.5 shadow-2xs">
+                            <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+                            <span>Relance recommandée aujourd&apos;hui (J+{days})</span>
+                          </span>
+                        ) : days >= 10 ? (
+                          <span className="font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                            Sans réponse depuis {days} jour(s)
+                          </span>
+                        ) : days >= 4 ? (
+                          <span className="font-semibold text-blue-800 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                            Bientôt à relancer (J+{days})
+                          </span>
+                        ) : (
+                          <span className="font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                            Candidature récente (J+{days})
+                          </span>
+                        )}
                         <span>({formatDate(reference)})</span>
                         {app.channel_email && (
                           <span className="font-mono text-gray-400 truncate">
@@ -590,7 +719,10 @@ export default function FollowUpsPage() {
                     {app.channel_email && (
                       <button
                         type="button"
-                        className="editorial-button-primary h-8 px-3 text-xs flex items-center gap-1 font-medium"
+                        className={cn(
+                          "editorial-button-primary h-8 px-3 text-xs flex items-center gap-1 font-medium cursor-pointer",
+                          days >= 7 && days <= 9 && "shadow-xs ring-2 ring-red-400/40"
+                        )}
                         onClick={() => {
                           setSelectedAppIds(new Set([app.id]));
                           setBulkRelanceOpen(true);
@@ -598,7 +730,7 @@ export default function FollowUpsPage() {
                         title="Envoyer une relance par email immédiatement"
                       >
                         <Send className="h-3 w-3" />
-                        <span>Relancer</span>
+                        <span>{days >= 7 && days <= 9 ? `Relancer (J+${days})` : "Relancer"}</span>
                       </button>
                     )}
 

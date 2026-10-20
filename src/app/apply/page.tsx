@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   AlertCircle,
+  AlertTriangle,
   BrainCircuit,
   Check,
   CheckCircle2,
   ChevronDown,
   Edit3,
+  ExternalLink,
   FileText,
   Loader2,
   Mail,
@@ -43,6 +46,14 @@ import { cn } from "@/lib/utils";
 import { readStoredCv } from "@/lib/workspace";
 import CvUploadCard from "@/components/CvUploadCard";
 
+interface DuplicateMatch {
+  company: string;
+  position: string;
+  date: string;
+  daysAgo: number;
+  status: string;
+}
+
 export default function ApplyPage() {
   const [loading, setLoading] = useState(false);
   const [templates, setTemplates] = useState(cloneDefaultTemplates);
@@ -63,6 +74,10 @@ export default function ApplyPage() {
   const [tempSubject, setTempSubject] = useState(DEFAULT_TEMPLATES[0].subject);
   const [tempMessage, setTempMessage] = useState(DEFAULT_TEMPLATES[0].message);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // Duplicate detection state
+  const [duplicateMatch, setDuplicateMatch] = useState<DuplicateMatch | null>(null);
+  const [checkingDuplicate, setCheckingDuplicate] = useState(false);
 
   useEffect(() => {
     const syncInitialState = () => {
@@ -178,6 +193,168 @@ export default function ApplyPage() {
     !email ||
     !emailCheck.valid ||
     Boolean(n8nBlocked);
+
+  const checkDuplicates = async (emailVal: string) => {
+    const cleanEmail = emailVal.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes("@")) {
+      setDuplicateMatch(null);
+      return;
+    }
+
+    setCheckingDuplicate(true);
+    try {
+      // 1. Check in applications table
+      const { data: appData } = await supabase
+        .from("applications")
+        .select("id, company, position, email, status, created_at")
+        .ilike("email", cleanEmail)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (appData && appData.length > 0) {
+        const match = appData[0];
+        const createdDate = new Date(match.created_at);
+        const diffTime = Math.abs(Date.now() - createdDate.getTime());
+        const daysAgo = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        setDuplicateMatch({
+          company: match.company || "Entreprise inconnue",
+          position: match.position || "Stage / Emploi",
+          date: createdDate.toLocaleDateString("fr-FR"),
+          daysAgo,
+          status: match.status || "envoyé",
+        });
+        return;
+      }
+
+      // 2. Check in job_applications (tracker)
+      const { data: trackerData } = await supabase
+        .from("job_applications")
+        .select("id, position, status, created_at, applied_at, company:companies(name)")
+        .ilike("channel_email", cleanEmail)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (trackerData && trackerData.length > 0) {
+        const match = trackerData[0];
+        const dateRef = match.applied_at || match.created_at;
+        const createdDate = new Date(dateRef);
+        const diffTime = Math.abs(Date.now() - createdDate.getTime());
+        const daysAgo = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const compName = (match.company as any)?.name || "Entreprise inconnue";
+        setDuplicateMatch({
+          company: compName,
+          position: match.position || "Stage / Emploi",
+          date: createdDate.toLocaleDateString("fr-FR"),
+          daysAgo,
+          status: match.status || "envoyé",
+        });
+        return;
+      }
+
+      // 3. Check by company inferred from email domain
+      const inferred = inferCompanyFromEmail(cleanEmail);
+      if (inferred?.name) {
+        const { data: compMatches } = await supabase
+          .from("job_applications")
+          .select("id, position, status, created_at, applied_at, company:companies!inner(name)")
+          .ilike("companies.name", `%${inferred.name}%`)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        if (compMatches && compMatches.length > 0) {
+          const match = compMatches[0];
+          const dateRef = match.applied_at || match.created_at;
+          const createdDate = new Date(dateRef);
+          const diffTime = Math.abs(Date.now() - createdDate.getTime());
+          const daysAgo = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const compName = (match.company as any)?.name || inferred.name;
+          setDuplicateMatch({
+            company: compName,
+            position: match.position || "Stage / Emploi",
+            date: createdDate.toLocaleDateString("fr-FR"),
+            daysAgo,
+            status: match.status || "envoyé",
+          });
+          return;
+        }
+      }
+
+      setDuplicateMatch(null);
+    } catch (err) {
+      console.warn("Duplicate check error:", err);
+    } finally {
+      setCheckingDuplicate(false);
+    }
+  };
+
+  const handleOpenGmailWeb = async () => {
+    if (!email || !emailCheck.valid) {
+      toast.error("Veuillez saisir une adresse email valide.");
+      return;
+    }
+
+    const template = templates.find((t) => t.id === selectedTemplateId) || DEFAULT_TEMPLATES[0];
+    const rawSubject = isCustomized ? (customSubject.trim() || template.subject) : template.subject;
+    const rawMessage = isCustomized ? (customMessage.trim() || template.message) : template.message;
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    const candidateName =
+      user?.user_metadata?.full_name || user?.email?.split("@")[0] || PROFILE_DEFAULT_NAME;
+    const formattedName = candidateName.charAt(0).toUpperCase() + candidateName.slice(1);
+
+    const inferred = inferCompanyFromEmail(email);
+    const companyToSave = inferred?.name || null;
+    const companyDisplayName = companyToSave || "your company";
+
+    const replaceTags = (text: string) =>
+      text
+        .replace(/in the \[Position\] role/gi, "in the open position")
+        .replace(/\[Position\] role/gi, "open position")
+        .replace(/\[Position\]/g, "open position")
+        .replace(/\{position\}/gi, "open position")
+        .replace(/\[Company\]/g, companyDisplayName)
+        .replace(/\{company\}/gi, companyDisplayName)
+        .replace(/\[MyName\]/g, formattedName)
+        .replace(/\{name\}/gi, formattedName)
+        .replace(/\[HR Name\]/g, "Hiring Manager");
+
+    const processedSubject = replaceTags(rawSubject);
+    const processedMessage = replaceTags(rawMessage);
+
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(
+      email
+    )}&su=${encodeURIComponent(processedSubject)}&body=${encodeURIComponent(processedMessage)}`;
+
+    window.open(gmailUrl, "_blank", "noopener,noreferrer");
+    toast.success("Onglet Gmail ouvert avec l'email pré-rempli ! N'oubliez pas d'attacher votre CV.");
+
+    try {
+      if (user) {
+        await supabase.from("applications").insert([
+          {
+            user_id: user.id,
+            company: companyToSave,
+            position: "Stage PFE / Emploi",
+            email: email,
+            status: "success",
+          },
+        ]);
+      }
+      await syncEmailDispatchToTracker({
+        company: companyToSave,
+        position: "Stage PFE / Emploi",
+        email: email,
+        status: "success",
+      });
+    } catch (syncErr) {
+      console.warn("Tracker sync error:", syncErr);
+    }
+  };
 
   const runEmailPreflight = async (emailValue = email) => {
     const formatResult = validateEmailFormat(emailValue);
@@ -384,9 +561,15 @@ export default function ApplyPage() {
                       const nextEmail = event.target.value;
                       setEmail(nextEmail);
                       setEmailCheck(validateEmailFormat(nextEmail));
+                      if (nextEmail.includes("@") && nextEmail.includes(".")) {
+                        void checkDuplicates(nextEmail);
+                      } else {
+                        setDuplicateMatch(null);
+                      }
                     }}
                     onBlur={() => {
                       void runEmailPreflight();
+                      void checkDuplicates(email);
                     }}
                     placeholder="talent@company.com"
                     type="email"
@@ -410,6 +593,46 @@ export default function ApplyPage() {
                     <span className="font-medium">{emailCheck.message}</span>
                   </div>
                 </div>
+
+                {/* Détecteur de doublons */}
+                {duplicateMatch && (
+                  <div className="rounded-xl border border-amber-300 bg-amber-50/95 p-3 text-xs text-amber-900 animate-in fade-in duration-200 shadow-2xs">
+                    <div className="flex items-start gap-2.5">
+                      <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-semibold text-amber-950">
+                            Candidature déjà existante pour ce destinataire !
+                          </p>
+                          <span className="rounded bg-amber-200/80 px-1.5 py-0.5 text-[10px] font-bold text-amber-900">
+                            Il y a {duplicateMatch.daysAgo}j
+                          </span>
+                        </div>
+                        <p className="mt-1 text-amber-800 leading-relaxed">
+                          Postulé le <strong>{duplicateMatch.date}</strong> chez{" "}
+                          <strong>{duplicateMatch.company}</strong> ({duplicateMatch.position}) · Statut :{" "}
+                          <span className="font-medium underline">{duplicateMatch.status}</span>.
+                        </p>
+                        <div className="mt-2 flex items-center gap-3">
+                          <Link
+                            href="/tracker/follow-ups"
+                            className="inline-flex items-center gap-1 font-semibold text-amber-950 hover:text-black underline text-[11px]"
+                          >
+                            Voir dans les relances &rarr;
+                          </Link>
+                          <span className="text-amber-400">·</span>
+                          <button
+                            type="button"
+                            onClick={() => setDuplicateMatch(null)}
+                            className="text-[11px] text-amber-700 hover:text-amber-900 underline cursor-pointer"
+                          >
+                            Ignorer l&apos;alerte
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2 relative">
@@ -503,19 +726,32 @@ export default function ApplyPage() {
               </div>
             </div>
 
-            <button
-              className="editorial-button-primary mt-8 h-12 w-full text-sm"
-              disabled={sendDisabled}
-              onClick={handleSend}
-              type="button"
-            >
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Sparkles className="h-4 w-4" />
-              )}
-              {n8nBlocked ? "n8n Blocked" : "Create Draft in Gmail"}
-            </button>
+            <div className="mt-8 space-y-2.5">
+              <button
+                className="editorial-button-primary h-12 w-full text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer"
+                disabled={sendDisabled}
+                onClick={handleSend}
+                type="button"
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
+                {n8nBlocked ? "n8n Blocked" : "Create Draft in Gmail"}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleOpenGmailWeb}
+                disabled={!email || !emailCheck.valid}
+                className="editorial-button-secondary h-10 w-full text-xs font-semibold flex items-center justify-center gap-2 text-gray-700 hover:text-gray-950 border-gray-200 hover:bg-gray-50 transition cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                title="Ouvrir directement un nouvel onglet Gmail avec le destinataire, l'objet et le message pré-remplis (fonctionne directement sans serveur n8n)"
+              >
+                <ExternalLink className="h-3.5 w-3.5 text-[#ea4335]" />
+                <span>Ouvrir dans Gmail Web (Fallback 1-Clic)</span>
+              </button>
+            </div>
           </div>
 
           {/* AI Analysis Card (Coming Soon) */}
