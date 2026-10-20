@@ -8,6 +8,8 @@ import {
   CalendarClock,
   Check,
   CheckSquare,
+  FileText,
+  Globe,
   MessageSquarePlus,
   MinusSquare,
   Search,
@@ -32,6 +34,12 @@ import {
   updateFollowUp,
 } from "@/lib/tracker/queries";
 import type { FollowUpRow, JobApplicationRow } from "@/lib/tracker/types";
+import {
+  resolveCountryCategory,
+  getCountryBadge,
+  COUNTRY_OPTIONS,
+} from "@/lib/tracker/countries";
+import { getStoredTemplates, type MessageTemplate } from "@/lib/templates";
 
 const SILENCE_DAYS_KEY = "truck-app-tracker-silence-days";
 const DEFAULT_SILENCE_DAYS = 7;
@@ -47,11 +55,23 @@ export default function FollowUpsPage() {
   const [preselectAppId, setPreselectAppId] = useState<string | null>(null);
   const [silenceDays, setSilenceDays] = useState(DEFAULT_SILENCE_DAYS);
 
-  // Bulk Relance & Selection for silent applications
+  // Bulk Relance, Template & Filter states for silent applications
   const [selectedAppIds, setSelectedAppIds] = useState<Set<string>>(new Set());
   const [bulkRelanceOpen, setBulkRelanceOpen] = useState(false);
   const [silentSearchQuery, setSilentSearchQuery] = useState("");
   const [silentCompanyFilter, setSilentCompanyFilter] = useState("all");
+  const [silentCountryFilter, setSilentCountryFilter] = useState<string>("all");
+  const [templates, setTemplates] = useState<MessageTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("followup-7days");
+
+  useEffect(() => {
+    const tpls = getStoredTemplates();
+    setTemplates(tpls);
+    if (tpls.length > 0) {
+      const followUp = tpls.find((t) => t.id === "followup-7days") || tpls[0];
+      setSelectedTemplateId(followUp.id);
+    }
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -148,9 +168,21 @@ export default function FollowUpsPage() {
           app.position.toLowerCase().includes(q) ||
           (app.channel_email || "").toLowerCase().includes(q);
 
-        return matchesCompany && matchesQuery;
+        const detectedCountry = resolveCountryCategory(
+          app.location || app.company?.location,
+          app.channel_email || app.company?.domain || app.company?.name
+        );
+
+        let matchesCountry = true;
+        if (silentCountryFilter === "non_saudi") {
+          matchesCountry = detectedCountry !== "saudi";
+        } else if (silentCountryFilter !== "all") {
+          matchesCountry = detectedCountry === silentCountryFilter;
+        }
+
+        return matchesCompany && matchesQuery && matchesCountry;
       }),
-    [silentApplications, silentCompanyFilter, silentSearchQuery]
+    [silentApplications, silentCompanyFilter, silentSearchQuery, silentCountryFilter]
   );
 
   const toggleSelectAppId = (id: string) => {
@@ -176,9 +208,12 @@ export default function FollowUpsPage() {
     filteredSilentApplications.length > 0 &&
     filteredSilentApplications.every((app) => selectedAppIds.has(app.id));
 
+  const filteredSelectedSilentApps = useMemo(() => {
+    return filteredSilentApplications.filter((app) => selectedAppIds.has(app.id));
+  }, [filteredSilentApplications, selectedAppIds]);
+
   const silentRelanceTargets: RelanceTarget[] = useMemo(() => {
-    return applications
-      .filter((app) => selectedAppIds.has(app.id))
+    return filteredSelectedSilentApps
       .map((app) => ({
         id: app.id,
         applicationId: app.id,
@@ -189,7 +224,7 @@ export default function FollowUpsPage() {
         lastInteractionAt: app.last_interaction_at || app.applied_at || app.created_at,
       }))
       .filter((t) => Boolean(t.email));
-  }, [applications, selectedAppIds]);
+  }, [filteredSelectedSilentApps]);
 
   const complete = async (row: FollowUpRow) => {
     try {
@@ -345,7 +380,7 @@ export default function FollowUpsPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-sm font-semibold text-gray-900">
-                  Candidatures sans réponse (+7j)
+                  Candidatures sans réponse (+{silenceDays}j)
                 </h2>
                 <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-900">
                   {filteredSilentApplications.length}
@@ -376,14 +411,14 @@ export default function FollowUpsPage() {
                   Tout sélectionner ({filteredSilentApplications.length})
                 </button>
               )}
-              {selectedAppIds.size > 0 && (
+              {filteredSelectedSilentApps.length > 0 && (
                 <button
                   type="button"
                   onClick={() => setBulkRelanceOpen(true)}
                   className="editorial-button-primary h-8 px-3.5 text-xs font-semibold shadow-xs flex items-center gap-1.5"
                 >
                   <Send className="h-3.5 w-3.5" />
-                  <span>Relancer la sélection ({selectedAppIds.size}) en Bulk</span>
+                  <span>Relancer la sélection ({filteredSelectedSilentApps.length}) en Bulk</span>
                 </button>
               )}
             </div>
@@ -391,18 +426,58 @@ export default function FollowUpsPage() {
 
           {/* Filter Toolbar for silent candidatures */}
           <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-100/80">
+            {/* Filter by Country (with option to exclude Saudi) */}
+            <div className="relative">
+              <Globe className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+              <select
+                value={silentCountryFilter}
+                onChange={(e) => setSilentCountryFilter(e.target.value)}
+                className={cn(
+                  "h-8 rounded-md border pl-8 pr-7 text-xs outline-none focus:border-[#ff5722] focus:ring-1 focus:ring-[#ff5722] bg-white cursor-pointer font-medium max-w-[210px] truncate",
+                  silentCountryFilter === "non_saudi"
+                    ? "border-amber-300 bg-amber-50/70 text-amber-900 font-semibold"
+                    : "border-gray-200 text-gray-700"
+                )}
+                title="Filtrer par pays / Exclure Arabie Saoudite"
+              >
+                <option value="all">🌐 Tous les pays</option>
+                <option value="non_saudi">🚫 Exclure Arabie Saoudite (Hors KSA)</option>
+                <option value="saudi">🇸🇦 Arabie Saoudite (Saudi)</option>
+                <option value="morocco">🇲🇦 Maroc</option>
+                <option value="france">🇫🇷 France</option>
+                <option value="other">🌍 Autre / International</option>
+              </select>
+            </div>
+
             {/* Filter by Company */}
             <div className="relative">
               <Building2 className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
               <select
                 value={silentCompanyFilter}
                 onChange={(e) => setSilentCompanyFilter(e.target.value)}
-                className="h-8 rounded-md border border-gray-200 pl-8 pr-7 text-xs outline-none focus:border-[#ff5722] focus:ring-1 focus:ring-[#ff5722] bg-white cursor-pointer text-gray-700 font-medium max-w-[180px] truncate"
+                className="h-8 rounded-md border border-gray-200 pl-8 pr-7 text-xs outline-none focus:border-[#ff5722] focus:ring-1 focus:ring-[#ff5722] bg-white cursor-pointer text-gray-700 font-medium max-w-[170px] truncate"
               >
                 <option value="all">Toutes entreprises ({silentApplications.length})</option>
                 {silentCompanies.map((c) => (
                   <option key={c.name} value={c.name}>
                     {c.name} ({c.count})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Template Selector */}
+            <div className="relative">
+              <FileText className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+              <select
+                value={selectedTemplateId}
+                onChange={(e) => setSelectedTemplateId(e.target.value)}
+                className="h-8 rounded-md border border-gray-200 pl-8 pr-7 text-xs outline-none focus:border-[#ff5722] focus:ring-1 focus:ring-[#ff5722] bg-white cursor-pointer text-gray-700 font-medium max-w-[200px] truncate"
+                title="Choisir le modèle d'email pour la relance"
+              >
+                {templates.map((tpl) => (
+                  <option key={tpl.id} value={tpl.id}>
+                    Modèle : {tpl.name}
                   </option>
                 ))}
               </select>
@@ -416,17 +491,17 @@ export default function FollowUpsPage() {
                 placeholder="Filtrer entreprise, poste, email..."
                 value={silentSearchQuery}
                 onChange={(e) => setSilentSearchQuery(e.target.value)}
-                className="h-8 rounded-md border border-gray-200 pl-8 pr-3 text-xs outline-none focus:border-[#ff5722] focus:ring-1 focus:ring-[#ff5722] w-48 sm:w-60"
+                className="h-8 rounded-md border border-gray-200 pl-8 pr-3 text-xs outline-none focus:border-[#ff5722] focus:ring-1 focus:ring-[#ff5722] w-44 sm:w-52"
               />
             </div>
 
-            {selectedAppIds.size > 0 && (
+            {filteredSelectedSilentApps.length > 0 && (
               <button
                 type="button"
                 onClick={clearSilentSelection}
                 className="text-xs text-gray-500 hover:text-gray-800 underline ml-auto"
               >
-                Désélectionner tout ({selectedAppIds.size})
+                Désélectionner tout ({filteredSelectedSilentApps.length})
               </button>
             )}
           </div>
@@ -442,6 +517,10 @@ export default function FollowUpsPage() {
               const reference = app.last_interaction_at ?? app.applied_at ?? app.created_at;
               const isSelected = selectedAppIds.has(app.id);
               const days = daysBetween(reference);
+              const countryBadge = getCountryBadge(
+                app.location || app.company?.location,
+                app.channel_email || app.company?.domain || app.company?.name
+              );
 
               return (
                 <div
@@ -471,12 +550,25 @@ export default function FollowUpsPage() {
                       className="h-9 w-9 shrink-0"
                     />
                     <div className="min-w-0">
-                      <Link
-                        href={`/tracker/applications/${app.id}`}
-                        className="truncate text-xs font-semibold text-gray-900 hover:text-[#ff5722]"
-                      >
-                        {app.company?.name ?? "—"} · {app.position}
-                      </Link>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Link
+                          href={`/tracker/applications/${app.id}`}
+                          className="truncate text-xs font-semibold text-gray-900 hover:text-[#ff5722]"
+                        >
+                          {app.company?.name ?? "—"} · {app.position}
+                        </Link>
+                        {countryBadge && (
+                          <span
+                            className={cn(
+                              "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium border shrink-0",
+                              countryBadge.color
+                            )}
+                          >
+                            <span>{countryBadge.flag}</span>
+                            <span>{countryBadge.label}</span>
+                          </span>
+                        )}
+                      </div>
                       <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-500 mt-0.5">
                         <span className="font-semibold text-amber-800 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
                           Sans réponse depuis {days} jour(s)
@@ -550,6 +642,7 @@ export default function FollowUpsPage() {
           setBulkRelanceOpen(false);
         }}
         targets={silentRelanceTargets}
+        initialTemplateId={selectedTemplateId}
         onSuccess={() => {
           void load();
           clearSilentSelection();

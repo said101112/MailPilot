@@ -7,7 +7,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  FileText,
   Filter,
+  Globe,
   History as HistoryIcon,
   Loader2,
   Mail,
@@ -31,6 +33,8 @@ import {
   inferCompanyFromEmail,
   parseContactFromEmail,
 } from "@/lib/tracker/syncService";
+import { getCountryBadge, resolveCountryCategory } from "@/lib/tracker/countries";
+import { getStoredTemplates, type MessageTemplate } from "@/lib/templates";
 
 interface HistoryItem {
   id: string;
@@ -68,6 +72,7 @@ export default function HistoryPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | "success" | "failed">("all");
   const [daysFilter, setDaysFilter] = useState<30 | 90 | 365>(30);
   const [companyFilter, setCompanyFilter] = useState<string>("all");
+  const [countryFilter, setCountryFilter] = useState<"all" | "non_saudi" | "saudi" | "morocco" | "france" | "other">("all");
   const [followUpFilter, setFollowUpFilter] = useState<"all" | "7days" | "14days">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -75,6 +80,10 @@ export default function HistoryPage() {
   const [syncing, setSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0 });
   const [linkingId, setLinkingId] = useState<string | null>(null);
+
+  // Template state for relance
+  const [templates, setTemplates] = useState<MessageTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
 
   // Selection & Relance
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -128,6 +137,14 @@ export default function HistoryPage() {
       void fetchHistory();
       // Auto-trigger background liaison so user never has to click manually
       void syncAllHistoryApplications().catch(() => undefined);
+      // Load templates
+      const tpls = getStoredTemplates();
+      setTemplates(tpls);
+      const defaultRelance =
+        tpls.find((t) => t.id === "relance-courte" || t.id.includes("relance")) ?? tpls[0];
+      if (defaultRelance) {
+        setSelectedTemplateId(defaultRelance.id);
+      }
     }, 0);
 
     return () => {
@@ -138,7 +155,7 @@ export default function HistoryPage() {
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [statusFilter, daysFilter, searchQuery, companyFilter, followUpFilter]);
+  }, [statusFilter, daysFilter, searchQuery, companyFilter, countryFilter, followUpFilter]);
 
   const handleCleanAllData = async () => {
     const {
@@ -313,15 +330,27 @@ export default function HistoryPage() {
         (followUpFilter === "7days" && daysSince >= 7 && item.status === "success") ||
         (followUpFilter === "14days" && daysSince >= 14 && item.status === "success");
 
+      const detectedCountry = resolveCountryCategory(
+        undefined,
+        item.email || item.company
+      );
+      let matchesCountry = true;
+      if (countryFilter === "non_saudi") {
+        matchesCountry = detectedCountry !== "saudi";
+      } else if (countryFilter !== "all") {
+        matchesCountry = detectedCountry === countryFilter;
+      }
+
       return (
         matchesStatus &&
         matchesDate &&
         matchesSearch &&
         matchesCompany &&
+        matchesCountry &&
         matchesFollowUp
       );
     });
-  }, [daysFilter, history, statusFilter, searchQuery, companyFilter, followUpFilter]);
+  }, [daysFilter, history, statusFilter, searchQuery, companyFilter, countryFilter, followUpFilter]);
 
   // Counts for tabs (based on selected date range)
   const counts = useMemo(() => {
@@ -617,6 +646,46 @@ export default function HistoryPage() {
                   </select>
                 </div>
 
+                {/* Filter by Country (with option to exclude Saudi) */}
+                <div className="relative">
+                  <Globe className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+                  <select
+                    value={countryFilter}
+                    onChange={(e) => setCountryFilter(e.target.value as any)}
+                    className={cn(
+                      "h-8 rounded-md border pl-8 pr-7 text-xs outline-none focus:border-[#ff5722] focus:ring-1 focus:ring-[#ff5722] bg-white cursor-pointer font-medium max-w-[210px] truncate",
+                      countryFilter === "non_saudi"
+                        ? "border-amber-300 bg-amber-50/70 text-amber-900 font-semibold"
+                        : "border-gray-200 text-gray-700"
+                    )}
+                    title="Filtrer par pays / Exclure Arabie Saoudite"
+                  >
+                    <option value="all">🌐 Tous les pays</option>
+                    <option value="non_saudi">🚫 Exclure Arabie Saoudite (Hors KSA)</option>
+                    <option value="saudi">🇸🇦 Arabie Saoudite (Saudi)</option>
+                    <option value="morocco">🇲🇦 Maroc</option>
+                    <option value="france">🇫🇷 France</option>
+                    <option value="other">🌍 Autre / International</option>
+                  </select>
+                </div>
+
+                {/* Template Selector for Relance */}
+                <div className="relative">
+                  <FileText className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+                  <select
+                    value={selectedTemplateId}
+                    onChange={(e) => setSelectedTemplateId(e.target.value)}
+                    className="h-8 rounded-md border border-gray-200 pl-8 pr-7 text-xs outline-none focus:border-[#ff5722] focus:ring-1 focus:ring-[#ff5722] bg-white cursor-pointer text-gray-700 font-medium max-w-[190px] truncate"
+                    title="Choisir le modèle d'email pour la relance"
+                  >
+                    {templates.map((tpl) => (
+                      <option key={tpl.id} value={tpl.id}>
+                        Modèle : {tpl.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* Filter by Relance / Silence */}
                 <div className="relative">
                   <Filter className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
@@ -746,6 +815,7 @@ export default function HistoryPage() {
                       const daysSince = getDaysSince(item.created_at);
                       const isOverSevenDays = daysSince >= 7 && isSuccess;
                       const isSelected = selectedIds.has(item.id);
+                      const countryBadge = getCountryBadge(undefined, item.email || item.company);
 
                       return (
                         <tr
@@ -775,9 +845,22 @@ export default function HistoryPage() {
                             <div className="flex items-center gap-2">
                               <Building2 className="h-4 w-4 text-gray-400 shrink-0" />
                               <div className="min-w-0">
-                                <p className="font-semibold text-gray-900 truncate">
-                                  {item.company || inferCompanyFromEmail(item.email)?.name || "Candidature Directe"}
-                                </p>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <p className="font-semibold text-gray-900 truncate">
+                                    {item.company || inferCompanyFromEmail(item.email)?.name || "Candidature Directe"}
+                                  </p>
+                                  {countryBadge && (
+                                    <span
+                                      className={cn(
+                                        "inline-flex items-center gap-1 rounded px-1.5 py-0.2 text-[9.5px] font-medium border shrink-0",
+                                        countryBadge.color
+                                      )}
+                                    >
+                                      <span>{countryBadge.flag}</span>
+                                      <span>{countryBadge.label}</span>
+                                    </span>
+                                  )}
+                                </div>
                                 <div className="flex items-center gap-1.5 mt-0.5">
                                   {inferCompanyFromEmail(item.email)?.domain && (
                                     <span className="text-[10px] text-gray-400 truncate">
@@ -1002,6 +1085,7 @@ export default function HistoryPage() {
           setSingleRelanceTarget(null);
         }}
         targets={activeRelanceTargets}
+        initialTemplateId={selectedTemplateId}
         onSuccess={() => {
           void fetchHistory();
           clearSelection();

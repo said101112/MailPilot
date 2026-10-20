@@ -36,6 +36,10 @@ import {
   parseContactFromEmail,
 } from "@/lib/tracker/syncService";
 import { logEvent } from "@/lib/tracker/queries";
+import {
+  resolveCountryCategory,
+  getCountryBadge,
+} from "@/lib/tracker/countries";
 
 export interface RelanceTarget {
   id?: string;
@@ -52,6 +56,7 @@ interface BulkRelanceModalProps {
   isOpen: boolean;
   onClose: () => void;
   targets: RelanceTarget[];
+  initialTemplateId?: string;
   onSuccess?: () => void;
 }
 
@@ -66,6 +71,7 @@ export default function BulkRelanceModal({
   isOpen,
   onClose,
   targets,
+  initialTemplateId,
   onSuccess,
 }: BulkRelanceModalProps) {
   const router = useRouter();
@@ -90,8 +96,9 @@ export default function BulkRelanceModal({
     const stored = getStoredTemplates();
     setTemplates(stored);
 
-    // Prefer follow-up template if available
+    // Prefer chosen initialTemplateId or follow-up template if available
     const followUpTpl =
+      (initialTemplateId && stored.find((t) => t.id === initialTemplateId)) ||
       stored.find((t) => t.id === "followup-7days") ||
       stored.find((t) => t.id.includes("followup")) ||
       stored[0] ||
@@ -117,7 +124,7 @@ export default function BulkRelanceModal({
     setCurrentIndex(0);
     setStats({ success: 0, failed: 0 });
     setPreviewIndex(0);
-  }, [isOpen, targets]);
+  }, [isOpen, targets, initialTemplateId]);
 
   const handleTemplateChange = (templateId: string) => {
     setSelectedTemplateId(templateId);
@@ -404,29 +411,37 @@ export default function BulkRelanceModal({
             </div>
 
             <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-100 bg-white">
-              {executionStates.map((target, idx) => (
-                <div
-                  key={target.email + idx}
-                  onClick={() => setPreviewIndex(idx)}
-                  className={cn(
-                    "flex items-center justify-between px-3.5 py-2.5 text-xs transition cursor-pointer hover:bg-gray-50",
-                    previewIndex === idx && "bg-orange-50/50"
-                  )}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <Building2 className="h-4 w-4 text-gray-400 shrink-0" />
-                    <div className="min-w-0 truncate">
-                      <span className="font-semibold text-gray-900">
-                        {target.company}
-                      </span>
-                      <span className="text-gray-400 mx-1.5">·</span>
-                      <span className="text-gray-600">{target.position}</span>
-                      <span className="text-gray-400 mx-1.5">·</span>
-                      <span className="font-mono text-gray-500 text-[11px]">
-                        {target.email}
-                      </span>
-                    </div>
-                  </div>
+              {executionStates.map((target, idx) => {
+                const countryBadge = getCountryBadge(null, target.email || target.company);
+
+                return (
+                    <div
+                      key={target.email + idx}
+                      onClick={() => setPreviewIndex(idx)}
+                      className={cn(
+                        "flex items-center justify-between px-3.5 py-2.5 text-xs transition cursor-pointer hover:bg-gray-50",
+                        previewIndex === idx && "bg-orange-50/50"
+                      )}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <Building2 className="h-4 w-4 text-gray-400 shrink-0" />
+                        <div className="min-w-0 truncate flex items-center gap-1.5">
+                          <span className="font-semibold text-gray-900 truncate">
+                            {target.company}
+                          </span>
+                          {countryBadge && (
+                            <span className={cn("inline-flex items-center gap-0.5 rounded px-1.5 py-0.2 text-[9.5px] font-semibold border shrink-0", countryBadge.badgeClass)}>
+                              {countryBadge.flag} {countryBadge.name}
+                            </span>
+                          )}
+                          <span className="text-gray-400">·</span>
+                          <span className="text-gray-600 truncate">{target.position}</span>
+                          <span className="text-gray-400">·</span>
+                          <span className="font-mono text-gray-500 text-[11px] truncate">
+                            {target.email}
+                          </span>
+                        </div>
+                      </div>
 
                   <div className="shrink-0 flex items-center gap-2">
                     {target.status === "pending" && (
@@ -456,7 +471,8 @@ export default function BulkRelanceModal({
                     )}
                   </div>
                 </div>
-              ))}
+              );
+            })}
             </div>
           </div>
 
