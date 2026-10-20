@@ -9,8 +9,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Columns3,
+  ExternalLink,
+  Globe,
   ListFilter,
   Loader2,
+  Mail,
   Pencil,
   Plus,
   Search,
@@ -216,6 +219,7 @@ export default function ApplicationsPage() {
   const [view, setView] = useState<ViewMode>("table");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<JobStatus | "all">("all");
+  const [channelFilter, setChannelFilter] = useState<string>("all");
   const [page, setPage] = useState(1);
   const [formOpen, setFormOpen] = useState(false);
   const [smartPasteOpen, setSmartPasteOpen] = useState(false);
@@ -271,14 +275,45 @@ export default function ApplicationsPage() {
     const term = search.trim().toLowerCase();
     return applications.filter((app) => {
       if (statusFilter !== "all" && app.status !== statusFilter) return false;
+
+      if (channelFilter !== "all") {
+        const appChannel = (app.channel || "").toLowerCase();
+        const appOfferUrl = (app.offer_url || "").toLowerCase();
+        const appChannelUrl = (app.channel_url || "").toLowerCase();
+        const hasEmail = Boolean(app.channel_email);
+
+        if (channelFilter === "email") {
+          if (appChannel !== "email" && !hasEmail) return false;
+        } else if (channelFilter === "linkedin") {
+          const isLinkedIn =
+            appChannel.includes("linkedin") ||
+            appOfferUrl.includes("linkedin.com") ||
+            appChannelUrl.includes("linkedin.com");
+          if (!isLinkedIn) return false;
+        } else if (channelFilter === "company_website") {
+          if (appChannel !== "company_website" && appChannel !== "website") return false;
+        } else if (channelFilter === "job_board") {
+          if (appChannel !== "job_board") return false;
+        } else if (channelFilter === "other") {
+          const isStandard =
+            appChannel === "email" ||
+            hasEmail ||
+            appChannel.includes("linkedin") ||
+            appOfferUrl.includes("linkedin.com") ||
+            appChannel === "company_website" ||
+            appChannel === "job_board";
+          if (isStandard) return false;
+        }
+      }
+
       if (!term) return true;
-      const haystack = [app.position, app.company?.name, app.location]
+      const haystack = [app.position, app.company?.name, app.location, app.channel_email]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
       return haystack.includes(term);
     });
-  }, [applications, search, statusFilter]);
+  }, [applications, search, statusFilter, channelFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageRows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -368,7 +403,7 @@ export default function ApplicationsPage() {
             />
           </div>
           <EditorialSelect
-            className="editorial-select w-full sm:w-48"
+            className="editorial-select w-full sm:w-44"
             value={statusFilter}
             onChange={(next) => {
               setStatusFilter(next as JobStatus | "all");
@@ -380,6 +415,23 @@ export default function ApplicationsPage() {
                 value: status,
                 label: JOB_STATUS_LABELS[status],
               })),
+            ]}
+          />
+
+          <EditorialSelect
+            className="editorial-select w-full sm:w-48"
+            value={channelFilter}
+            onChange={(next) => {
+              setChannelFilter(next);
+              setPage(1);
+            }}
+            options={[
+              { value: "all", label: "Tous les canaux" },
+              { value: "email", label: "✉️ Email direct" },
+              { value: "linkedin", label: "💼 LinkedIn (Offre / Msg)" },
+              { value: "company_website", label: "🏢 Site officiel" },
+              { value: "job_board", label: "🌐 Plateforme / Job board" },
+              { value: "other", label: "Autre canal" },
             ]}
           />
         </div>
@@ -493,7 +545,35 @@ export default function ApplicationsPage() {
                             )}
                           </td>
                           <td className="px-5 py-3 text-gray-600">
-                            {app.channel ? CHANNEL_LABELS[app.channel] ?? app.channel : "—"}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {app.channel?.includes("linkedin") || app.offer_url?.includes("linkedin.com") || app.channel_url?.includes("linkedin.com") ? (
+                                <span className="inline-flex items-center gap-1 rounded bg-blue-50 px-1.5 py-0.5 text-[11px] font-medium text-blue-700 border border-blue-200">
+                                  <span className="font-bold text-[10px]">in</span> LinkedIn
+                                </span>
+                              ) : app.channel === "email" || app.channel_email ? (
+                                <span className="inline-flex items-center gap-1 rounded bg-orange-50 px-1.5 py-0.5 text-[11px] font-medium text-[#ff5722] border border-orange-200">
+                                  <Mail className="h-3 w-3" /> Email
+                                </span>
+                              ) : app.channel === "company_website" ? (
+                                <span className="inline-flex items-center gap-1 rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-700 border border-gray-200">
+                                  <Globe className="h-3 w-3" /> Site web
+                                </span>
+                              ) : (
+                                <span>{app.channel ? CHANNEL_LABELS[app.channel] ?? app.channel : "—"}</span>
+                              )}
+                              {app.offer_url && (
+                                <a
+                                  href={app.offer_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(event) => event.stopPropagation()}
+                                  className="text-gray-400 hover:text-[#ff5722] p-0.5"
+                                  title="Ouvrir le lien de l'offre"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                </a>
+                              )}
+                            </div>
                           </td>
                           <td className="px-5 py-3 text-gray-600">{formatDate(app.applied_at)}</td>
                           <td className="px-5 py-3">
@@ -568,9 +648,23 @@ export default function ApplicationsPage() {
                             <span className="font-semibold text-xs text-gray-900 block truncate">
                               {app.company?.name ?? "—"}
                             </span>
-                            <p className="text-[11px] text-gray-500 truncate">
-                              {app.channel ? CHANNEL_LABELS[app.channel] ?? app.channel : "Direct"} · {formatDate(app.applied_at)}
-                            </p>
+                            <div className="flex items-center gap-1.5 text-[11px] text-gray-500 truncate">
+                              <span>{app.channel ? CHANNEL_LABELS[app.channel] ?? app.channel : "Direct"}</span>
+                              <span>·</span>
+                              <span>{formatDate(app.applied_at)}</span>
+                              {app.offer_url && (
+                                <a
+                                  href={app.offer_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(event) => event.stopPropagation()}
+                                  className="text-[#ff5722] hover:underline inline-flex items-center gap-0.5 ml-1"
+                                  title="Ouvrir le lien de l'offre"
+                                >
+                                  Offre <ExternalLink className="h-2.5 w-2.5" />
+                                </a>
+                              )}
+                            </div>
                           </div>
                         </div>
                         <StatusBadge status={app.status} />

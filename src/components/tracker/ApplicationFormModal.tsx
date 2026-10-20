@@ -1,7 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, Sparkles, Trash2, X } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Globe,
+  Link as LinkIcon,
+  Loader2,
+  Mail,
+  SlidersHorizontal,
+  Sparkles,
+  Trash2,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -81,10 +92,23 @@ export default function ApplicationFormModal({
         companyLocation: prefillCompany.location ?? "",
         companyDescription: prefillCompany.description ?? "",
         companyWikidataId: prefillCompany.wikidata_id,
+        status: "sent",
         appliedAt: today,
       });
     }
-    return emptyFormValues({ appliedAt: today });
+    return emptyFormValues({ appliedAt: today, status: "sent" });
+  });
+
+  const [showAdditional, setShowAdditional] = useState<boolean>(() => {
+    if (!editingApplication) return false;
+    return Boolean(
+      editingApplication.description ||
+      editingApplication.location ||
+      editingApplication.published_at ||
+      editingApplication.primary_contact_id ||
+      editingApplication.channel_url ||
+      editingApplication.channel_phone
+    );
   });
 
   useEffect(() => {
@@ -242,228 +266,58 @@ export default function ApplicationFormModal({
                 </div>
               )}
 
-              <section className="space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                  Poste
-                </h3>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="sm:col-span-2 space-y-1.5">
-                    <label className="editorial-label" htmlFor="position">
-                      Intitulé du poste ou stage *
-                    </label>
-                    <input
-                      id="position"
-                      className="editorial-input w-full"
-                      value={values.position}
-                      onChange={(event) => patch({ position: event.target.value })}
-                      placeholder="Ex : Stagiaire Software Engineering / PFE"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="editorial-label" htmlFor="jobType">
-                      Type
-                    </label>
-                    <EditorialSelect
-                      id="jobType"
-                      className="editorial-select w-full"
-                      value={values.jobType}
-                      onChange={(next) => patch({ jobType: next })}
-                      options={JOB_TYPES}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="editorial-label" htmlFor="domain">
-                      Domaine
-                    </label>
-                    <EditorialSelect
-                      id="domain"
-                      className="editorial-select w-full"
-                      value={values.domain}
-                      onChange={(next) => patch({ domain: next })}
-                      options={JOB_DOMAINS}
-                    />
-                  </div>
-                  <div className="sm:col-span-2 space-y-1.5">
-                    <label className="editorial-label" htmlFor="description">
-                      Description de l&apos;offre
-                    </label>
-                    <textarea
-                      id="description"
-                      className="editorial-textarea min-h-[120px] w-full"
-                      value={values.description}
-                      onChange={(event) => patch({ description: event.target.value })}
-                      placeholder="Collez ici le texte complet de l'annonce..."
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="editorial-label" htmlFor="offerUrl">
-                      URL de l&apos;offre
-                    </label>
-                    <input
-                      id="offerUrl"
-                      type="url"
-                      className="editorial-input w-full"
-                      value={values.offerUrl}
-                      onChange={(event) => patch({ offerUrl: event.target.value })}
-                      placeholder="https://..."
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="editorial-label" htmlFor="location">
-                      Localisation
-                    </label>
-                    <input
-                      id="location"
-                      className="editorial-input w-full"
-                      value={values.location}
-                      onChange={(event) => patch({ location: event.target.value })}
-                      placeholder="Casablanca, Paris..."
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="editorial-label" htmlFor="publishedAt">
-                      Date de publication
-                    </label>
-                    <input
-                      id="publishedAt"
-                      type="date"
-                      className="editorial-input w-full"
-                      value={values.publishedAt}
-                      onChange={(event) => patch({ publishedAt: event.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="editorial-label" htmlFor="appliedAt">
-                      Date de candidature
-                    </label>
-                    <input
-                      id="appliedAt"
-                      type="date"
-                      className="editorial-input w-full"
-                      value={values.appliedAt}
-                      onChange={(event) => patch({ appliedAt: event.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="editorial-label" htmlFor="workMode">
-                      Mode de travail
-                    </label>
-                    <EditorialSelect
-                      id="workMode"
-                      className="editorial-select w-full"
-                      value={values.workMode}
-                      onChange={(next) => patch({ workMode: next })}
-                      options={WORK_MODES}
-                    />
-                  </div>
+              {/* 1. INFORMATIONS ESSENTIELLES (CRÉATION RAPIDE) */}
+              <section className="space-y-4">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                  <h3 className="text-xs font-bold uppercase tracking-wide text-gray-800 flex items-center gap-1.5">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#ff5722]/10 text-[10px] font-bold text-[#ff5722]">1</span>
+                    Champs essentiels
+                  </h3>
+                  <span className="text-[11px] text-gray-400">Création rapide en quelques secondes</span>
                 </div>
-              </section>
 
-              <section className="space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                  Entreprise
-                </h3>
-                <CompanyCombobox
-                  companies={companies}
-                  value={{
-                    companyId: values.companyId,
-                    name: values.companyName,
-                    website: values.companyWebsite,
-                    domain: values.companyDomain,
-                    logoUrl: values.companyLogoUrl,
-                    sector: values.companySector,
-                    location: values.companyLocation,
-                    description: values.companyDescription,
-                    wikidataId: values.companyWikidataId,
-                  }}
-                  onChange={(next) => {
-                    patch(comboboxPatchToFormValues(next));
-                  }}
-                />
-              </section>
+                {/* Entreprise Selector (En haut pour sélection immédiate) */}
+                <div>
+                  <CompanyCombobox
+                    label="Entreprise *"
+                    companies={companies}
+                    value={{
+                      companyId: values.companyId,
+                      name: values.companyName,
+                      website: values.companyWebsite,
+                      domain: values.companyDomain,
+                      logoUrl: values.companyLogoUrl,
+                      sector: values.companySector,
+                      location: values.companyLocation,
+                      description: values.companyDescription,
+                      wikidataId: values.companyWikidataId,
+                    }}
+                    onChange={(next) => {
+                      patch(comboboxPatchToFormValues(next));
+                    }}
+                  />
+                </div>
 
-              <section className="space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                  Canal de candidature
-                </h3>
+                {/* Intitulé du Poste */}
+                <div className="space-y-1.5">
+                  <label className="editorial-label" htmlFor="position">
+                    Intitulé du poste ou stage *
+                  </label>
+                  <input
+                    id="position"
+                    className="editorial-input w-full"
+                    value={values.position}
+                    onChange={(event) => patch({ position: event.target.value })}
+                    placeholder="Ex : Stagiaire Software Engineering / Stage PFE Data Science & IA"
+                    required
+                  />
+                </div>
+
+                {/* Statut & Date de postulation */}
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <label className="editorial-label" htmlFor="channel">
-                      Canal utilisé
-                    </label>
-                    <EditorialSelect
-                      id="channel"
-                      className="editorial-select w-full"
-                      value={values.channel}
-                      onChange={(next) => patch({ channel: next })}
-                      options={APPLICATION_CHANNELS}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="editorial-label" htmlFor="primaryContact">
-                      Contact principal
-                    </label>
-                    <EditorialSelect
-                      id="primaryContact"
-                      className="editorial-select w-full"
-                      value={values.primaryContactId ?? ""}
-                      onChange={(next) => patch({ primaryContactId: next || null })}
-                      options={[
-                        { value: "", label: "Aucun contact" },
-                        ...companyContacts.map((contact) => ({
-                          value: contact.id,
-                          label: `${contact.full_name}${contact.role ? ` — ${contact.role}` : ""}`,
-                        })),
-                      ]}
-                    />
-                    {values.companyId && companyContacts.length === 0 && (
-                      <p className="text-[11px] text-gray-400">
-                        Ajoutez un contact depuis la fiche entreprise.
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="editorial-label" htmlFor="channelUrl">
-                      Lien (profil LinkedIn, page de candidature...)
-                    </label>
-                    <input
-                      id="channelUrl"
-                      type="url"
-                      className="editorial-input w-full"
-                      value={values.channelUrl}
-                      onChange={(event) => patch({ channelUrl: event.target.value })}
-                      placeholder="https://linkedin.com/in/..."
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="editorial-label" htmlFor="channelEmail">
-                      Email utilisé
-                    </label>
-                    <input
-                      id="channelEmail"
-                      type="email"
-                      className="editorial-input w-full"
-                      value={values.channelEmail}
-                      onChange={(event) => patch({ channelEmail: event.target.value })}
-                      placeholder="recrutement@entreprise.com"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="editorial-label" htmlFor="channelPhone">
-                      Téléphone / WhatsApp
-                    </label>
-                    <input
-                      id="channelPhone"
-                      className="editorial-input w-full"
-                      value={values.channelPhone}
-                      onChange={(event) => patch({ channelPhone: event.target.value })}
-                      placeholder="+212..."
-                    />
-                  </div>
                   <div className="space-y-1.5">
                     <label className="editorial-label" htmlFor="status">
-                      Statut
+                      Statut de la candidature *
                     </label>
                     <EditorialSelect
                       id="status"
@@ -476,8 +330,241 @@ export default function ApplicationFormModal({
                       }))}
                     />
                   </div>
+
+                  <div className="space-y-1.5">
+                    <label className="editorial-label" htmlFor="appliedAt">
+                      Date de candidature / postulation *
+                    </label>
+                    <input
+                      id="appliedAt"
+                      type="date"
+                      className="editorial-input w-full"
+                      value={values.appliedAt}
+                      onChange={(event) => patch({ appliedAt: event.target.value })}
+                    />
+                  </div>
+                </div>
+
+                {/* Type de contrat & Canal */}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <label className="editorial-label" htmlFor="jobType">
+                      Type de contrat
+                    </label>
+                    <EditorialSelect
+                      id="jobType"
+                      className="editorial-select w-full"
+                      value={values.jobType}
+                      onChange={(next) => patch({ jobType: next })}
+                      options={JOB_TYPES}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="editorial-label" htmlFor="channel">
+                      Canal de candidature
+                    </label>
+                    <EditorialSelect
+                      id="channel"
+                      className="editorial-select w-full"
+                      value={values.channel}
+                      onChange={(next) => patch({ channel: next })}
+                      options={APPLICATION_CHANNELS}
+                    />
+                  </div>
+                </div>
+
+                {/* Lien de l'offre (Optionnel) & Email de contact (Optionnel) */}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <label className="editorial-label flex items-center justify-between" htmlFor="offerUrl">
+                      <span>Lien de l&apos;offre</span>
+                      <span className="text-[10px] text-gray-400 font-normal">Optionnel</span>
+                    </label>
+                    <div className="relative">
+                      <LinkIcon className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+                      <input
+                        id="offerUrl"
+                        type="url"
+                        className="editorial-input w-full pl-8"
+                        value={values.offerUrl}
+                        onChange={(event) => patch({ offerUrl: event.target.value })}
+                        placeholder="https://linkedin.com/jobs/... ou site"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="editorial-label flex items-center justify-between" htmlFor="channelEmail">
+                      <span>Email destinataire</span>
+                      <span className="text-[10px] text-gray-400 font-normal">Optionnel</span>
+                    </label>
+                    <div className="relative">
+                      <Mail className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+                      <input
+                        id="channelEmail"
+                        type="email"
+                        className="editorial-input w-full pl-8"
+                        value={values.channelEmail}
+                        onChange={(event) => patch({ channelEmail: event.target.value })}
+                        placeholder="recrutement@entreprise.com"
+                      />
+                    </div>
+                  </div>
                 </div>
               </section>
+
+              {/* 2. SECTION REPLIABLE : INFORMATIONS ADDITIONNELLES */}
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowAdditional((prev) => !prev)}
+                  className={cn(
+                    "flex w-full items-center justify-between rounded-xl border px-4 py-2.5 text-xs font-medium transition cursor-pointer",
+                    showAdditional
+                      ? "border-[#ff5722]/30 bg-orange-50/30 text-gray-900"
+                      : "border-dashed border-gray-300 bg-gray-50/70 text-gray-600 hover:bg-gray-100 hover:border-gray-400 hover:text-gray-900"
+                  )}
+                >
+                  <span className="flex items-center gap-2">
+                    <SlidersHorizontal className="h-3.5 w-3.5 text-[#ff5722]" />
+                    <span className="font-semibold">Informations additionnelles</span>
+                    <span className="text-[11px] text-gray-400 font-normal hidden sm:inline">
+                      (Description, Domaine, Contact, Localisation, Mode...)
+                    </span>
+                  </span>
+                  <span className="flex items-center gap-1 text-[11px] text-[#ff5722] font-semibold">
+                    {showAdditional ? "Masquer les détails" : "+ Afficher plus de détails"}
+                    {showAdditional ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                  </span>
+                </button>
+
+                {showAdditional && (
+                  <div className="mt-3.5 space-y-4 rounded-xl border border-gray-200/90 bg-gray-50/40 p-4 animate-in fade-in duration-200">
+                    {/* Domaine & Mode de travail */}
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <label className="editorial-label" htmlFor="domain">
+                          Domaine d&apos;activité
+                        </label>
+                        <EditorialSelect
+                          id="domain"
+                          className="editorial-select w-full bg-white"
+                          value={values.domain}
+                          onChange={(next) => patch({ domain: next })}
+                          options={JOB_DOMAINS}
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="editorial-label" htmlFor="workMode">
+                          Mode de travail
+                        </label>
+                        <EditorialSelect
+                          id="workMode"
+                          className="editorial-select w-full bg-white"
+                          value={values.workMode}
+                          onChange={(next) => patch({ workMode: next })}
+                          options={WORK_MODES}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Localisation & Date publication */}
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <label className="editorial-label" htmlFor="location">
+                          Localisation (Ville, Pays)
+                        </label>
+                        <input
+                          id="location"
+                          className="editorial-input w-full bg-white"
+                          value={values.location}
+                          onChange={(event) => patch({ location: event.target.value })}
+                          placeholder="Casablanca, Paris, Remote..."
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="editorial-label" htmlFor="publishedAt">
+                          Date de publication de l&apos;offre
+                        </label>
+                        <input
+                          id="publishedAt"
+                          type="date"
+                          className="editorial-input w-full bg-white"
+                          value={values.publishedAt}
+                          onChange={(event) => patch({ publishedAt: event.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Description complète de l'offre */}
+                    <div className="space-y-1.5">
+                      <label className="editorial-label" htmlFor="description">
+                        Description complète de l&apos;offre / annonce
+                      </label>
+                      <textarea
+                        id="description"
+                        className="editorial-textarea min-h-[100px] w-full bg-white"
+                        value={values.description}
+                        onChange={(event) => patch({ description: event.target.value })}
+                        placeholder="Collez ici le texte complet de l'annonce, missions, pré-requis..."
+                      />
+                    </div>
+
+                    {/* Contact principal & Lien profil */}
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <label className="editorial-label" htmlFor="primaryContact">
+                          Contact principal
+                        </label>
+                        <EditorialSelect
+                          id="primaryContact"
+                          className="editorial-select w-full bg-white"
+                          value={values.primaryContactId ?? ""}
+                          onChange={(next) => patch({ primaryContactId: next || null })}
+                          options={[
+                            { value: "", label: "Aucun contact lié" },
+                            ...companyContacts.map((contact) => ({
+                              value: contact.id,
+                              label: `${contact.full_name}${contact.role ? ` — ${contact.role}` : ""}`,
+                            })),
+                          ]}
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="editorial-label" htmlFor="channelUrl">
+                          Lien direct du profil (LinkedIn / Contact)
+                        </label>
+                        <input
+                          id="channelUrl"
+                          type="url"
+                          className="editorial-input w-full bg-white"
+                          value={values.channelUrl}
+                          onChange={(event) => patch({ channelUrl: event.target.value })}
+                          placeholder="https://linkedin.com/in/..."
+                        />
+                      </div>
+                    </div>
+
+                    {/* Téléphone / WhatsApp */}
+                    <div className="space-y-1.5 sm:w-1/2">
+                      <label className="editorial-label" htmlFor="channelPhone">
+                        Téléphone / WhatsApp
+                      </label>
+                      <input
+                        id="channelPhone"
+                        className="editorial-input w-full bg-white"
+                        value={values.channelPhone}
+                        onChange={(event) => patch({ channelPhone: event.target.value })}
+                        placeholder="+212 6... ou +33 6..."
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="shrink-0 flex items-center justify-between border-t border-gray-100 bg-gray-50 px-4 py-3 sm:px-6">
