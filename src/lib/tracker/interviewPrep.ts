@@ -10,6 +10,7 @@ export interface PitchData {
 export interface QuestionAnswerItem {
   id: string;
   category: "classic" | "technical" | "behavioral" | "difficult";
+  domain?: string;
   question: string;
   situation?: string;
   task?: string;
@@ -17,6 +18,9 @@ export interface QuestionAnswerItem {
   result?: string;
   fullAnswer?: string;
   keyTip?: string;
+  difficulty?: "junior" | "mid" | "senior";
+  tags?: string[];
+  createdAt?: string;
 }
 
 export interface StrategicQuestionItem {
@@ -289,4 +293,196 @@ export function saveInterviewPrep(state: InterviewPrepState): void {
   } catch (err) {
     console.error("Unable to save interview prep to localStorage", err);
   }
+}
+
+// ---------------------------------------------------------------------------
+// AI Prompt Studio & Smart Parser
+// ---------------------------------------------------------------------------
+
+export interface AIPromptOptions {
+  domain: string;
+  language: "fr" | "en";
+  count: number;
+  seniority: "internship_pfe" | "junior" | "mid";
+  focus: "all" | "technical" | "behavioral" | "difficult";
+}
+
+export const PROMPT_DOMAIN_PRESETS = [
+  { id: "data_science", name: "Data Science & Machine Learning", icon: "🧠" },
+  { id: "python_fastapi", name: "Python & Backend (FastAPI / Django)", icon: "🐍" },
+  { id: "data_engineering", name: "Data Engineering (SQL, Spark, Airflow)", icon: "⚙️" },
+  { id: "sql_analytics", name: "SQL Avancé & Data Analytics", icon: "📊" },
+  { id: "nlp_llm", name: "NLP, LLMs & IA Générative (LangChain, RAG)", icon: "🤖" },
+  { id: "computer_vision", name: "Computer Vision & Deep Learning (PyTorch)", icon: "👁️" },
+  { id: "react_nextjs", name: "Fullstack / Frontend (React, Next.js, TS)", icon: "💻" },
+  { id: "devops_cloud", name: "DevOps & Cloud (Docker, Kubernetes, AWS)", icon: "☁️" },
+  { id: "rh_behavioral", name: "Entretien RH & Questions Pièges", icon: "🎯" },
+];
+
+export function generateAIPrompt(options: AIPromptOptions): string {
+  const isFr = options.language === "fr";
+  const seniorityLabel = isFr
+    ? options.seniority === "internship_pfe"
+      ? "Stage PFE de fin d'études d'ingénieur (6 mois avec perspective d'embauche CDI)"
+      : options.seniority === "junior"
+        ? "Poste Premier Emploi / Junior (0-2 ans d'expérience)"
+        : "Poste Intermédiaire"
+    : options.seniority === "internship_pfe"
+      ? "End-of-Studies Engineering Internship (6 months with full-time conversion perspective)"
+      : options.seniority === "junior"
+        ? "Junior / Entry-level role (0-2 years of experience)"
+        : "Mid-level role";
+
+  const focusLabel = isFr
+    ? options.focus === "technical"
+      ? "100% axées sur la technique, l'architecture et les pièges de code"
+      : options.focus === "behavioral"
+        ? "axées sur le comportement, le travail d'équipe et la gestion de projet"
+        : options.focus === "difficult"
+          ? "axées sur les questions pièges, mises en situation délicates et prétentions"
+          : "équilibrées entre technique, architecture et mises en situation"
+    : options.focus === "technical"
+      ? "focused 100% on technical depth, architecture, and code gotchas"
+      : options.focus === "behavioral"
+        ? "focused on behavior, teamwork, and communication"
+        : options.focus === "difficult"
+          ? "focused on tricky questions and situational challenges"
+          : "balanced between technical depth and situational questions";
+
+  if (isFr) {
+    return `Agis comme un Tech Lead senior et recruteur technique d'élite spécialisé dans le domaine : "${options.domain}".
+Je prépare un entretien d'embauche pour le niveau suivant : ${seniorityLabel}.
+
+Consigne : Génère exactement ${options.count} questions d'entretien réelles, percutantes et réalistes (${focusLabel}), avec pour chacune la réponse type idéale et le conseil clé du recruteur.
+
+FORMAT DE SORTIE OBLIGATOIRE :
+Tu dois répondre UNIQUEMENT avec un tableau JSON valide (sans aucun mot d'introduction, sans texte avant ou après, sans balises superflues). Respecte strictement ce schéma JSON :
+
+[
+  {
+    "question": "Texte exact de la question posée par le recruteur",
+    "category": "${options.focus === "technical" ? "technical" : options.focus === "behavioral" ? "behavioral" : "classic"}",
+    "domain": "${options.domain}",
+    "fullAnswer": "La réponse idéale, synthétique (3 à 5 phrases), structurée et convaincante que le candidat doit formuler.",
+    "situation": "Optionnel : contexte d'exemple selon la méthode STAR",
+    "action": "Optionnel : ce que le candidat a résolu concrètement",
+    "result": "Optionnel : impact chiffré du résultat",
+    "keyTip": "Le conseil d'or / le piège exact à éviter selon le recruteur."
+  }
+]
+
+Sois précis, professionnel, exigeant et moderne (technologies actuelles de 2026). Donne les ${options.count} questions.`;
+  }
+
+  return `Act as an elite Tech Lead and Senior Technical Recruiter specialized in: "${options.domain}".
+I am preparing for an interview for the following level: ${seniorityLabel}.
+
+Generate exactly ${options.count} real-world, high-impact interview questions (${focusLabel}), each with the ideal benchmark answer and the recruiter's golden tip.
+
+MANDATORY OUTPUT FORMAT:
+You MUST reply ONLY with a valid JSON array (no conversational filler, no markdown wrappers, no intro, no outro). Strictly adhere to this JSON format:
+
+[
+  {
+    "question": "Exact wording of the interview question",
+    "category": "${options.focus === "technical" ? "technical" : options.focus === "behavioral" ? "behavioral" : "classic"}",
+    "domain": "${options.domain}",
+    "fullAnswer": "The ideal, punchy (3 to 5 sentences), structured and convincing answer the candidate should give.",
+    "keyTip": "The recruiter's golden tip / trap to avoid."
+  }
+]
+
+Be specific, challenging, and focused on modern industry practices for ${options.domain}.`;
+}
+
+export function parseAIResponse(rawText: string, fallbackDomain?: string): QuestionAnswerItem[] {
+  const trimmed = rawText.trim();
+  if (!trimmed) return [];
+
+  // 1. Try JSON extraction
+  try {
+    let cleanJson = trimmed;
+    // Strip markdown code fences if present: ```json ... ```
+    const matchFences = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    if (matchFences && matchFences[1]) {
+      cleanJson = matchFences[1].trim();
+    } else {
+      // Find array boundaries [ ... ]
+      const startIdx = trimmed.indexOf("[");
+      const endIdx = trimmed.lastIndexOf("]");
+      if (startIdx !== -1 && endIdx > startIdx) {
+        cleanJson = trimmed.slice(startIdx, endIdx + 1);
+      }
+    }
+
+    const parsed = JSON.parse(cleanJson);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed.map((item: any, idx: number): QuestionAnswerItem => {
+        return {
+          id: `qa-ai-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 6)}`,
+          category: ["classic", "technical", "behavioral", "difficult"].includes(item.category)
+            ? item.category
+            : "technical",
+          domain: item.domain || fallbackDomain || "Tech",
+          question: String(item.question || item.q || `Question ${idx + 1}`).trim(),
+          fullAnswer: String(item.fullAnswer || item.answer || item.a || item.response || "").trim(),
+          situation: item.situation ? String(item.situation).trim() : undefined,
+          task: item.task ? String(item.task).trim() : undefined,
+          action: item.action ? String(item.action).trim() : undefined,
+          result: item.result ? String(item.result).trim() : undefined,
+          keyTip: item.keyTip || item.tip ? String(item.keyTip || item.tip).trim() : undefined,
+          createdAt: new Date().toISOString(),
+        };
+      });
+    }
+  } catch (jsonErr) {
+    console.warn("JSON parsing failed, attempting line-by-line fallback parser...", jsonErr);
+  }
+
+  // 2. Line-by-line Fallback Parser (e.g. Q: ... A: ... or 1. Question: ... Réponse: ...)
+  const items: QuestionAnswerItem[] = [];
+  const lines = trimmed.split("\n").map((l) => l.trim()).filter(Boolean);
+
+  let currentQuestion = "";
+  let currentAnswer = "";
+  let currentTip = "";
+
+  const commitCurrent = () => {
+    if (currentQuestion && (currentAnswer || currentTip)) {
+      items.push({
+        id: `qa-text-${Date.now()}-${items.length}-${Math.random().toString(36).slice(2, 6)}`,
+        category: "technical",
+        domain: fallbackDomain || "Tech",
+        question: currentQuestion,
+        fullAnswer: currentAnswer || currentTip,
+        keyTip: currentTip || undefined,
+        createdAt: new Date().toISOString(),
+      });
+      currentQuestion = "";
+      currentAnswer = "";
+      currentTip = "";
+    }
+  };
+
+  for (const line of lines) {
+    const isQ = /^(?:Q(?:\d+)?[:.]|Question(?:\s*\d+)?[:.]|\d+[\).]\s*|\*\*Q(?:uestion)?\d*[:\*])/i.test(line);
+    const isA = /^(?:R(?:\d+)?[:.]|A(?:\d+)?[:.]|R[ée]ponse(?:\s*\d+)?[:.]|Answer(?:\s*\d+)?[:.]|\*\*R[ée]ponse[:\*])/i.test(line);
+    const isTip = /^(?:Conseil[:.]|Astuce[:.]|Tip[:.]|KeyTip[:.]|\*\*Conseil[:\*])/i.test(line);
+
+    if (isQ) {
+      commitCurrent();
+      currentQuestion = line.replace(/^(?:Q(?:\d+)?[:.]|Question(?:\s*\d+)?[:.]|\d+[\).]\s*|\*\*Q(?:uestion)?\d*[:\*])/i, "").trim();
+    } else if (isA) {
+      currentAnswer = line.replace(/^(?:R(?:\d+)?[:.]|A(?:\d+)?[:.]|R[ée]ponse(?:\s*\d+)?[:.]|Answer(?:\s*\d+)?[:.]|\*\*R[ée]ponse[:\*])/i, "").trim();
+    } else if (isTip) {
+      currentTip = line.replace(/^(?:Conseil[:.]|Astuce[:.]|Tip[:.]|KeyTip[:.]|\*\*Conseil[:\*])/i, "").trim();
+    } else if (currentAnswer) {
+      currentAnswer += " " + line;
+    } else if (currentQuestion) {
+      currentQuestion += " " + line;
+    }
+  }
+  commitCurrent();
+
+  return items;
 }
