@@ -5,7 +5,9 @@ import Link from "next/link";
 import {
   AlertCircle,
   Award,
+  BarChart3,
   BookOpen,
+  Brain,
   Briefcase,
   Building2,
   CalendarClock,
@@ -15,12 +17,15 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  Cloud,
   Code2,
   Compass,
   Copy,
+  Cpu,
   Database,
   Edit3,
   ExternalLink,
+  Eye,
   Flame,
   Globe,
   HelpCircle,
@@ -39,9 +44,12 @@ import {
   Send,
   Share2,
   Shuffle,
+  Smartphone,
   Sparkles,
   Star,
   Target,
+  Terminal,
+  Timer,
   Trash2,
   TrendingUp,
   UploadCloud,
@@ -68,6 +76,31 @@ import {
   type QuestionAnswerItem,
   type StrategicQuestionItem,
 } from "@/lib/tracker/interviewPrep";
+
+function renderDomainPresetIcon(iconType?: string) {
+  switch (iconType) {
+    case "brain":
+      return <Brain className="h-3.5 w-3.5 text-[#ff5722]" />;
+    case "terminal":
+      return <Terminal className="h-3.5 w-3.5 text-emerald-600" />;
+    case "database":
+      return <Database className="h-3.5 w-3.5 text-blue-600" />;
+    case "chart":
+      return <BarChart3 className="h-3.5 w-3.5 text-indigo-600" />;
+    case "cpu":
+      return <Cpu className="h-3.5 w-3.5 text-purple-600" />;
+    case "eye":
+      return <Eye className="h-3.5 w-3.5 text-cyan-600" />;
+    case "layers":
+      return <Layers className="h-3.5 w-3.5 text-amber-600" />;
+    case "cloud":
+      return <Cloud className="h-3.5 w-3.5 text-sky-600" />;
+    case "target":
+      return <Target className="h-3.5 w-3.5 text-rose-600" />;
+    default:
+      return <Sparkles className="h-3.5 w-3.5 text-[#ff5722]" />;
+  }
+}
 
 export default function InterviewPrepPage() {
   const [prepData, setPrepData] = useState<InterviewPrepState>(DEFAULT_PREP_DATA);
@@ -290,7 +323,7 @@ export default function InterviewPrepPage() {
     }));
 
     toast.success(
-      `🎉 ${parsedQuestionsPreview.length} questions importées avec succès pour "${promptDomain}" !`
+      `${parsedQuestionsPreview.length} questions importées avec succès pour "${promptDomain}" !`
     );
     setPastedAIResponse("");
     setIsPromptImportModalOpen(false);
@@ -491,7 +524,7 @@ export default function InterviewPrepPage() {
           <div>
             <div className="flex items-center gap-2.5">
               <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-orange-100 text-[#ff5722] text-base shadow-2xs">
-                🧠
+                <Brain className="h-4.5 w-4.5 text-[#ff5722]" />
               </span>
               <h1 className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">
                 Aide-Mémoire & Questions d&apos;Entretien
@@ -509,7 +542,7 @@ export default function InterviewPrepPage() {
                 setIsReadingMode((prev) => !prev);
                 toast.info(
                   !isReadingMode
-                    ? "📱 Mode Révision activé (Lecture aérée pour les transports & mobile)"
+                    ? "Mode Révision activé (Lecture aérée pour les transports & mobile)"
                     : "Mode Standard rétabli"
                 );
               }}
@@ -521,7 +554,7 @@ export default function InterviewPrepPage() {
               )}
               title="Affichage optimisé pour réviser dans le train ou 5 min avant l'appel"
             >
-              <Zap className="h-3.5 w-3.5" />
+              <Smartphone className="h-3.5 w-3.5" />
               <span>{isReadingMode ? "Mode Révision Activé" : "Mode En Route (Lecture)"}</span>
             </button>
           </div>
@@ -539,8 +572,18 @@ export default function InterviewPrepPage() {
                   <h3 className="text-sm font-bold text-gray-900">
                     Préparation d&apos;Entretien
                   </h3>
-                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
-                    {readinessStats.score >= 80 ? "🔥 Prêt pour l'appel" : "⚡ En progression"}
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 inline-flex items-center gap-1">
+                    {readinessStats.score >= 80 ? (
+                      <>
+                        <Flame className="h-3 w-3 text-emerald-700" />
+                        <span>Prêt pour l&apos;appel</span>
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="h-3 w-3 text-emerald-700" />
+                        <span>En progression</span>
+                      </>
+                    )}
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 mt-0.5">
@@ -694,10 +737,10 @@ export default function InterviewPrepPage() {
                   }}
                   className="editorial-input text-xs font-bold w-full cursor-pointer bg-white"
                 >
-                  <option value="all">🌐 Tous les domaines ({prepData.qaList.length} questions)</option>
+                  <option value="all">Tous les domaines ({prepData.qaList.length} questions)</option>
                   {availableDomains.map((dom) => (
                     <option key={dom} value={dom}>
-                      📂 {dom} ({prepData.qaList.filter((q) => q.domain === dom).length})
+                      {dom} ({prepData.qaList.filter((q) => q.domain === dom).length})
                     </option>
                   ))}
                 </select>
@@ -780,7 +823,7 @@ export default function InterviewPrepPage() {
                     <div className="flex items-center gap-2">
                       <div
                         className={cn(
-                          "rounded-xl px-3 py-1 font-mono text-sm font-extrabold border transition-all",
+                          "rounded-xl px-3 py-1 font-mono text-sm font-extrabold border transition-all flex items-center gap-1.5",
                           practiceTimer <= 10 && practiceTimer > 0
                             ? "bg-red-50 text-red-600 border-red-200 animate-pulse"
                             : practiceTimer === 0
@@ -788,7 +831,8 @@ export default function InterviewPrepPage() {
                               : "bg-white text-gray-800 border-gray-200 shadow-2xs"
                         )}
                       >
-                        ⏱️ {practiceTimer}s
+                        <Timer className="h-3.5 w-3.5 text-gray-500" />
+                        <span>{practiceTimer}s</span>
                       </div>
                       <button
                         type="button"
@@ -924,34 +968,42 @@ export default function InterviewPrepPage() {
                         <button
                           type="button"
                           onClick={() => handleScorePractice("mastered")}
-                          className="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold hover:bg-emerald-100 transition cursor-pointer"
+                          className="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold hover:bg-emerald-100 transition cursor-pointer flex items-center gap-1.5"
                           title="Je sais y répondre sans hésiter"
                         >
-                          🟢 Maîtrisé
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                          <span>Maîtrisé</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => handleScorePractice("review")}
-                          className="px-3 py-1.5 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold hover:bg-amber-100 transition cursor-pointer"
+                          className="px-3 py-1.5 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold hover:bg-amber-100 transition cursor-pointer flex items-center gap-1.5"
                           title="À approfondir"
                         >
-                          🟡 Moyen
+                          <AlertCircle className="h-3.5 w-3.5 text-amber-600" />
+                          <span>Moyen</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => handleScorePractice("difficult")}
-                          className="px-3 py-1.5 rounded-lg bg-red-50 text-red-800 border border-red-200 text-xs font-bold hover:bg-red-100 transition cursor-pointer"
+                          className="px-3 py-1.5 rounded-lg bg-red-50 text-red-800 border border-red-200 text-xs font-bold hover:bg-red-100 transition cursor-pointer flex items-center gap-1.5"
                           title="Difficile pour moi"
                         >
-                          🔴 À revoir
+                          <RotateCcw className="h-3.5 w-3.5 text-red-600" />
+                          <span>À revoir</span>
                         </button>
                       </div>
                     ) : (
                       <div className="text-right">
                         <span className="text-[11px] text-gray-400">
-                          {prepData.practiceScores?.[currentPracticeItem.id] === "mastered"
-                            ? "✅ Déjà marquée comme maîtrisée"
-                            : "Non évaluée"}
+                          {prepData.practiceScores?.[currentPracticeItem.id] === "mastered" ? (
+                            <span className="inline-flex items-center gap-1 text-emerald-600 font-medium">
+                              <Check className="h-3 w-3" />
+                              <span>Déjà marquée comme maîtrisée</span>
+                            </span>
+                          ) : (
+                            "Non évaluée"
+                          )}
                         </span>
                       </div>
                     )}
@@ -1026,7 +1078,7 @@ export default function InterviewPrepPage() {
                           : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
                       )}
                     >
-                      <span>{preset.icon}</span>
+                      {renderDomainPresetIcon(preset.iconType)}
                       <span>{preset.name}</span>
                     </button>
                   ))}
@@ -1136,8 +1188,9 @@ export default function InterviewPrepPage() {
                   </div>
 
                   {parsedQuestionsPreview.length > 0 && (
-                    <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800">
-                      ✅ {parsedQuestionsPreview.length} questions prêtes à être importées
+                    <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800 inline-flex items-center gap-1.5">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700" />
+                      <span>{parsedQuestionsPreview.length} questions prêtes à être importées</span>
                     </span>
                   )}
                 </div>
@@ -1376,14 +1429,28 @@ export default function InterviewPrepPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 space-y-2">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="rounded-md bg-orange-100/80 px-2 py-0.5 text-[10.5px] font-bold text-[#ff5722] uppercase tracking-wide">
-                            {item.category === "architecture"
-                              ? "🛠️ Architecture & Tech"
-                              : item.category === "success_metrics"
-                                ? "🎯 Critères de Succès"
-                                : item.category === "team_culture"
-                                  ? "🤝 Organisation & Équipe"
-                                  : "🚀 Vision & Business"}
+                          <span className="rounded-md bg-orange-100/80 px-2 py-0.5 text-[10.5px] font-bold text-[#ff5722] uppercase tracking-wide inline-flex items-center gap-1.5">
+                            {item.category === "architecture" ? (
+                              <>
+                                <Layers className="h-3 w-3" />
+                                <span>Architecture & Tech</span>
+                              </>
+                            ) : item.category === "success_metrics" ? (
+                              <>
+                                <Target className="h-3 w-3" />
+                                <span>Critères de Succès</span>
+                              </>
+                            ) : item.category === "team_culture" ? (
+                              <>
+                                <Briefcase className="h-3 w-3" />
+                                <span>Organisation & Équipe</span>
+                              </>
+                            ) : (
+                              <>
+                                <TrendingUp className="h-3 w-3" />
+                                <span>Vision & Business</span>
+                              </>
+                            )}
                           </span>
                           {item.tags.map((tag) => (
                             <span
@@ -1723,10 +1790,10 @@ export default function InterviewPrepPage() {
                 >
                   {dbCompanies.map((c) => (
                     <option key={c.id} value={c.id}>
-                      🏢 {c.name} {c.sector ? `(${c.sector})` : ""}
+                      {c.name} {c.sector ? `(${c.sector})` : ""}
                     </option>
                   ))}
-                  <option value="custom">✏️ Autre entreprise (Saisie manuelle libre)...</option>
+                  <option value="custom">Autre entreprise (Saisie manuelle libre)...</option>
                 </select>
               </div>
 

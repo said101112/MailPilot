@@ -308,15 +308,15 @@ export interface AIPromptOptions {
 }
 
 export const PROMPT_DOMAIN_PRESETS = [
-  { id: "data_science", name: "Data Science & Machine Learning", icon: "🧠" },
-  { id: "python_fastapi", name: "Python & Backend (FastAPI / Django)", icon: "🐍" },
-  { id: "data_engineering", name: "Data Engineering (SQL, Spark, Airflow)", icon: "⚙️" },
-  { id: "sql_analytics", name: "SQL Avancé & Data Analytics", icon: "📊" },
-  { id: "nlp_llm", name: "NLP, LLMs & IA Générative (LangChain, RAG)", icon: "🤖" },
-  { id: "computer_vision", name: "Computer Vision & Deep Learning (PyTorch)", icon: "👁️" },
-  { id: "react_nextjs", name: "Fullstack / Frontend (React, Next.js, TS)", icon: "💻" },
-  { id: "devops_cloud", name: "DevOps & Cloud (Docker, Kubernetes, AWS)", icon: "☁️" },
-  { id: "rh_behavioral", name: "Entretien RH & Questions Pièges", icon: "🎯" },
+  { id: "data_science", name: "Data Science & Machine Learning", iconType: "brain" },
+  { id: "python_fastapi", name: "Python & Backend (FastAPI / Django)", iconType: "terminal" },
+  { id: "data_engineering", name: "Data Engineering (SQL, Spark, Airflow)", iconType: "database" },
+  { id: "sql_analytics", name: "SQL Avancé & Data Analytics", iconType: "chart" },
+  { id: "nlp_llm", name: "NLP, LLMs & IA Générative (LangChain, RAG)", iconType: "cpu" },
+  { id: "computer_vision", name: "Computer Vision & Deep Learning (PyTorch)", iconType: "eye" },
+  { id: "react_nextjs", name: "Fullstack / Frontend (React, Next.js, TS)", iconType: "layers" },
+  { id: "devops_cloud", name: "DevOps & Cloud (Docker, Kubernetes, AWS)", iconType: "cloud" },
+  { id: "rh_behavioral", name: "Entretien RH & Questions Pièges", iconType: "target" },
 ];
 
 export function generateAIPrompt(options: AIPromptOptions): string {
