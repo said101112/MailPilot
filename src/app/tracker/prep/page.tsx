@@ -915,7 +915,7 @@ export default function InterviewPrepPage() {
                       )}
                     >
                       <RotateCcw className="h-4 w-4" />
-                      <span>{isCardFlipped ? "🔄 Revoir la Question" : "🔄 Retourner la Carte (Voir la Réponse)"}</span>
+                      <span>{isCardFlipped ? "Revoir la Question" : "Retourner la Carte (Voir la Réponse)"}</span>
                     </button>
 
                     {/* Self-Rating buttons when flipped */}
