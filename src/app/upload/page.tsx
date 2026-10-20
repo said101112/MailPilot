@@ -16,6 +16,7 @@ import {
   Loader2,
   MinusSquare,
   Play,
+  Send,
   Sparkles,
   Square,
   UploadCloud,
@@ -42,6 +43,7 @@ import {
   syncEmailDispatchToTracker,
   syncAllHistoryApplications,
   inferCompanyFromEmail,
+  parseContactFromEmail,
 } from "@/lib/tracker/syncService";
 
 interface CSVRow {
@@ -209,11 +211,90 @@ export default function UploadPage() {
     window.addEventListener(TEMPLATE_LIBRARY_EVENT, syncTemplates);
     window.addEventListener("storage", syncTemplates);
 
-    return () => {
-      window.removeEventListener(TEMPLATE_LIBRARY_EVENT, syncTemplates);
-      window.removeEventListener("storage", syncTemplates);
-    };
   }, []);
+
+  // Check for preloaded rows (e.g. transferred from BulkRelanceModal)
+  useEffect(() => {
+    try {
+      const preload = window.sessionStorage.getItem("truck_app_bulk_preload");
+      if (preload) {
+        const rows = JSON.parse(preload);
+        if (Array.isArray(rows) && rows.length > 0) {
+          setData(rows);
+          const initialSelection = new Set<number>();
+          rows.forEach((_, idx) => initialSelection.add(idx));
+          setSelectedRows(initialSelection);
+          setFileName(`relance_batch_${new Date().toISOString().slice(0, 10)}.csv`);
+
+          const tplId = window.sessionStorage.getItem("truck_app_bulk_template_id");
+          if (tplId) setSelectedTemplateId(tplId);
+
+          toast.success(`${rows.length} candidature(s) pour relance chargées dans le Bulk Upload !`);
+          window.sessionStorage.removeItem("truck_app_bulk_preload");
+          window.sessionStorage.removeItem("truck_app_bulk_template_id");
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const handleLoadSevenDaysAwaiting = async () => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        toast.error("Veuillez vous connecter.");
+        return;
+      }
+
+      const { data: apps, error } = await supabase
+        .from("applications")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("status", "success")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      const filtered = (apps || []).filter(
+        (a) => new Date(a.created_at).getTime() <= sevenDaysAgo
+      );
+
+      if (filtered.length === 0) {
+        toast.info("Aucune candidature sans réponse depuis plus de 7 jours trouvée.");
+        return;
+      }
+
+      const loadedRows: CSVRow[] = filtered.map((a) => {
+        const comp = a.company || inferCompanyFromEmail(a.email)?.name || "Entreprise";
+        const contact = parseContactFromEmail(a.email, comp);
+        return {
+          company: comp,
+          position: a.position || "Candidature",
+          email: a.email,
+          name: contact.fullName,
+          status: "pending",
+        };
+      });
+
+      setData(loadedRows);
+      const sel = new Set<number>();
+      loadedRows.forEach((_, i) => sel.add(i));
+      setSelectedRows(sel);
+      setFileName(`relance_7jours_${new Date().toISOString().slice(0, 10)}.csv`);
+
+      const followUpTpl = templates.find((t) => t.id === "followup-7days") || templates[0];
+      if (followUpTpl) setSelectedTemplateId(followUpTpl.id);
+
+      toast.success(`${loadedRows.length} candidature(s) sans réponse (+7j) importées !`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erreur de chargement.");
+    }
+  };
 
   const duplicateEmails = useMemo(() => {
     const counts = new Map<string, number>();
@@ -630,7 +711,16 @@ export default function UploadPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={handleLoadSevenDaysAwaiting}
+              className="editorial-button-primary h-8 px-3 text-xs flex items-center gap-1.5 shadow-2xs font-semibold"
+              title="Importer les candidatures envoyées depuis plus d'une semaine sans réponse pour lancer une relance"
+            >
+              <Send className="h-3.5 w-3.5" />
+              <span>Importer relances (+7j)</span>
+            </button>
             <a
               className="editorial-button-secondary h-8 px-3 text-xs"
               download

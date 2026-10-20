@@ -30,6 +30,20 @@ export const DEFAULT_TEMPLATES: MessageTemplate[] = [
     message:
       "Hello Hiring Manager,\n\nI am excited by the [Position] opening at [Company]. I bring a practical mix of transportation operations, structured execution, and process improvement that fits fast-moving logistics teams.\n\nI would be glad to discuss how I can help strengthen day-to-day fleet performance and coordination.\n\nSincerely,\n[MyName]",
   },
+  {
+    id: "followup-7days",
+    name: "Relance - Polie & Courte (J+7)",
+    subject: "Relance : Candidature [Position] chez [Company] - [MyName]",
+    message:
+      "Bonjour [Name],\n\nJe me permets de revenir vers vous suite à l'envoi de ma candidature la semaine dernière pour le poste de [Position] au sein de votre entreprise [Company].\n\nToujours très enthousiaste à l'idée d'intégrer votre équipe, je serais ravi(e) d'échanger avec vous sur la manière dont mes compétences peuvent répondre à vos besoins.\n\nVous trouverez mon CV en pièce jointe pour rappel.\n\nRestant à votre entière disposition,\n\nBien cordialement,\n[MyName]",
+  },
+  {
+    id: "followup-motivation",
+    name: "Relance - Motivation & Disponibilité",
+    subject: "Suivi de ma candidature [Position] - [Company]",
+    message:
+      "Bonjour [Name],\n\nJ'espère que vous allez bien. Faisant suite à mon message de la semaine passée concernant l'opportunité [Position] chez [Company], je souhaitais vous réitérer mon vif intérêt pour ce poste.\n\nSeriez-vous disponible pour un court échange téléphonique cette semaine afin de faire connaissance ?\n\nExcellente journée,\n[MyName]",
+  },
 ];
 
 export const TEMPLATE_PLACEHOLDERS = [
@@ -82,7 +96,18 @@ export function getStoredTemplates() {
       .map((item) => normalizeTemplate(item))
       .filter((item): item is MessageTemplate => item !== null);
 
-    return templates.length > 0 ? templates : cloneDefaultTemplates();
+    if (templates.length === 0) {
+      return cloneDefaultTemplates();
+    }
+
+    // Ensure default follow-up templates are available
+    for (const def of DEFAULT_TEMPLATES) {
+      if (!templates.some((t) => t.id === def.id)) {
+        templates.push({ ...def });
+      }
+    }
+
+    return templates;
   } catch {
     return cloneDefaultTemplates();
   }

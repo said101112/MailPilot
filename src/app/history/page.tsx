@@ -3,15 +3,20 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Building2,
+  CheckSquare,
   ChevronLeft,
   ChevronRight,
   Download,
+  Filter,
   History as HistoryIcon,
   Loader2,
   Mail,
+  MinusSquare,
   RefreshCw,
   Search,
+  Send,
   Sparkles,
+  Square,
   Trash2,
   UserCheck,
 } from "lucide-react";
@@ -19,6 +24,7 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import CleanDataModal from "@/components/CleanDataModal";
+import BulkRelanceModal, { type RelanceTarget } from "@/components/tracker/BulkRelanceModal";
 import {
   syncAllHistoryApplications,
   syncEmailDispatchToTracker,
@@ -50,18 +56,30 @@ function formatRowTime(dateString: string) {
   });
 }
 
+function getDaysSince(dateString: string): number {
+  const diff = Date.now() - new Date(dateString).getTime();
+  return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
+}
+
 export default function HistoryPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | "success" | "failed">("all");
   const [daysFilter, setDaysFilter] = useState<30 | 90 | 365>(30);
+  const [companyFilter, setCompanyFilter] = useState<string>("all");
+  const [followUpFilter, setFollowUpFilter] = useState<"all" | "7days" | "14days">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isCleanModalOpen, setIsCleanModalOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0 });
   const [linkingId, setLinkingId] = useState<string | null>(null);
+
+  // Selection & Relance
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isRelanceModalOpen, setIsRelanceModalOpen] = useState(false);
+  const [singleRelanceTarget, setSingleRelanceTarget] = useState<RelanceTarget | null>(null);
 
   const ROWS_PER_PAGE = 12;
 
@@ -120,7 +138,7 @@ export default function HistoryPage() {
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [statusFilter, daysFilter, searchQuery]);
+  }, [statusFilter, daysFilter, searchQuery, companyFilter, followUpFilter]);
 
   const handleCleanAllData = async () => {
     const {
@@ -240,6 +258,29 @@ export default function HistoryPage() {
     toast.success(`${filteredHistory.length} candidatures exportées en CSV avec succès !`);
   };
 
+  // Extract unique companies for filtering
+  const availableCompanies = useMemo(() => {
+    const compMap = new Map<string, number>();
+    history.forEach((item) => {
+      const compName =
+        (item.company || inferCompanyFromEmail(item.email)?.name || "").trim();
+      if (compName) {
+        compMap.set(compName, (compMap.get(compName) ?? 0) + 1);
+      }
+    });
+    return Array.from(compMap.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [history]);
+
+  // Candidatures sent >= 7 days ago that succeeded (ready for follow-up)
+  const candidatesAwaitingFollowUp = useMemo(() => {
+    return history.filter((item) => {
+      if (item.status !== "success") return false;
+      return getDaysSince(item.created_at) >= 7;
+    });
+  }, [history]);
+
   // Filtered dataset
   const filteredHistory = useMemo(() => {
     const cutoff = new Date();
@@ -261,9 +302,26 @@ export default function HistoryPage() {
         (item.position || "").toLowerCase().includes(q) ||
         (item.email || "").toLowerCase().includes(q);
 
-      return matchesStatus && matchesDate && matchesSearch;
+      const compName =
+        (item.company || inferCompanyFromEmail(item.email)?.name || "").trim();
+      const matchesCompany =
+        companyFilter === "all" || compName.toLowerCase() === companyFilter.toLowerCase();
+
+      const daysSince = getDaysSince(item.created_at);
+      const matchesFollowUp =
+        followUpFilter === "all" ||
+        (followUpFilter === "7days" && daysSince >= 7 && item.status === "success") ||
+        (followUpFilter === "14days" && daysSince >= 14 && item.status === "success");
+
+      return (
+        matchesStatus &&
+        matchesDate &&
+        matchesSearch &&
+        matchesCompany &&
+        matchesFollowUp
+      );
     });
-  }, [daysFilter, history, statusFilter, searchQuery]);
+  }, [daysFilter, history, statusFilter, searchQuery, companyFilter, followUpFilter]);
 
   // Counts for tabs (based on selected date range)
   const counts = useMemo(() => {
@@ -282,6 +340,62 @@ export default function HistoryPage() {
     const start = (currentPage - 1) * ROWS_PER_PAGE;
     return filteredHistory.slice(start, start + ROWS_PER_PAGE);
   }, [filteredHistory, currentPage, ROWS_PER_PAGE]);
+
+  // Selection handlers
+  const toggleSelectId = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const allVisibleSelected =
+    paginatedHistory.length > 0 &&
+    paginatedHistory.every((item) => selectedIds.has(item.id));
+
+  const someVisibleSelected =
+    paginatedHistory.some((item) => selectedIds.has(item.id)) && !allVisibleSelected;
+
+  const toggleSelectAllVisible = () => {
+    const visibleIds = paginatedHistory.map((item) => item.id);
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allVisibleSelected) {
+        visibleIds.forEach((id) => next.delete(id));
+      } else {
+        visibleIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const selectAllAwaitingSevenDays = () => {
+    const ids = new Set(candidatesAwaitingFollowUp.map((c) => c.id));
+    setSelectedIds(ids);
+    toast.info(`${ids.size} candidature(s) sans réponse (+7j) sélectionnée(s).`);
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  // Convert selected rows to RelanceTarget
+  const activeRelanceTargets: RelanceTarget[] = useMemo(() => {
+    if (singleRelanceTarget) return [singleRelanceTarget];
+    return history
+      .filter((item) => selectedIds.has(item.id))
+      .map((item) => ({
+        id: item.id,
+        company:
+          item.company || inferCompanyFromEmail(item.email)?.name || "Entreprise",
+        position: item.position || "Candidature",
+        email: item.email,
+        name: parseContactFromEmail(item.email, item.company).fullName,
+        sentAt: item.created_at,
+      }));
+  }, [history, selectedIds, singleRelanceTarget]);
 
   return (
     <div className="page-shell">
@@ -340,6 +454,53 @@ export default function HistoryPage() {
           </div>
         </div>
 
+        {/* Notification Banner for Silent Applications (>= 7 days without response) */}
+        {candidatesAwaitingFollowUp.length > 0 && (
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50/90 via-orange-50/60 to-amber-50/90 p-4 shadow-2xs">
+            <div className="flex items-start sm:items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-700">
+                <Send className="h-4 w-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs font-bold text-gray-900 sm:text-sm">
+                    {candidatesAwaitingFollowUp.length} candidature{candidatesAwaitingFollowUp.length > 1 ? "s" : ""} sans réponse depuis plus d&apos;une semaine (+7 jours)
+                  </p>
+                  <span className="rounded-full bg-amber-200/80 px-2 py-0.5 text-[10px] font-bold text-amber-900">
+                    Relance recommandée
+                  </span>
+                </div>
+                <p className="mt-0.5 text-xs text-gray-600">
+                  Ces recruteurs n&apos;ont pas encore répondu. Une relance polie après une semaine relance leur attention et maximise vos opportunités.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={selectAllAwaitingSevenDays}
+                className="editorial-button-secondary h-8 px-3 text-xs bg-white hover:bg-gray-50 border-amber-300 text-amber-900 font-medium"
+              >
+                <CheckSquare className="mr-1.5 h-3.5 w-3.5 text-amber-700 inline" />
+                Sélectionner les {candidatesAwaitingFollowUp.length} emails (+7j)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  selectAllAwaitingSevenDays();
+                  setSingleRelanceTarget(null);
+                  setIsRelanceModalOpen(true);
+                }}
+                className="editorial-button-primary h-8 px-3.5 text-xs font-semibold shadow-xs flex items-center gap-1.5"
+              >
+                <Send className="h-3.5 w-3.5" />
+                <span>Relancer en 1 clic ({candidatesAwaitingFollowUp.length})</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Sync to Tracker Helper Banner */}
         {history.length > 0 && (
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-[#ff5722]/20 bg-[#fff8f5] p-3.5 text-xs">
@@ -358,6 +519,39 @@ export default function HistoryPage() {
             >
               {syncing ? `Synchronisation (${syncProgress.current}/${syncProgress.total})...` : "⚡ Lier tout l'historique au Tracker →"}
             </button>
+          </div>
+        )}
+
+        {/* Bulk Selection Bar (When rows are checked) */}
+        {selectedIds.size > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#ff5722]/40 bg-gradient-to-r from-orange-50 via-white to-orange-50/50 p-3.5 shadow-sm animate-in fade-in duration-150">
+            <div className="flex items-center gap-2.5 text-xs font-medium text-gray-900">
+              <CheckSquare className="h-4 w-4 text-[#ff5722]" />
+              <span>
+                <strong className="font-bold text-[#ff5722] text-sm">{selectedIds.size}</strong> candidature{selectedIds.size > 1 ? "s" : ""} sélectionnée{selectedIds.size > 1 ? "s" : ""}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={clearSelection}
+                className="editorial-button-secondary h-8 px-3 text-xs"
+              >
+                Tout désélectionner
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSingleRelanceTarget(null);
+                  setIsRelanceModalOpen(true);
+                }}
+                className="editorial-button-primary h-8 px-4 text-xs font-semibold shadow-xs flex items-center gap-1.5"
+              >
+                <Send className="h-3.5 w-3.5" />
+                <span>Relancer la sélection ({selectedIds.size}) en Bulk</span>
+              </button>
+            </div>
           </div>
         )}
 
@@ -385,8 +579,8 @@ export default function HistoryPage() {
           <div className="w-full rounded-lg border border-gray-200 bg-white shadow-xs">
             {/* Filter & Search Bar */}
             <div className="flex flex-col gap-3 border-b border-gray-200 px-5 py-3 lg:flex-row lg:items-center lg:justify-between">
-              {/* Date Filters & Search */}
-              <div className="flex flex-wrap items-center gap-3">
+              {/* Date Filters, Company Filter & Search */}
+              <div className="flex flex-wrap items-center gap-2.5">
                 <div className="flex gap-1">
                   {[30, 90, 365].map((value) => (
                     <button
@@ -405,15 +599,53 @@ export default function HistoryPage() {
                   ))}
                 </div>
 
+                {/* Filter by Company */}
+                <div className="relative">
+                  <Building2 className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+                  <select
+                    value={companyFilter}
+                    onChange={(e) => setCompanyFilter(e.target.value)}
+                    className="h-8 rounded-md border border-gray-200 pl-8 pr-7 text-xs outline-none focus:border-[#ff5722] focus:ring-1 focus:ring-[#ff5722] bg-white cursor-pointer text-gray-700 font-medium max-w-[170px] truncate"
+                    title="Filtrer par entreprise"
+                  >
+                    <option value="all">Toutes entreprises</option>
+                    {availableCompanies.map((c) => (
+                      <option key={c.name} value={c.name}>
+                        {c.name} ({c.count})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Filter by Relance / Silence */}
+                <div className="relative">
+                  <Filter className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+                  <select
+                    value={followUpFilter}
+                    onChange={(e) => setFollowUpFilter(e.target.value as "all" | "7days" | "14days")}
+                    className={cn(
+                      "h-8 rounded-md border pl-8 pr-7 text-xs outline-none focus:border-[#ff5722] focus:ring-1 focus:ring-[#ff5722] bg-white cursor-pointer font-medium",
+                      followUpFilter !== "all"
+                        ? "border-amber-300 bg-amber-50/50 text-amber-900 font-semibold"
+                        : "border-gray-200 text-gray-700"
+                    )}
+                    title="Filtrer par délai sans réponse"
+                  >
+                    <option value="all">Toutes échéances</option>
+                    <option value="7days">Sans réponse &gt; 7j (1 semaine)</option>
+                    <option value="14days">Sans réponse &gt; 14j (2 semaines)</option>
+                  </select>
+                </div>
+
                 {/* Quick Search */}
                 <div className="relative">
                   <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Filtrer entreprise, email, poste..."
+                    placeholder="Filtrer email, poste..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="h-8 rounded-md border border-gray-200 pl-8 pr-3 text-xs outline-none focus:border-[#ff5722] focus:ring-1 focus:ring-[#ff5722] w-52 sm:w-64"
+                    className="h-8 rounded-md border border-gray-200 pl-8 pr-3 text-xs outline-none focus:border-[#ff5722] focus:ring-1 focus:ring-[#ff5722] w-44 sm:w-52"
                   />
                 </div>
               </div>
@@ -477,29 +709,67 @@ export default function HistoryPage() {
               <table className="min-w-full text-left text-xs">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50/75 text-[11px] font-semibold text-gray-500">
+                    <th className="w-10 px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={toggleSelectAllVisible}
+                        className="flex items-center text-gray-500 hover:text-gray-900 cursor-pointer"
+                        title="Sélectionner / Désélectionner toutes les lignes visibles"
+                      >
+                        {allVisibleSelected ? (
+                          <CheckSquare className="h-4 w-4 text-[#ff5722]" />
+                        ) : someVisibleSelected ? (
+                          <MinusSquare className="h-4 w-4 text-[#ff5722]" />
+                        ) : (
+                          <Square className="h-4 w-4 text-gray-400" />
+                        )}
+                      </button>
+                    </th>
                     <th className="px-5 py-3">Entreprise</th>
                     <th className="px-4 py-3">Poste visé</th>
                     <th className="px-4 py-3">Email Destinataire</th>
                     <th className="px-4 py-3">Date & Heure</th>
                     <th className="px-4 py-3">Statut</th>
-                    <th className="px-5 py-3 text-right">Action</th>
+                    <th className="px-5 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {paginatedHistory.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-12 text-center text-xs text-gray-400">
+                      <td colSpan={7} className="py-12 text-center text-xs text-gray-400">
                         Aucun enregistrement ne correspond à vos filtres.
                       </td>
                     </tr>
                   ) : (
                     paginatedHistory.map((item) => {
                       const isSuccess = item.status === "success";
+                      const daysSince = getDaysSince(item.created_at);
+                      const isOverSevenDays = daysSince >= 7 && isSuccess;
+                      const isSelected = selectedIds.has(item.id);
+
                       return (
                         <tr
                           key={item.id}
-                          className="transition hover:bg-gray-50/80"
+                          className={cn(
+                            "transition hover:bg-gray-50/80",
+                            isSelected && "bg-orange-50/40"
+                          )}
                         >
+                          {/* Checkbox */}
+                          <td className="px-4 py-3.5">
+                            <button
+                              type="button"
+                              onClick={() => toggleSelectId(item.id)}
+                              className="flex items-center text-gray-500 hover:text-gray-900 cursor-pointer"
+                            >
+                              {isSelected ? (
+                                <CheckSquare className="h-4 w-4 text-[#ff5722]" />
+                              ) : (
+                                <Square className="h-4 w-4 text-gray-300" />
+                              )}
+                            </button>
+                          </td>
+
                           {/* Company */}
                           <td className="px-5 py-3.5">
                             <div className="flex items-center gap-2">
@@ -508,11 +778,18 @@ export default function HistoryPage() {
                                 <p className="font-semibold text-gray-900 truncate">
                                   {item.company || inferCompanyFromEmail(item.email)?.name || "Candidature Directe"}
                                 </p>
-                                {inferCompanyFromEmail(item.email)?.domain && (
-                                  <p className="text-[10px] text-gray-400 truncate">
-                                    {inferCompanyFromEmail(item.email)?.domain}
-                                  </p>
-                                )}
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                  {inferCompanyFromEmail(item.email)?.domain && (
+                                    <span className="text-[10px] text-gray-400 truncate">
+                                      {inferCompanyFromEmail(item.email)?.domain}
+                                    </span>
+                                  )}
+                                  {isOverSevenDays && (
+                                    <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-50 px-1.5 py-0.2 text-[9.5px] font-semibold text-amber-800 border border-amber-200">
+                                      ⏰ +{daysSince}j sans réponse
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </td>
@@ -565,6 +842,29 @@ export default function HistoryPage() {
                           {/* Actions */}
                           <td className="px-5 py-3.5 text-right">
                             <div className="flex items-center justify-end gap-1.5">
+                              {/* Single Relance Button */}
+                              {isSuccess && (
+                                <button
+                                  className="editorial-button-secondary h-7 px-2.5 text-xs text-[#ff5722] hover:bg-orange-50 hover:border-orange-200 flex items-center gap-1"
+                                  onClick={() => {
+                                    setSingleRelanceTarget({
+                                      id: item.id,
+                                      company: item.company || inferCompanyFromEmail(item.email)?.name || "Entreprise",
+                                      position: item.position || "Candidature",
+                                      email: item.email,
+                                      name: parseContactFromEmail(item.email, item.company).fullName,
+                                      sentAt: item.created_at,
+                                    });
+                                    setIsRelanceModalOpen(true);
+                                  }}
+                                  title="Faire une relance pour cet email"
+                                  type="button"
+                                >
+                                  <Send className="h-3 w-3" />
+                                  <span>Relancer</span>
+                                </button>
+                              )}
+
                               <button
                                 className="editorial-icon-button"
                                 disabled={linkingId === item.id}
@@ -683,6 +983,7 @@ export default function HistoryPage() {
         )}
       </div>
 
+      {/* Clean All Data Modal */}
       <CleanDataModal
         isOpen={isCleanModalOpen}
         onClose={() => setIsCleanModalOpen(false)}
@@ -691,6 +992,20 @@ export default function HistoryPage() {
         title="Nettoyer l'historique des envois"
         description="Cette action supprimera définitivement tous les enregistrements d'envois et de brouillons dans Supabase en production. Cette action est irréversible."
         confirmWord="SUPPRIMER"
+      />
+
+      {/* Bulk Relance Modal */}
+      <BulkRelanceModal
+        isOpen={isRelanceModalOpen}
+        onClose={() => {
+          setIsRelanceModalOpen(false);
+          setSingleRelanceTarget(null);
+        }}
+        targets={activeRelanceTargets}
+        onSuccess={() => {
+          void fetchHistory();
+          clearSelection();
+        }}
       />
     </div>
   );
