@@ -30,7 +30,13 @@ export interface StrategicQuestionItem {
 
 export interface CompanyPrepItem {
   id: string;
+  companyId?: string | null;
   companyName: string;
+  domain?: string | null;
+  logoUrl?: string | null;
+  website?: string | null;
+  sector?: string | null;
+  location?: string | null;
   roleTitle: string;
   strongPoints: string[];
   keyChallenges: string;
@@ -44,9 +50,95 @@ export interface InterviewPrepState {
   qaList: QuestionAnswerItem[];
   strategicQuestions: StrategicQuestionItem[];
   companySheets: CompanyPrepItem[];
+  practiceScores?: Record<string, "mastered" | "review" | "difficult">;
+  readinessChecklist?: Record<string, boolean>;
 }
 
-export const PREP_STORAGE_KEY = "mailpilot_interview_prep_v1";
+export const PREP_STORAGE_KEY = "mailpilot_interview_prep_v2";
+
+export const SECTOR_PRESETS: Record<
+  string,
+  { label: string; strongPoints: string[]; questions: string[] }
+> = {
+  fintech: {
+    label: "Fintech & Banque",
+    strongPoints: [
+      "Leur rigueur sur la sécurité et le traitement de données financières à haute fréquence",
+      "Leurs investissements continus dans l'automatisation et la détection de fraudes",
+      "La conformité réglementaire et la scalabilité de leur infrastructure",
+    ],
+    questions: [
+      "Comment gérez-vous la latence et l'auditabilité de vos modèles de décision financière ?",
+      "Quelle est votre stratégie face aux réglementations sur l'explicabilité des algorithmes (AI Act) ?",
+      "Comment s'organise la validation entre les équipes de data science et la gestion des risques ?",
+    ],
+  },
+  saas: {
+    label: "SaaS & Cloud Software",
+    strongPoints: [
+      "Leur culture produit centrée sur l'expérience utilisateur et les retours rapides",
+      "Leur architecture cloud-native et leur vélocité de déploiement en CI/CD",
+      "L'impact direct des analyses de données sur la rétention et l'activation client",
+    ],
+    questions: [
+      "Quels outils utilisez-vous pour tracker les signaux de churn et le product usage ?",
+      "Comment l'équipe data collabore-t-elle avec les Product Managers et développeurs au quotidien ?",
+      "Quelle est votre stack actuelle pour le feature store et les déploiements de modèles ?",
+    ],
+  },
+  healthtech: {
+    label: "Santé & Healthtech",
+    strongPoints: [
+      "Le sens et l'impact sociétal direct de leurs technologies pour les soignants et patients",
+      "Leur maîtrise du traitement de données de santé hautement sensibles et sécurisées",
+      "L'exigence d'excellence et de validation clinique de leurs algorithmes",
+    ],
+    questions: [
+      "Comment abordez-vous les contraintes de confidentialité (RGPD, HDS) dans vos pipelines de données ?",
+      "Quel est le processus de validation humaine avant la mise en production d'un modèle ?",
+      "Comment gérez-vous la rareté ou le déséquilibre des données médicales annotées ?",
+    ],
+  },
+  ecommerce: {
+    label: "E-Commerce, Retail & Logistique",
+    strongPoints: [
+      "Leur volumétrie de données transactionnelles et la richesse du catalogue",
+      "Leurs algorithmes de recommandation, de search et d'optimisation de pricing",
+      "Leur capacité à gérer les pics de charge saisonniers et l'optimisation logistique",
+    ],
+    questions: [
+      "Comment mesurez-vous l'impact incrémental de votre moteur de recommandation en A/B testing ?",
+      "Quels défis rencontrez-vous sur la réconciliation des données omnicanales et stocks ?",
+      "Comment traitez-vous les problèmes de cold-start pour les nouveaux produits ou utilisateurs ?",
+    ],
+  },
+  defense_industry: {
+    label: "Industrie, Aérospatial & Défense",
+    strongPoints: [
+      "La robustesse extrême exigée pour les systèmes critiques et embarqués",
+      "Leurs technologies de pointe et la culture d'excellence technique de l'équipe",
+      "Leur vision à long terme sur des programmes d'envergure et la souveraineté technologique",
+    ],
+    questions: [
+      "Travaillez-vous sur des architectures embarquées ou edge computing pour vos modèles ?",
+      "Comment gérez-vous les environnements déconnectés (air-gapped) et les contraintes temps réel ?",
+      "Quelles sont vos pratiques pour la traçabilité des données d'entraînement et la reproductibilité ?",
+    ],
+  },
+  general: {
+    label: "Général / Autre secteur",
+    strongPoints: [
+      "Leur positionnement et leur croissance sur leur marché cible",
+      "La taille de l'équipe qui offre une excellente opportunité d'apprentissage et d'autonomie",
+      "La modernité de leurs projets de transformation numérique et data",
+    ],
+    questions: [
+      "Quelle est la plus grande dette technique de votre pipeline de données ou codebase actuel ?",
+      "Quels critères précis détermineront que ce stage ou recrutement est un succès à 6 mois ?",
+      "Comment s'organise le partage de connaissances au sein de l'équipe technique ?",
+    ],
+  },
+};
 
 export const DEFAULT_PREP_DATA: InterviewPrepState = {
   pitch: {
@@ -133,35 +225,57 @@ export const DEFAULT_PREP_DATA: InterviewPrepState = {
   companySheets: [
     {
       id: "cs-demo",
-      companyName: "Exemple : Entreprise Cible",
+      companyName: "Exemple : Capgemini",
       roleTitle: "Stage PFE - Ingénieur Data Science & IA",
+      sector: "SaaS & Cloud Software",
+      domain: "capgemini.com",
       strongPoints: [
-        "Leur récente plateforme cloud et leurs investissements en IA",
-        "Leur position de leader européen sur leur marché",
-        "La taille humaine de l'équipe data qui permet une grande autonomie"
+        "Leur expertise reconnue dans le déploiement de solutions d'IA à grande échelle",
+        "Leur position de leader international avec des projets multi-secteurs",
+        "L'opportunité d'apprendre au contact d'architectes et de tech leads seniors"
       ],
-      keyChallenges: "Migration vers une architecture micro-services et volumétrie croissante des flux temps réel.",
+      keyChallenges: "Industrialisation de modèles complexes et respect des exigences de sécurité client.",
       tailoredQuestions: [
-        "Avez-vous déjà un orchestrateur (Airflow/Prefect) en place pour vos flux ?",
-        "Comment interagissez-vous avec les équipes métiers pour valider les modèles ?"
+        "Quelle est votre stack actuelle pour le déploiement et le monitoring de modèles en production ?",
+        "Comment s'organise l'intégration d'un stagiaire PFE au sein de vos équipes projets ?"
       ],
-      liveNotes: "Note d'appel : Entretien avec le Lead Data. Très intéressé par mes projets de Computer Vision. Prochaine étape : échange technique de 45 min la semaine prochaine.",
+      liveNotes: "Entretien RH initial très positif. Préparer pour le second tour : explications claires sur mon projet de classification NLP.",
       updatedAt: new Date().toISOString()
     }
-  ]
+  ],
+  practiceScores: {},
+  readinessChecklist: {
+    pitch_ready: true,
+    star_practiced: false,
+    strategic_chosen: true,
+    company_researched: true,
+  }
 };
 
 export function loadInterviewPrep(): InterviewPrepState {
   if (typeof window === "undefined") return DEFAULT_PREP_DATA;
   try {
     const raw = window.localStorage.getItem(PREP_STORAGE_KEY);
-    if (!raw) return DEFAULT_PREP_DATA;
+    if (!raw) {
+      // Migrate v1 to v2 if present
+      const oldRaw = window.localStorage.getItem("mailpilot_interview_prep_v1");
+      if (oldRaw) {
+        const oldParsed = JSON.parse(oldRaw);
+        return {
+          ...DEFAULT_PREP_DATA,
+          ...oldParsed,
+        };
+      }
+      return DEFAULT_PREP_DATA;
+    }
     const parsed = JSON.parse(raw);
     return {
       pitch: parsed.pitch || DEFAULT_PREP_DATA.pitch,
       qaList: Array.isArray(parsed.qaList) ? parsed.qaList : DEFAULT_PREP_DATA.qaList,
       strategicQuestions: Array.isArray(parsed.strategicQuestions) ? parsed.strategicQuestions : DEFAULT_PREP_DATA.strategicQuestions,
       companySheets: Array.isArray(parsed.companySheets) ? parsed.companySheets : DEFAULT_PREP_DATA.companySheets,
+      practiceScores: parsed.practiceScores || {},
+      readinessChecklist: parsed.readinessChecklist || DEFAULT_PREP_DATA.readinessChecklist,
     };
   } catch {
     return DEFAULT_PREP_DATA;
