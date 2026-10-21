@@ -40,6 +40,7 @@ import {
 import {
   syncEmailDispatchToTracker,
   inferCompanyFromEmail,
+  getWithdrawnEmails,
 } from "@/lib/tracker/syncService";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
@@ -362,6 +363,18 @@ export default function ApplyPage() {
 
     if (!formatResult.valid) {
       return formatResult;
+    }
+
+    const cleanEmail = emailValue.trim().toLowerCase();
+    const withdrawnSet = await getWithdrawnEmails();
+    if (withdrawnSet.has(cleanEmail)) {
+      const withdrawnResult: EmailPreflightResult = {
+        valid: false,
+        code: "domain_not_found",
+        message: "Cet email est marqué comme retiré / non délivré dans votre historique (bloqué pour éviter un bounce).",
+      };
+      setEmailCheck(withdrawnResult);
+      return withdrawnResult;
     }
 
     setEmailChecking(true);

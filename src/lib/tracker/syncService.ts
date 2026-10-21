@@ -567,3 +567,108 @@ export async function syncAllHistoryApplications(
     applicationsCreated,
   };
 }
+
+/**
+ * Fetch the set of all emails marked as withdrawn/not found/bounced by the current user
+ */
+export async function getWithdrawnEmails(): Promise<Set<string>> {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return new Set();
+
+    const { data, error } = await supabase
+      .from("applications")
+      .select("email")
+      .eq("user_id", user.id)
+      .eq("status", "withdrawn");
+
+    if (error || !data) return new Set();
+
+    const set = new Set<string>();
+    data.forEach((row) => {
+      if (row.email) {
+        set.add(row.email.trim().toLowerCase());
+      }
+    });
+    return set;
+  } catch (err) {
+    console.warn("Unable to fetch withdrawn emails:", err);
+    return new Set();
+  }
+}
+
+/**
+ * Mark an application / email as withdrawn (not found / bounced / not delivered)
+ */
+export async function markEmailAsWithdrawn(email: string, applicationId?: string): Promise<void> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const cleanEmail = email.trim().toLowerCase();
+
+  if (applicationId) {
+    await supabase
+      .from("applications")
+      .update({ status: "withdrawn" })
+      .eq("id", applicationId)
+      .eq("user_id", user.id);
+  } else {
+    await supabase
+      .from("applications")
+      .update({ status: "withdrawn" })
+      .eq("email", cleanEmail)
+      .eq("user_id", user.id);
+  }
+
+  // Also update corresponding job_applications in Tracker
+  try {
+    await supabase
+      .from("job_applications")
+      .update({ status: "withdrawn" })
+      .eq("user_id", user.id)
+      .eq("channel_email", cleanEmail);
+  } catch (err) {
+    console.warn("Tracker withdrawn sync warning:", err);
+  }
+}
+
+/**
+ * Restore an application / email from withdrawn back to normal
+ */
+export async function restoreWithdrawnEmail(email: string, applicationId?: string): Promise<void> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const cleanEmail = email.trim().toLowerCase();
+
+  if (applicationId) {
+    await supabase
+      .from("applications")
+      .update({ status: "success" })
+      .eq("id", applicationId)
+      .eq("user_id", user.id);
+  } else {
+    await supabase
+      .from("applications")
+      .update({ status: "success" })
+      .eq("email", cleanEmail)
+      .eq("user_id", user.id);
+  }
+
+  try {
+    await supabase
+      .from("job_applications")
+      .update({ status: "sent" })
+      .eq("user_id", user.id)
+      .eq("channel_email", cleanEmail);
+  } catch (err) {
+    console.warn("Tracker restore sync warning:", err);
+  }
+}
+

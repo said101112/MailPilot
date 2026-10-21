@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  Ban,
   Building2,
   CheckSquare,
   ChevronLeft,
@@ -15,6 +16,7 @@ import {
   Mail,
   MinusSquare,
   RefreshCw,
+  RotateCcw,
   Search,
   Send,
   Sparkles,
@@ -32,6 +34,8 @@ import {
   syncEmailDispatchToTracker,
   inferCompanyFromEmail,
   parseContactFromEmail,
+  markEmailAsWithdrawn,
+  restoreWithdrawnEmail,
 } from "@/lib/tracker/syncService";
 import { getCountryBadge, resolveCountryCategory } from "@/lib/tracker/countries";
 import { getStoredTemplates, type MessageTemplate } from "@/lib/templates";
@@ -69,7 +73,7 @@ export default function HistoryPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<"all" | "success" | "failed">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "success" | "failed" | "withdrawn">("all");
   const [daysFilter, setDaysFilter] = useState<30 | 90 | 365>(30);
   const [companyFilter, setCompanyFilter] = useState<string>("all");
   const [countryFilter, setCountryFilter] = useState<"all" | "non_saudi" | "saudi" | "morocco" | "france" | "other">("all");
@@ -243,6 +247,46 @@ export default function HistoryPage() {
     }
   };
 
+  const handleToggleWithdrawn = async (item: HistoryItem) => {
+    const isCurrentlyWithdrawn = item.status === "withdrawn";
+    try {
+      if (isCurrentlyWithdrawn) {
+        await restoreWithdrawnEmail(item.email, item.id);
+        setHistory((prev) =>
+          prev.map((h) => (h.id === item.id ? { ...h, status: "success" } : h))
+        );
+        toast.success(`Statut rétabli pour "${item.email}".`);
+      } else {
+        await markEmailAsWithdrawn(item.email, item.id);
+        setHistory((prev) =>
+          prev.map((h) => (h.id === item.id ? { ...h, status: "withdrawn" } : h))
+        );
+        toast.success(
+          `Email "${item.email}" marqué comme retiré/non délivré. Il sera automatiquement exclu des prochains envois !`
+        );
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erreur de mise à jour.");
+    }
+  };
+
+  const handleBulkMarkWithdrawn = async () => {
+    if (selectedIds.size === 0) return;
+    try {
+      const selectedItems = history.filter((h) => selectedIds.has(h.id));
+      for (const item of selectedItems) {
+        await markEmailAsWithdrawn(item.email, item.id);
+      }
+      setHistory((prev) =>
+        prev.map((h) => (selectedIds.has(h.id) ? { ...h, status: "withdrawn" } : h))
+      );
+      setSelectedIds(new Set());
+      toast.success(`${selectedItems.length} email(s) marqué(s) comme retirés/non délivrés.`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erreur de mise à jour groupée.");
+    }
+  };
+
   // Export to CSV
   const exportHistoryCsv = () => {
     if (filteredHistory.length === 0) {
@@ -305,10 +349,12 @@ export default function HistoryPage() {
 
     return history.filter((item) => {
       const isItemFailed = item.status === "failed" || item.status === "error";
+      const isItemWithdrawn = item.status === "withdrawn";
       const matchesStatus =
         statusFilter === "all" ||
         (statusFilter === "success" && item.status === "success") ||
-        (statusFilter === "failed" && isItemFailed);
+        (statusFilter === "failed" && isItemFailed) ||
+        (statusFilter === "withdrawn" && isItemWithdrawn);
 
       const matchesDate = new Date(item.created_at) >= cutoff;
 
@@ -360,7 +406,8 @@ export default function HistoryPage() {
     const total = inRange.length;
     const success = inRange.filter((item) => item.status === "success").length;
     const failed = inRange.filter((item) => item.status === "failed" || item.status === "error").length;
-    return { total, success, failed };
+    const withdrawn = inRange.filter((item) => item.status === "withdrawn").length;
+    return { total, success, failed, withdrawn };
   }, [history, daysFilter]);
 
   // Pagination calculation
@@ -571,6 +618,15 @@ export default function HistoryPage() {
               </button>
               <button
                 type="button"
+                onClick={handleBulkMarkWithdrawn}
+                className="editorial-button-secondary h-8 px-3 text-xs font-semibold text-amber-900 border-amber-200 hover:bg-amber-50 flex items-center gap-1.5"
+                title="Marquer les emails sélectionnés comme retirés/non délivrés pour les exclure des futurs envois"
+              >
+                <Ban className="h-3.5 w-3.5 text-amber-600" />
+                <span>Marquer Retiré / Non délivré ({selectedIds.size})</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => {
                   setSingleRelanceTarget(null);
                   setIsRelanceModalOpen(true);
@@ -770,6 +826,23 @@ export default function HistoryPage() {
                     {counts.failed}
                   </span>
                 </button>
+
+                <button
+                  type="button"
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition cursor-pointer",
+                    statusFilter === "withdrawn"
+                      ? "bg-amber-50 text-amber-900 font-semibold border border-amber-200"
+                      : "text-gray-500 hover:text-gray-800",
+                  )}
+                  onClick={() => setStatusFilter("withdrawn")}
+                >
+                  <Ban className="h-3 w-3 text-amber-600" />
+                  <span>Retiré / Non délivré</span>
+                  <span className="rounded-full bg-amber-100 px-1.5 py-0.2 text-[10px] font-bold text-amber-800">
+                    {counts.withdrawn}
+                  </span>
+                </button>
               </div>
             </div>
 
@@ -904,22 +977,29 @@ export default function HistoryPage() {
 
                           {/* Status */}
                           <td className="px-4 py-3.5">
-                            <span
-                              className={cn(
-                                "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium",
-                                isSuccess
-                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                  : "bg-red-50 text-red-700 border border-red-200",
-                              )}
-                            >
+                            {item.status === "withdrawn" ? (
+                              <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200">
+                                <Ban className="h-3 w-3 text-amber-600" />
+                                <span>Retiré / Non délivré</span>
+                              </span>
+                            ) : (
                               <span
                                 className={cn(
-                                  "h-1.5 w-1.5 rounded-full",
-                                  isSuccess ? "bg-emerald-500" : "bg-red-500",
+                                  "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium",
+                                  isSuccess
+                                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                    : "bg-red-50 text-red-700 border border-red-200",
                                 )}
-                              />
-                              {isSuccess ? "Draft Created" : "Failed"}
-                            </span>
+                              >
+                                <span
+                                  className={cn(
+                                    "h-1.5 w-1.5 rounded-full",
+                                    isSuccess ? "bg-emerald-500" : "bg-red-500",
+                                  )}
+                                />
+                                {isSuccess ? "Draft Created" : "Failed"}
+                              </span>
+                            )}
                           </td>
 
                           {/* Actions */}
@@ -947,6 +1027,35 @@ export default function HistoryPage() {
                                   <span>Relancer</span>
                                 </button>
                               )}
+
+                              {/* Mark / Unmark Withdrawn */}
+                              <button
+                                className={cn(
+                                  "h-7 px-2 text-xs rounded-md border font-medium flex items-center gap-1 transition cursor-pointer",
+                                  item.status === "withdrawn"
+                                    ? "bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100"
+                                    : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:text-red-700"
+                                )}
+                                onClick={() => void handleToggleWithdrawn(item)}
+                                title={
+                                  item.status === "withdrawn"
+                                    ? "Rétablir cet email (ne plus bloquer)"
+                                    : "Marquer comme non délivré / email introuvable (bloque les prochains envois)"
+                                }
+                                type="button"
+                              >
+                                {item.status === "withdrawn" ? (
+                                  <>
+                                    <RotateCcw className="h-3 w-3 text-amber-700" />
+                                    <span>Rétablir</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Ban className="h-3 w-3 text-gray-400" />
+                                    <span>Retirer</span>
+                                  </>
+                                )}
+                              </button>
 
                               <button
                                 className="editorial-icon-button"

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Papa from "papaparse";
 import { toast } from "sonner";
 import {
+  Ban,
   CheckCircle2,
   CheckSquare,
   ChevronLeft,
@@ -44,6 +45,7 @@ import {
   syncAllHistoryApplications,
   inferCompanyFromEmail,
   parseContactFromEmail,
+  getWithdrawnEmails,
 } from "@/lib/tracker/syncService";
 import { useBulkUpload, type CSVRow } from "@/context/BulkUploadContext";
 
@@ -53,6 +55,7 @@ type ValidationState =
   | "error"
   | "invalid-email"
   | "duplicate"
+  | "withdrawn"
   | "incomplete"
   | "ready";
 
@@ -82,6 +85,7 @@ const VALIDATION_LABELS: Record<ValidationState, string> = {
   error: "Error",
   "invalid-email": "Invalid Email",
   duplicate: "Duplicate",
+  withdrawn: "Blocked",
   incomplete: "Incomplete",
   ready: "Ready",
 };
@@ -90,12 +94,18 @@ function formatTemplateName(name: string) {
   return name === "Standard" ? "Standard Application" : name;
 }
 
-function getValidationState(row: CSVRow, duplicateEmails: Set<string>): ValidationState {
+function getValidationState(
+  row: CSVRow,
+  duplicateEmails: Set<string>,
+  withdrawnEmails: Set<string> = new Set()
+): ValidationState {
   if (row.status === "sending") return "processing";
   if (row.status === "success") return "sent";
   if (row.status === "error") return "error";
-  if (!validateEmailFormat(row.email || "").valid) return "invalid-email";
-  if (duplicateEmails.has((row.email || "").toLowerCase())) return "duplicate";
+  const cleanEmail = (row.email || "").toLowerCase();
+  if (!validateEmailFormat(cleanEmail).valid) return "invalid-email";
+  if (withdrawnEmails.has(cleanEmail)) return "withdrawn";
+  if (duplicateEmails.has(cleanEmail)) return "duplicate";
   if (!row.company || !row.position || !row.name) return "incomplete";
   return "ready";
 }
@@ -183,8 +193,13 @@ export default function UploadPage() {
   const [integrationLoading, setIntegrationLoading] = useState(true);
   const [integrationStatus, setIntegrationStatus] =
     useState<IntegrationStatusResponse | null>(null);
+  const [withdrawnEmails, setWithdrawnEmails] = useState<Set<string>>(new Set());
   const ROWS_PER_PAGE = 10;
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    void getWithdrawnEmails().then((set) => setWithdrawnEmails(set));
+  }, []);
 
   useEffect(() => {
     const loadIntegrationStatus = async () => {
@@ -327,31 +342,36 @@ export default function UploadPage() {
       error: 0,
       "invalid-email": 0,
       duplicate: 0,
+      withdrawn: 0,
       incomplete: 0,
       ready: 0,
     };
 
     data.forEach((row) => {
-      counts[getValidationState(row, duplicateEmails)] += 1;
+      counts[getValidationState(row, duplicateEmails, withdrawnEmails)] += 1;
     });
 
     return counts;
-  }, [data, duplicateEmails]);
+  }, [data, duplicateEmails, withdrawnEmails]);
 
   const selectableIndexes = useMemo(
     () =>
       data
-        .map((row, index) =>
-          row.status === "pending" || row.status === "error" ? index : -1,
-        )
+        .map((row, index) => {
+          const cleanEmail = (row.email || "").toLowerCase();
+          // Exclude emails marked as withdrawn/not found in history
+          if (withdrawnEmails.has(cleanEmail)) return -1;
+          return row.status === "pending" || row.status === "error" ? index : -1;
+        })
         .filter((index) => index !== -1),
-    [data],
+    [data, withdrawnEmails],
   );
 
   const readyCount = validationCounts.ready;
   const issueCount =
     validationCounts.duplicate +
     validationCounts["invalid-email"] +
+    validationCounts.withdrawn +
     validationCounts.incomplete +
     validationCounts.error;
   const selectedCount = selectedRows.size;
@@ -501,6 +521,8 @@ export default function UploadPage() {
         return "Draft created successfully in Gmail with CV attached.";
       case "error":
         return row.error || "Delivery failed - draft was not created.";
+      case "withdrawn":
+        return "Email marqué comme non délivré / retiré dans l'historique (exclu pour éviter un bounce).";
       case "ready":
       default:
         return "Validated and ready for launch.";
@@ -510,10 +532,11 @@ export default function UploadPage() {
   const renderStatusChip = (state: ValidationState) => (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium",
+        "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium",
         state === "ready" && "bg-blue-50 text-blue-700",
         state === "sent" && "bg-emerald-50 text-emerald-700",
         state === "processing" && "bg-amber-50 text-amber-700",
+        state === "withdrawn" && "bg-amber-50 text-amber-900 border border-amber-200 font-semibold",
         (state === "duplicate" ||
           state === "invalid-email" ||
           state === "incomplete" ||
@@ -521,7 +544,8 @@ export default function UploadPage() {
           "bg-red-50 text-red-700",
       )}
     >
-      {VALIDATION_LABELS[state]}
+      {state === "withdrawn" && <Ban className="h-3 w-3 text-amber-700" />}
+      <span>{VALIDATION_LABELS[state]}</span>
     </span>
   );
 
@@ -1006,7 +1030,7 @@ export default function UploadPage() {
                   <tbody className="divide-y divide-gray-100">
                     {paginatedData.map((row, relativeIndex) => {
                       const index = (currentPage - 1) * ROWS_PER_PAGE + relativeIndex;
-                      const validationState = getValidationState(row, duplicateEmails);
+                      const validationState = getValidationState(row, duplicateEmails, withdrawnEmails);
                       const isSelected = selectedRows.has(index);
 
                       return (

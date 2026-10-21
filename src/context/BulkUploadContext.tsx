@@ -22,6 +22,7 @@ import {
   syncEmailDispatchToTracker,
   syncAllHistoryApplications,
   inferCompanyFromEmail,
+  getWithdrawnEmails,
 } from "@/lib/tracker/syncService";
 import type { MessageTemplate } from "@/lib/templates";
 
@@ -233,6 +234,7 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
         data: { user },
       } = await supabase.auth.getUser();
       const emailValidationCache = new Map<string, EmailPreflightResult>();
+      const withdrawnSet = await getWithdrawnEmails();
 
       let successCount = 0;
       let failCount = 0;
@@ -254,6 +256,17 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
         try {
           const row = nextData[index];
           const emailKey = (row.email || "").toLowerCase();
+
+          if (withdrawnSet.has(emailKey)) {
+            nextData[index] = {
+              ...nextData[index],
+              status: "error",
+              error: "Email retiré / non délivré dans l'historique (envoi bloqué pour éviter un bounce).",
+            };
+            failCount += 1;
+            setData([...nextData]);
+            continue;
+          }
 
           const formatResult = validateEmailFormat(emailKey);
           if (!formatResult.valid) {
