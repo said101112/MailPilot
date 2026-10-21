@@ -45,18 +45,7 @@ import {
   inferCompanyFromEmail,
   parseContactFromEmail,
 } from "@/lib/tracker/syncService";
-
-interface CSVRow {
-  company: string;
-  email: string;
-  position: string;
-  name: string;
-  status?: "pending" | "sending" | "success" | "error";
-  error?: string;
-  message?: string;
-  subject?: string;
-  [key: string]: string | undefined;
-}
+import { useBulkUpload, type CSVRow } from "@/context/BulkUploadContext";
 
 type ValidationState =
   | "processing"
@@ -159,22 +148,41 @@ function guessCompanyFromEmail(email: string): string {
 }
 
 export default function UploadPage() {
-  const [data, setData] = useState<CSVRow[]>([]);
-  const [fileName, setFileName] = useState("routepilot_batch_template.csv");
-  const [inputMode, setInputMode] = useState<"file" | "paste">("file");
-  const [pastedText, setPastedText] = useState("");
-  const [defaultPosition, setDefaultPosition] = useState("Stage PFE / Emploi");
-  const [defaultContactName, setDefaultContactName] = useState("Hiring Manager");
-  const [isProcessing, setIsProcessing] = useState(false);
+  const {
+    data,
+    setData,
+    fileName,
+    setFileName,
+    selectedRows,
+    setSelectedRows,
+    toggleRow,
+    selectAll,
+    deselectAll,
+    selectedTemplateId,
+    setSelectedTemplateId,
+    defaultPosition,
+    setDefaultPosition,
+    defaultContactName,
+    setDefaultContactName,
+    inputMode,
+    setInputMode,
+    pastedText,
+    setPastedText,
+    currentPage,
+    setCurrentPage,
+    isProcessing,
+    progress,
+    setProgress,
+    startBatchProcess: contextStartBatchProcess,
+    cancelBatchProcess,
+    clearBatch,
+  } = useBulkUpload();
+
   const [isDragging, setIsDragging] = useState(false);
   const [templates, setTemplates] = useState(cloneDefaultTemplates);
-  const [progress, setProgress] = useState({ current: 0, total: 0 });
-  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
   const [integrationLoading, setIntegrationLoading] = useState(true);
   const [integrationStatus, setIntegrationStatus] =
     useState<IntegrationStatusResponse | null>(null);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
   const ROWS_PER_PAGE = 10;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -458,31 +466,12 @@ export default function UploadPage() {
     toast.success(`${detectedEmails.length} contacts extraits et importés avec succès !`);
   };
 
-  const toggleRow = (index: number) => {
+  const handleSelectAll = () => {
     if (isProcessing) return;
-
-    setSelectedRows((previous) => {
-      const next = new Set(previous);
-      if (next.has(index)) {
-        next.delete(index);
-      } else {
-        next.add(index);
-      }
-      return next;
-    });
+    selectAll(selectableIndexes);
   };
 
-  const selectAll = () => {
-    if (isProcessing) return;
-    setSelectedRows(new Set(selectableIndexes));
-  };
-
-  const deselectAll = () => {
-    if (isProcessing) return;
-    setSelectedRows(new Set());
-  };
-
-  const startBatchProcess = async () => {
+  const handleStartBatchProcess = async () => {
     if (integrationLoading) {
       toast.info("Checking workflow health. Try again in a moment.");
       return;
@@ -493,168 +482,7 @@ export default function UploadPage() {
       return;
     }
 
-    const selectedIndexes = Array.from(selectedRows).sort((a, b) => a - b);
-    if (selectedIndexes.length === 0) {
-      toast.error("Select at least one row before launching the queue.");
-      return;
-    }
-
-    setIsProcessing(true);
-
-    const template = activeTemplate;
-    const savedName = readCandidateName();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    const emailValidationCache = new Map<string, EmailPreflightResult>();
-
-    let successCount = 0;
-    let failCount = 0;
-    const nextData = [...data];
-
-    setProgress({ current: 0, total: selectedIndexes.length });
-
-    for (let step = 0; step < selectedIndexes.length; step += 1) {
-      const index = selectedIndexes[step];
-      nextData[index] = { ...nextData[index], status: "sending", error: undefined };
-      setData([...nextData]);
-      setProgress({ current: step + 1, total: selectedIndexes.length });
-
-      try {
-        const row = nextData[index];
-        const emailKey = (row.email || "").toLowerCase();
-
-        const formatResult = validateEmailFormat(emailKey);
-        if (!formatResult.valid) {
-          nextData[index] = { ...nextData[index], status: "error", error: formatResult.message };
-          failCount += 1;
-          setData([...nextData]);
-          continue;
-        }
-
-        let emailResult = emailValidationCache.get(emailKey);
-        if (!emailResult) {
-          emailResult = await validateEmailBeforeSend(emailKey);
-          emailValidationCache.set(emailKey, emailResult);
-        }
-
-        if (!emailResult.valid) {
-          nextData[index] = { ...nextData[index], status: "error", error: emailResult.message };
-          failCount += 1;
-          setData([...nextData]);
-          continue;
-        }
-
-        const replace = (text: string) => {
-          let processedText = text;
-
-          Object.keys(row).forEach((key) => {
-            const regex = new RegExp(`\\[${key}\\]`, "gi");
-            processedText = processedText.replace(regex, row[key as keyof CSVRow] || "");
-          });
-
-          return processedText.replace(/\[MyName\]/gi, savedName);
-        };
-
-        const processedMessage = replace(template.message).replace(/\n/g, "<br>");
-        const processedSubject = replace(template.subject);
-        const { base64: cvBase64, fileName: cvFileName } = readStoredCv();
-
-        await sendApplication({
-          ...row,
-          message: processedMessage,
-          subject: processedSubject,
-          cv_base64: cvBase64,
-          cv_filename: cvFileName || `${savedName.replace(/\s+/g, "_")}_Resume.pdf`,
-        });
-
-        if (user) {
-          const compToSave = row.company || inferCompanyFromEmail(row.email)?.name || null;
-          await supabase.from("applications").insert([
-            {
-              user_id: user.id,
-              company: compToSave,
-              position: row.position || null,
-              email: row.email,
-              status: "success",
-            },
-          ]);
-
-          // Automatically sync with Tracker (creates/links company & contact)
-          try {
-            await syncEmailDispatchToTracker({
-              company: compToSave,
-              position: row.position,
-              email: row.email,
-              status: "success",
-            });
-          } catch (syncErr) {
-            console.warn("Bulk tracker sync failed:", syncErr);
-          }
-        }
-
-        nextData[index] = { ...nextData[index], status: "success", error: undefined };
-        successCount += 1;
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Unknown workflow failure.";
-        nextData[index] = { ...nextData[index], status: "error", error: message };
-        failCount += 1;
-
-        if (user) {
-          try {
-            await supabase.from("applications").insert([
-              {
-                user_id: user.id,
-                company: nextData[index].company || null,
-                position: nextData[index].position || null,
-                email: nextData[index].email,
-                status: "failed",
-              },
-            ]);
-          } catch (dbErr) {
-            console.error("Unable to record failed application in Supabase", dbErr);
-          }
-        }
-      }
-
-      setData([...nextData]);
-
-      if (step < selectedIndexes.length - 1) {
-        await delay(2000);
-      }
-    }
-
-    const remainingSelection = new Set<number>();
-    nextData.forEach((row, index) => {
-      if (row.status === "pending" || row.status === "error") {
-        remainingSelection.add(index);
-      }
-    });
-
-    setSelectedRows(remainingSelection);
-    setIsProcessing(false);
-
-    if (failCount > 0 && successCount === 0) {
-      toast.error(`Queue completed: all ${failCount} failed.`);
-    } else if (failCount > 0) {
-      toast.warning(`Queue completed: ${successCount} drafts created, ${failCount} failed.`);
-    } else {
-      toast.success(`Queue complete: ${successCount} drafts created in Gmail.`);
-    }
-
-    // Automatically trigger Tracker synchronization in background without user having to click
-    if (successCount > 0) {
-      void syncAllHistoryApplications()
-        .then((res) => {
-          if (res.applicationsCreated > 0 || res.companiesCreated > 0) {
-            toast.success(
-              `Liaison Tracker automatique : ${res.companiesCreated} entreprise(s) et ${res.contactsCreated} contact(s) créés/liés.`
-            );
-          }
-        })
-        .catch((err) => console.warn("Background auto-sync failed:", err));
-    }
+    await contextStartBatchProcess(activeTemplate);
   };
 
   const getValidationMessage = (row: CSVRow, state: ValidationState) => {
@@ -1080,11 +908,9 @@ export default function UploadPage() {
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   className="editorial-button-secondary h-8 px-3 text-xs"
-                  onClick={() => {
-                    setData([]);
-                    setSelectedRows(new Set());
-                  }}
+                  onClick={clearBatch}
                   type="button"
+                  disabled={isProcessing}
                 >
                   Clear & New File
                 </button>
@@ -1092,7 +918,7 @@ export default function UploadPage() {
                 <button
                   className="editorial-button-secondary h-8 px-3 text-xs"
                   disabled={data.length === 0 || isProcessing}
-                  onClick={isAllSelected ? deselectAll : selectAll}
+                  onClick={isAllSelected ? deselectAll : handleSelectAll}
                   type="button"
                 >
                   {isAllSelected ? "Deselect All" : "Select All"}
@@ -1107,7 +933,7 @@ export default function UploadPage() {
                     integrationLoading ||
                     n8nBlocked
                   }
-                  onClick={startBatchProcess}
+                  onClick={handleStartBatchProcess}
                   type="button"
                 >
                   {isProcessing ? (
@@ -1119,6 +945,17 @@ export default function UploadPage() {
                     ? `Creating Drafts (${progress.current}/${progress.total})`
                     : `Create Drafts (${selectedCount})`}
                 </button>
+
+                {isProcessing && (
+                  <button
+                    className="editorial-button-secondary h-8 px-3 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                    onClick={cancelBatchProcess}
+                    type="button"
+                    title="Arrêter la file d'attente"
+                  >
+                    Arrêter
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1147,7 +984,7 @@ export default function UploadPage() {
                       <th className="w-10 px-4 py-2.5">
                         <button
                           className="text-gray-400 hover:text-gray-600"
-                          onClick={isAllSelected ? deselectAll : selectAll}
+                          onClick={isAllSelected ? deselectAll : handleSelectAll}
                           type="button"
                         >
                           {isAllSelected ? (

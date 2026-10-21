@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import AppHeader from "@/components/AppHeader";
 import Navbar from "@/components/Navbar";
 import { APP_DESCRIPTION, APP_NAME } from "@/lib/brand";
+import { BulkUploadProvider } from "@/context/BulkUploadContext";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -24,16 +25,18 @@ export default function RootLayout({
         suppressHydrationWarning
         className={`${inter.variable} h-full overflow-hidden bg-[var(--editorial-background)] antialiased`}
       >
-        <div className="flex h-screen h-dvh w-full max-w-full overflow-hidden">
-          <Navbar />
-          <div className="flex h-full min-w-0 w-full max-w-full flex-1 flex-col overflow-hidden bg-[var(--editorial-background)]">
-            <AppHeader />
-            <main className="min-w-0 w-full max-w-full flex-1 overflow-y-auto overflow-x-hidden pt-14 lg:pt-0">
-              {children}
-            </main>
+        <BulkUploadProvider>
+          <div className="flex h-screen h-dvh w-full max-w-full overflow-hidden">
+            <Navbar />
+            <div className="flex h-full min-w-0 w-full max-w-full flex-1 flex-col overflow-hidden bg-[var(--editorial-background)]">
+              <AppHeader />
+              <main className="min-w-0 w-full max-w-full flex-1 overflow-y-auto overflow-x-hidden pt-14 lg:pt-0">
+                {children}
+              </main>
+            </div>
           </div>
-        </div>
-        <Toaster position="bottom-right" richColors />
+          <Toaster position="bottom-right" richColors />
+        </BulkUploadProvider>
       </body>
     </html>
   );

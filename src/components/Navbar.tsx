@@ -12,6 +12,7 @@ import {
   Clock,
   FileText,
   Home,
+  Loader2,
   LogOut,
   Menu,
   MessageSquarePlus,
@@ -22,6 +23,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { useBulkUpload } from "@/context/BulkUploadContext";
 import { toast } from "sonner";
 import BrandLogo from "@/components/BrandLogo";
 import CvUploadCard from "@/components/CvUploadCard";
@@ -130,6 +132,11 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [candidateName, setCandidateName] = useState(PROFILE_DEFAULT_NAME);
+  const {
+    isProcessing: isBulkProcessing,
+    progress: bulkProgress,
+    data: bulkData,
+  } = useBulkUpload();
 
   useEffect(() => {
     const syncSidebar = () => setIsCollapsed(readSidebarCollapsed());
@@ -267,6 +274,19 @@ export default function Navbar() {
                     >
                       <item.icon className="h-4 w-4 shrink-0 text-gray-500" />
                       <span>{item.name}</span>
+                      {item.href === "/upload" && isBulkProcessing && (
+                        <span className="ml-auto flex items-center gap-1 rounded-full bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold text-[#ff5722]">
+                          <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                          <span>
+                            {bulkProgress.current}/{bulkProgress.total}
+                          </span>
+                        </span>
+                      )}
+                      {item.href === "/upload" && !isBulkProcessing && bulkData.length > 0 && (
+                        <span className="ml-auto rounded-full bg-gray-100 px-1.5 py-0.2 text-[10px] font-semibold text-gray-600">
+                          {bulkData.length}
+                        </span>
+                      )}
                     </Link>
                   );
                 })}
@@ -339,13 +359,34 @@ export default function Navbar() {
                       href={item.href}
                       title={item.name}
                     >
-                        <item.icon
-                          className={cn(
-                            "h-4 w-4 shrink-0",
-                            isActive ? "text-gray-900" : "text-gray-500",
+                        <div className="relative">
+                          <item.icon
+                            className={cn(
+                              "h-4 w-4 shrink-0",
+                              isActive ? "text-gray-900" : "text-gray-500",
+                            )}
+                          />
+                          {item.href === "/upload" && isBulkProcessing && isCollapsed && (
+                            <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#ff5722] opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#ff5722]"></span>
+                            </span>
                           )}
-                        />
+                        </div>
                         {!isCollapsed && <span>{item.name}</span>}
+                        {item.href === "/upload" && isBulkProcessing && !isCollapsed && (
+                          <span className="ml-auto flex items-center gap-1 rounded-full bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold text-[#ff5722]">
+                            <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                            <span>
+                              {bulkProgress.current}/{bulkProgress.total}
+                            </span>
+                          </span>
+                        )}
+                        {item.href === "/upload" && !isBulkProcessing && bulkData.length > 0 && !isCollapsed && (
+                          <span className="ml-auto rounded-full bg-gray-100 px-1.5 py-0.2 text-[10px] font-semibold text-gray-600">
+                            {bulkData.length}
+                          </span>
+                        )}
                       </Link>
                     );
                   })}
