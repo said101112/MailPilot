@@ -59,6 +59,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import CompanyLogo from "@/components/tracker/CompanyLogo";
+import ForumCompanyNotebook from "@/components/tracker/ForumCompanyNotebook";
 import { listCompanies, listApplications } from "@/lib/tracker/queries";
 import type { CompanyRow, JobApplicationRow } from "@/lib/tracker/types";
 import {
@@ -105,7 +106,7 @@ function renderDomainPresetIcon(iconType?: string) {
 export default function InterviewPrepPage() {
   const [prepData, setPrepData] = useState<InterviewPrepState>(DEFAULT_PREP_DATA);
   const [activeTab, setActiveTab] = useState<
-    "flashcards" | "prompt_studio" | "company" | "strategic" | "pitch" | "qa"
+    "flashcards" | "prompt_studio" | "forum_notes" | "company" | "strategic" | "pitch" | "qa"
   >("flashcards");
   const [isReadingMode, setIsReadingMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -178,6 +179,14 @@ export default function InterviewPrepPage() {
       setSelectedCompanyId(loaded.companySheets[0].id);
     }
     void loadDbData();
+
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get("tab");
+      if (tabParam === "forum" || tabParam === "forum_notes") {
+        setActiveTab("forum_notes");
+      }
+    }
   }, [loadDbData]);
 
   // Save changes
@@ -657,6 +666,23 @@ export default function InterviewPrepPage() {
           >
             <Sparkles className="h-4 w-4" />
             <span>Générateur de Prompt IA & Import</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("forum_notes")}
+            className={cn(
+              "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition cursor-pointer",
+              activeTab === "forum_notes"
+                ? "bg-[#fff3ef] text-[#ff5722] shadow-2xs font-bold"
+                : "text-gray-600 hover:text-gray-900 hover:bg-gray-100/60"
+            )}
+          >
+            <Building2 className="h-4 w-4 text-[#ff5722]" />
+            <span>Bloc-Notes Forum Entreprises</span>
+            <span className="rounded-full bg-orange-100 px-1.5 py-0.2 text-[10px] text-[#ff5722] font-bold">
+              Forum
+            </span>
           </button>
 
           <button
@@ -1230,7 +1256,14 @@ export default function InterviewPrepPage() {
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 3: FICHE ENTREPRISE LINKÉE À SUPABASE                                 */}
+        {/* TAB 3: BLOC-NOTES FORUM ENTREPRISES & PROFILS RECHERCHÉS                 */}
+        {/* ========================================================================= */}
+        {activeTab === "forum_notes" && (
+          <ForumCompanyNotebook />
+        )}
+
+        {/* ========================================================================= */}
+        {/* TAB 4: FICHE ENTREPRISE LINKÉE À SUPABASE                                 */}
         {/* ========================================================================= */}
         {activeTab === "company" && (
           <div className="space-y-4">

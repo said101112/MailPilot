@@ -200,6 +200,14 @@ export default function CompaniesPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/tracker/prep?tab=forum"
+            className="h-8 px-3 rounded-lg border border-orange-200 bg-orange-50 hover:bg-orange-100/70 text-[#ff5722] text-xs font-bold flex items-center gap-1.5 transition shadow-2xs"
+            title="Ouvrir le bloc-notes spécial forums et salons de recrutement"
+          >
+            <Building2 className="h-3.5 w-3.5 text-[#ff5722]" />
+            <span>Bloc-Notes Forum</span>
+          </Link>
           <button
             type="button"
             disabled={syncingSaudi}
