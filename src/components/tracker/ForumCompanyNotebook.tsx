@@ -24,6 +24,7 @@ import {
   MapPin,
   Plus,
   RefreshCw,
+  RotateCcw,
   Search,
   Sparkles,
   Star,
@@ -41,6 +42,7 @@ import {
   FORUM_FILTER_PRESETS,
   loadForumCompanies,
   parseRawForumText,
+  resetForumCompaniesToDefault,
   saveForumCompanies,
   syncForumCompaniesToSupabase,
   type ForumCompanyEntry,
@@ -216,6 +218,19 @@ export default function ForumCompanyNotebook() {
   // Profile matching predicate
   const matchesDomainPreset = (entry: ForumCompanyEntry, presetId: string): boolean => {
     if (presetId === "all") return true;
+    if (presetId === "top_data") {
+      return Boolean(entry.topObjective?.includes("data"));
+    }
+    if (presetId === "top_dev") {
+      return Boolean(entry.topObjective?.includes("dev"));
+    }
+    if (presetId === "top_cloud") {
+      return Boolean(entry.topObjective?.includes("cloud"));
+    }
+    if (presetId === "top_sap") {
+      return Boolean(entry.topObjective?.includes("sap"));
+    }
+
     const preset = FORUM_FILTER_PRESETS.find((p) => p.id === presetId);
     if (!preset || !preset.keywords) return true;
 
@@ -338,6 +353,22 @@ export default function ForumCompanyNotebook() {
             >
               <RefreshCw className={cn("h-3.5 w-3.5", isSyncingSupabase && "animate-spin")} />
               <span>{isSyncingSupabase ? "Sauvegarde..." : "Sauvegarder Supabase"}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm("Recharger la liste complète officielle (34 entreprises avec les 3 catégories et objectifs) ?")) {
+                  const refreshed = resetForumCompaniesToDefault();
+                  setCompanies(refreshed);
+                  toast.success("Liste complète rechargée (34 entreprises) !");
+                }
+              }}
+              className="h-9 px-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-500 text-xs flex items-center gap-1 cursor-pointer shadow-2xs transition"
+              title="Recharger les 34 entreprises officielles"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Réinitialiser (34)</span>
             </button>
           </div>
         </div>

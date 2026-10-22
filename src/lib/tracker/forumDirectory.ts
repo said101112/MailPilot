@@ -25,23 +25,30 @@ export interface ForumCompanyEntry {
   contactPerson?: string | null;
   notes?: string | null;
   rating?: number;
+  topObjective?: ("dev" | "data" | "cloud" | "sap")[];
   updatedAt: string;
 }
 
-export const FORUM_STORAGE_KEY = "mailpilot_forum_companies_v1";
+export const FORUM_STORAGE_KEY = "mailpilot_forum_companies_v2";
 
 export const FORUM_FILTER_PRESETS = [
   { id: "all", label: "Toutes les entreprises", countBadge: null },
+  { id: "top_data", label: "🎯 Top DATA / IA (Recommandé)", keywords: ["top_data"] },
+  { id: "top_dev", label: "🎯 Top DEV Backend/Fullstack", keywords: ["top_dev"] },
+  { id: "top_cloud", label: "🎯 Top CLOUD / DEVOPS", keywords: ["top_cloud"] },
+  { id: "top_sap", label: "🎯 Top SAP / ERP", keywords: ["top_sap"] },
   { id: "data", label: "DATA / BI / IA", keywords: ["data", "ia", "bi", "analytics", "rag", "llm", "science", "gouvernance"] },
-  { id: "dev", label: "DEV / Logiciel", keywords: ["dev", "java", "jee", ".net", "backend", "ingénierie logicielle", "applicative", "embarqué"] },
+  { id: "dev", label: "DEV / Logiciel", keywords: ["dev", "java", "jee", "spring", "angular", ".net", "backend", "ingénierie logicielle", "applicative", "embarqué", "api"] },
   { id: "cloud", label: "CLOUD / DEVOPS", keywords: ["cloud", "devops", "devsecops", "infrastructure"] },
   { id: "cyber", label: "CYBER / Sécurité", keywords: ["cyber", "sécurité"] },
   { id: "sap", label: "SAP / ERP / CRM", keywords: ["sap", "erp", "salesforce", "servicenow", "btp"] },
-  { id: "telecom", label: "TÉLÉCOMS / IoT", keywords: ["télécoms", "réseaux", "iot"] },
-  { id: "consulting", label: "Conseil & Transfo", keywords: ["conseil", "transformation", "digitale", "processus"] },
+  { id: "telecom", label: "TÉLÉCOMS / IoT", keywords: ["télécoms", "télécom", "réseaux", "iot", "5g"] },
 ];
 
 export const INITIAL_FORUM_COMPANIES: ForumCompanyEntry[] = [
+  // =========================================================================
+  // 1. ENTREPRISES IT ET SERVICES NUMÉRIQUES
+  // =========================================================================
   {
     id: "forum-inetum",
     category: "1. Entreprises IT et sociétés de services numériques",
@@ -54,7 +61,8 @@ export const INITIAL_FORUM_COMPANIES: ForumCompanyEntry[] = [
     tagline: "Inetum",
     stand: "Stand A01",
     status: "priority",
-    notes: "Prend des profils Data & Cloud. Parler de mon projet de traitement par batch et intégration APIs.",
+    topObjective: ["dev", "data", "cloud", "sap"],
+    notes: "Top recruteur DEV, DATA et CLOUD. Pitcher les projets batch / API et intérêt pour les missions grands comptes.",
     updatedAt: new Date().toISOString(),
   },
   {
@@ -68,8 +76,9 @@ export const INITIAL_FORUM_COMPANIES: ForumCompanyEntry[] = [
     rawDomainsText: "DEV · DATA/IA · CLOUD/DEVOPS · Télécoms · CYBER",
     tagline: "Orange Group",
     stand: "Stand A02",
-    status: "to_visit",
-    notes: "Filiale d'Orange. Projets télécoms, data et cloud en Afrique et Moyen-Orient.",
+    status: "priority",
+    topObjective: ["dev", "data", "cloud"],
+    notes: "Filiale d'Orange. Projets internationaux télécoms, data et cloud en Afrique & Moyen-Orient.",
     updatedAt: new Date().toISOString(),
   },
   {
@@ -83,8 +92,9 @@ export const INITIAL_FORUM_COMPANIES: ForumCompanyEntry[] = [
     rawDomainsText: "DEV · DATA/IA · Ingénierie logicielle · Logiciel embarqué · Télécoms",
     tagline: "Groupe SII",
     stand: "Stand A03",
-    status: "to_visit",
-    notes: "Société d'ingénierie avec grosse présence au Maroc. Pôle software et data.",
+    status: "priority",
+    topObjective: ["dev"],
+    notes: "Société d'ingénierie tech majeure. Pôle développement logiciel et data pour grands comptes européens.",
     updatedAt: new Date().toISOString(),
   },
   {
@@ -96,10 +106,11 @@ export const INITIAL_FORUM_COMPANIES: ForumCompanyEntry[] = [
     website: "https://www.skatys.com",
     domains: ["SAP/ERP", "SAP BTP", "BI/DATA", "Analytics", "IA appliquée aux processus métier"],
     rawDomainsText: "SAP/ERP · SAP BTP · BI/DATA · Analytics · IA appliquée aux processus métier",
-    tagline: "Conseil & Intégration",
+    tagline: "Conseil & Intégration Solutions SAP",
     stand: "Stand A04",
-    status: "to_visit",
-    notes: "Cabinet spécialisé SAP et Business Analytics. Focus IA appliquée aux processus métier.",
+    status: "priority",
+    topObjective: ["sap"],
+    notes: "Leader sur l'intégration SAP et Business Analytics. Très forte valeur ajoutée sur l'IA appliquée aux processus d'entreprise.",
     updatedAt: new Date().toISOString(),
   },
   {
@@ -114,7 +125,8 @@ export const INITIAL_FORUM_COMPANIES: ForumCompanyEntry[] = [
     tagline: "Make it real.",
     stand: "Stand B01",
     status: "priority",
-    notes: "Énorme recruteur PFE au Maroc (Casablanca, Rabat). Pôles Insights & Data et Cloud Infrastructure.",
+    topObjective: ["dev", "data", "cloud", "sap"],
+    notes: "Énorme volume de recrutements PFE (Casablanca, Rabat). Pôles Insights & Data et Cloud Infrastructure.",
     updatedAt: new Date().toISOString(),
   },
   {
@@ -128,8 +140,9 @@ export const INITIAL_FORUM_COMPANIES: ForumCompanyEntry[] = [
     rawDomainsText: "SAP/ERP · DEV Java/.NET · Salesforce · DATA/BI",
     tagline: "VISEO Global",
     stand: "Stand B02",
-    status: "to_visit",
-    notes: "Cabinet de conseil et services numériques. Pôles dev backend et intégration data.",
+    status: "priority",
+    topObjective: ["dev", "sap"],
+    notes: "Cabinet de conseil et ESN internationale. Pôles dev backend Java/.NET et intégration ERP/Data.",
     updatedAt: new Date().toISOString(),
   },
   {
@@ -143,8 +156,9 @@ export const INITIAL_FORUM_COMPANIES: ForumCompanyEntry[] = [
     rawDomainsText: "DEV Java/JEE · Backend · Intégration · Paiement électronique · Sécurité",
     tagline: "Solutions Monétiques",
     stand: "Stand B03",
-    status: "to_visit",
-    notes: "Leader marocain des solutions de paiement et transactions électroniques sécurisées.",
+    status: "priority",
+    topObjective: ["dev"],
+    notes: "Pionnier marocain de la monétique et transactions financières sécurisées. Fort besoin en ingénieurs dev backend Java.",
     updatedAt: new Date().toISOString(),
   },
   {
@@ -156,9 +170,10 @@ export const INITIAL_FORUM_COMPANIES: ForumCompanyEntry[] = [
     website: "https://www.leyton.com",
     domains: ["DEV", "DATA Engineering", "Data Science", "IA générative/LLM", "RAG", "DevSecOps"],
     rawDomainsText: "DEV · DATA Engineering · Data Science · IA générative/LLM · RAG · DevSecOps",
-    tagline: "Unlock New Potential",
+    tagline: "Unlock New Potential with AI Solutions",
     stand: "Stand C01",
     status: "priority",
+    topObjective: ["data"],
     notes: "Filiale tech et IA de Leyton. Très forte orientation RAG, LLM et Data Science opérationnelle. À cibler en priorité absolue !",
     updatedAt: new Date().toISOString(),
   },
@@ -174,7 +189,8 @@ export const INITIAL_FORUM_COMPANIES: ForumCompanyEntry[] = [
     tagline: "Orange Jobs",
     stand: "Stand C02",
     status: "priority",
-    notes: "Pôle B2B d'Orange. Projets cloud souverain, cybersécurité et plateformes data.",
+    topObjective: ["data", "cloud"],
+    notes: "Entité B2B d'Orange. Projets cloud souverain, cybersécurité et plateformes big data industrielles.",
     updatedAt: new Date().toISOString(),
   },
   {
@@ -186,10 +202,11 @@ export const INITIAL_FORUM_COMPANIES: ForumCompanyEntry[] = [
     website: "https://www.afdtech.com",
     domains: ["CLOUD/DEVOPS", "DATA", "CYBER", "Réseaux télécoms", "Infrastructure"],
     rawDomainsText: "CLOUD/DEVOPS · DATA · CYBER · Réseaux télécoms · Infrastructure",
-    tagline: "Accenture Industry X",
+    tagline: "your digital team",
     stand: "Stand C03",
-    status: "to_visit",
-    notes: "Société de conseil en ingénierie réseaux et cloud rattachée au groupe Accenture.",
+    status: "priority",
+    topObjective: ["cloud"],
+    notes: "Rattachée à Accenture Industry X. Projets d'infrastructures cloud, automatisation et virtualisation télécoms.",
     updatedAt: new Date().toISOString(),
   },
   {
@@ -203,8 +220,9 @@ export const INITIAL_FORUM_COMPANIES: ForumCompanyEntry[] = [
     rawDomainsText: "CLOUD · Infrastructure · DATA/IA · Modernisation applicative",
     tagline: "Data Center & Cloud",
     stand: "Stand D01",
-    status: "to_visit",
-    notes: "Opérateur de Data Center certifié Tier III et Tier IV au Maroc (Benguerir, UM6P).",
+    status: "priority",
+    topObjective: ["cloud"],
+    notes: "Opérateur de Data Center certifié Tier III et Tier IV (Benguerir UM6P). Infrastructures cloud souveraines au Maroc.",
     updatedAt: new Date().toISOString(),
   },
   {
@@ -219,7 +237,8 @@ export const INITIAL_FORUM_COMPANIES: ForumCompanyEntry[] = [
     tagline: "Deloitte Nearshore",
     stand: "Stand D02",
     status: "priority",
-    notes: "Centre de livraison Nearshore à Casablanca. Recrutement massif sur l'IA, la Cyber et le Cloud.",
+    topObjective: ["data", "cloud"],
+    notes: "Centre Nearshore à Casablanca. Recrutements importants sur l'IA, la cybersécurité et la gouvernance IT.",
     updatedAt: new Date().toISOString(),
   },
   {
@@ -234,7 +253,7 @@ export const INITIAL_FORUM_COMPANIES: ForumCompanyEntry[] = [
     tagline: "Audit & Advisory",
     stand: "Stand E01",
     status: "to_visit",
-    notes: "Pôle conseil en gouvernance data, audit des systèmes d'information et cybersécurité.",
+    notes: "Pôle conseil technologique : gouvernance de données, conformité IT et audit cybersécurité.",
     updatedAt: new Date().toISOString(),
   },
   {
@@ -249,7 +268,362 @@ export const INITIAL_FORUM_COMPANIES: ForumCompanyEntry[] = [
     tagline: "Conseil & Audit",
     stand: "Stand E02",
     status: "to_visit",
-    notes: "Cabinet d'audit et de conseil. Projets BI, modélisation et transformation digitale.",
+    notes: "Cabinet de conseil et d'audit. Missions de modélisation financière, BI et transformation digitale.",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "forum-netis",
+    category: "1. Entreprises IT et sociétés de services numériques",
+    companyName: "NETIS",
+    domain: "netisgroup.net",
+    logoUrl: null,
+    website: "https://www.netisgroup.net",
+    domains: ["Réseaux", "Télécoms", "Infrastructure"],
+    rawDomainsText: "Réseaux · Télécoms · Infrastructure",
+    stand: "Stand F01",
+    status: "to_visit",
+    notes: "Acteur des infrastructures de télécommunications et réseaux en Afrique.",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "forum-ericsson",
+    category: "1. Entreprises IT et sociétés de services numériques",
+    companyName: "Ericsson",
+    domain: "ericsson.com",
+    logoUrl: "https://logo.clearbit.com/ericsson.com",
+    website: "https://www.ericsson.com",
+    domains: ["Logiciel télécom", "Réseaux 5G", "Cloud télécom", "Automatisation"],
+    rawDomainsText: "Logiciel télécom · Réseaux 5G · Cloud télécom · Automatisation",
+    stand: "Stand F02",
+    status: "to_visit",
+    notes: "Géant des télécoms et de la 5G. Ingénierie logicielle pour les réseaux mobiles et le cloud télécom.",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "forum-portnet",
+    category: "1. Entreprises IT et sociétés de services numériques",
+    companyName: "PortNet",
+    domain: "portnet.ma",
+    logoUrl: null,
+    website: "https://www.portnet.ma",
+    domains: ["DEV", "API/intégration", "DATA/BI", "Systèmes d'information logistiques"],
+    rawDomainsText: "DEV · API/intégration · DATA/BI · Systèmes d'information logistiques",
+    stand: "Stand F03",
+    status: "to_visit",
+    notes: "Guichet unique national du commerce extérieur du Maroc. Forte composante APIs, échange de flux EDI et BI.",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "forum-maysync",
+    category: "1. Entreprises IT et sociétés de services numériques",
+    companyName: "MaySync",
+    domain: "maysync.com",
+    logoUrl: null,
+    website: "https://www.maysync.com",
+    domains: ["Conseil", "Management", "Digitalisation"],
+    rawDomainsText: "Conseil/management apparent · Spécialités technologiques à confirmer",
+    stand: "Stand F04",
+    status: "to_visit",
+    notes: "Conseil et management. Se renseigner au stand sur leurs opportunités IT / Data.",
+    updatedAt: new Date().toISOString(),
+  },
+
+  // =========================================================================
+  // 2. BANQUES ET ASSURANCES
+  // =========================================================================
+  {
+    id: "forum-attijariwafa",
+    category: "2. Banques et assurances",
+    companyName: "Attijariwafa bank",
+    domain: "attijariwafabank.com",
+    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/1/1c/LogoNew.png",
+    website: "https://www.attijariwafabank.com",
+    domains: ["DEV", "DATA/BI", "Applications bancaires", "CLOUD", "CYBER"],
+    rawDomainsText: "DEV · DATA/BI · Applications bancaires · CLOUD · CYBER",
+    stand: "Stand B-Banque 01",
+    status: "priority",
+    topObjective: ["dev", "data"],
+    notes: "Plus grand groupe bancaire. Équipes internes data science (scoring crédit, détection de fraude) et dev core-banking.",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "forum-bcp",
+    category: "2. Banques et assurances",
+    companyName: "Banque Populaire / Crédit Populaire du Maroc",
+    domain: "groupebanquepopulaire.ma",
+    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/e/ec/Banque_Populaire_du_Maroc_Logo.svg",
+    website: "https://groupebanquepopulaire.ma",
+    domains: ["DEV", "DATA/BI", "Systèmes bancaires", "CYBER"],
+    rawDomainsText: "DEV · DATA/BI · Systèmes bancaires · CYBER",
+    stand: "Stand B-Banque 02",
+    status: "priority",
+    topObjective: ["dev", "data"],
+    notes: "Gros besoins en digitalisation des parcours clients, data warehouses et cybersécurité bancaire.",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "forum-cdm",
+    category: "2. Banques et assurances",
+    companyName: "Crédit du Maroc (CDM)",
+    domain: "creditdumaroc.ma",
+    logoUrl: null,
+    website: "https://www.creditdumaroc.ma",
+    domains: ["DEV", "DATA/BI", "Applications bancaires", "Intégration"],
+    rawDomainsText: "DEV · DATA/BI · Applications bancaires · Intégration",
+    stand: "Stand B-Banque 03",
+    status: "to_visit",
+    notes: "Filiale du groupe Holmarcom. Chantiers de modernisation du système d'information et intégration applicative.",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "forum-cfgbank",
+    category: "2. Banques et assurances",
+    companyName: "CFG Bank",
+    domain: "cfgbank.com",
+    logoUrl: null,
+    website: "https://www.cfgbank.com",
+    domains: ["DEV", "DATA/BI", "Systèmes d'information financiers"],
+    rawDomainsText: "DEV · DATA/BI · Systèmes d'information financiers",
+    stand: "Stand B-Banque 04",
+    status: "to_visit",
+    notes: "Banque digitale et d'affaires reconnue pour son application mobile fluide et ses outils boursiers.",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "forum-cam",
+    category: "2. Banques et assurances",
+    companyName: "Crédit Agricole du Maroc",
+    domain: "creditagricole.ma",
+    logoUrl: null,
+    website: "https://www.creditagricole.ma",
+    domains: ["DEV Java/Spring Boot/Angular", "DATA Engineering", "BI", "Intégration"],
+    rawDomainsText: "DEV Java/Spring Boot/Angular · DATA Engineering · BI · Intégration",
+    tagline: "Un engagement durable",
+    stand: "Stand B-Banque 05",
+    status: "priority",
+    topObjective: ["dev", "data"],
+    notes: "Fort besoin exprimé en DEV Java/Spring Boot/Angular et DATA Engineering. À voir absolument !",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "forum-bkam",
+    category: "2. Banques et assurances",
+    companyName: "Bank Al-Maghrib",
+    domain: "bkam.ma",
+    logoUrl: null,
+    website: "https://www.bkam.ma",
+    domains: ["DATA/Analytics", "Systèmes financiers", "CYBER", "Informatique interne"],
+    rawDomainsText: "DATA/Analytics · Systèmes financiers · CYBER · Informatique interne",
+    stand: "Stand B-Banque 06",
+    status: "priority",
+    topObjective: ["data"],
+    notes: "Banque Centrale du Maroc. Projets macroéconomiques, analyses prédictives, sécurité financière et SI souverain.",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "forum-wafa-assurance",
+    category: "2. Banques et assurances",
+    companyName: "Wafa Assurance",
+    domain: "wafaassurance.ma",
+    logoUrl: null,
+    website: "https://www.wafaassurance.ma",
+    domains: ["DATA/BI", "Applications d'assurance", "Digitalisation"],
+    rawDomainsText: "DATA/BI · Applications d'assurance · Digitalisation",
+    stand: "Stand B-Assur 01",
+    status: "to_visit",
+    notes: "Compagnie d'assurance leader au Maroc. Projets de tarification actuarielle prédictive et dématérialisation.",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "forum-sanlam",
+    category: "2. Banques et assurances",
+    companyName: "Sanlam Allianz Maroc",
+    domain: "sanlam.ma",
+    logoUrl: null,
+    website: "https://www.sanlam.ma",
+    domains: ["DATA/BI", "Systèmes d'assurance", "Applications métier"],
+    rawDomainsText: "DATA/BI · Systèmes d'assurance · Applications métier",
+    stand: "Stand B-Assur 02",
+    status: "to_visit",
+    notes: "Alliance Sanlam & Allianz. Plateformes digitales d'assurance et analyse de données clients.",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "forum-cimr",
+    category: "2. Banques et assurances",
+    companyName: "CIMR",
+    domain: "cimr.ma",
+    logoUrl: null,
+    website: "https://www.cimr.ma",
+    domains: ["Applications métier", "DATA/BI", "Systèmes de gestion"],
+    rawDomainsText: "Applications métier · DATA/BI · Systèmes de gestion",
+    stand: "Stand B-Assur 03",
+    status: "to_visit",
+    notes: "Caisse Interprofessionnelle Marocaine de Retraite. Gestion de données de masse et portails usagers.",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "forum-maroclear",
+    category: "2. Banques et assurances",
+    companyName: "Maroclear",
+    domain: "maroclear.com",
+    logoUrl: null,
+    website: "https://www.maroclear.com",
+    domains: ["Systèmes financiers", "Applications transactionnelles", "Bases de données", "CYBER"],
+    rawDomainsText: "Systèmes financiers · Applications transactionnelles · Bases de données · CYBER",
+    stand: "Stand B-Finance 01",
+    status: "to_visit",
+    notes: "Dépositaire Central des valeurs mobilières au Maroc. Systèmes transactionnels critiques à haute sécurité.",
+    updatedAt: new Date().toISOString(),
+  },
+
+  // =========================================================================
+  // 3. TÉLÉCOMMUNICATIONS, INDUSTRIE ET AUTRES ORGANISATIONS
+  // =========================================================================
+  {
+    id: "forum-inwi",
+    category: "3. Télécommunications, industrie et autres organisations",
+    companyName: "inwi",
+    domain: "inwi.ma",
+    logoUrl: "https://logo.clearbit.com/inwi.ma",
+    website: "https://www.inwi.ma",
+    domains: ["DATA", "Digital", "Télécoms", "CLOUD", "CYBER"],
+    rawDomainsText: "DATA · Digital · Télécoms · CLOUD · CYBER",
+    tagline: "inwi",
+    stand: "Stand T01",
+    status: "priority",
+    topObjective: ["data", "cloud"],
+    notes: "Opérateur télécoms et cloud. Data centers et solutions entreprises (inwi Business). Recrute en Data et Cloud.",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "forum-orange-tel",
+    category: "3. Télécommunications, industrie et autres organisations",
+    companyName: "Orange",
+    domain: "orange.ma",
+    logoUrl: "https://logo.clearbit.com/orange.ma",
+    website: "https://www.orange.ma",
+    domains: ["Télécoms", "Réseaux", "CLOUD", "DATA/IA"],
+    rawDomainsText: "Télécoms · Réseaux · CLOUD · DATA/IA",
+    stand: "Stand T02",
+    status: "priority",
+    topObjective: ["data", "cloud"],
+    notes: "Opérateur grand public et entreprise. Laboratoires d'innovation digitale, IA et plateformes 5G.",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "forum-maroctelecom",
+    category: "3. Télécommunications, industrie et autres organisations",
+    companyName: "Maroc Telecom",
+    domain: "iam.ma",
+    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/e/ec/Maroc_Telecom_logo.png",
+    website: "https://www.iam.ma",
+    domains: ["Télécoms", "Réseaux", "CLOUD", "CYBER", "Systèmes d'information"],
+    rawDomainsText: "Télécoms · Réseaux · CLOUD · CYBER · Systèmes d'information",
+    stand: "Stand T03",
+    status: "priority",
+    notes: "Opérateur historique national. Énormes infrastructures réseau, centres serveurs et SI de facturation.",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "forum-ocp",
+    category: "3. Télécommunications, industrie et autres organisations",
+    companyName: "OCP Group",
+    domain: "ocpgroup.ma",
+    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/5/58/Logo_Ocp.jpg",
+    website: "https://www.ocpgroup.ma",
+    domains: ["DATA/IA", "Automatisation industrielle", "Logiciels", "Optimisation par IA"],
+    rawDomainsText: "DATA/IA · Automatisation industrielle · Logiciels · Optimisation par IA",
+    tagline: "Groupe OCP",
+    stand: "Stand I01",
+    status: "priority",
+    topObjective: ["data"],
+    notes: "Leader mondial des phosphates. Très gros investissements dans l'IA industrielle, les jumeaux numériques et l'optimisation des procédés.",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "forum-onda",
+    category: "3. Télécommunications, industrie et autres organisations",
+    companyName: "ONDA — Aéroports du Maroc",
+    domain: "onda.ma",
+    logoUrl: null,
+    website: "https://www.onda.ma",
+    domains: ["Systèmes aéroportuaires", "Réseaux", "Applications métier", "DATA"],
+    rawDomainsText: "Systèmes aéroportuaires · Réseaux · Applications métier · DATA",
+    stand: "Stand I02",
+    status: "to_visit",
+    notes: "Office National Des Aéroports. Systèmes d'information aéroportuaires, guidage et gestion des passagers.",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "forum-labelvie",
+    category: "3. Télécommunications, industrie et autres organisations",
+    companyName: "LabelVie Groupe",
+    domain: "labelvie.ma",
+    logoUrl: null,
+    website: "https://www.labelvie.ma",
+    domains: ["DATA/BI", "Applications métier", "Digitalisation du commerce", "ERP selon les postes"],
+    rawDomainsText: "DATA/BI · Applications métier · Digitalisation du commerce · ERP selon les postes",
+    stand: "Stand I03",
+    status: "to_visit",
+    notes: "Leader de la grande distribution au Maroc (Carrefour, Atacadao). Analyse de panier client, supply chain et BI.",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "forum-valeo",
+    category: "3. Télécommunications, industrie et autres organisations",
+    companyName: "Valeo",
+    domain: "valeo.com",
+    logoUrl: "https://logo.clearbit.com/valeo.com",
+    website: "https://www.valeo.com",
+    domains: ["Logiciel embarqué", "Ingénierie logicielle", "Systèmes automobiles", "Automatisation"],
+    rawDomainsText: "Logiciel embarqué · Ingénierie logicielle · Systèmes automobiles · Automatisation",
+    stand: "Stand I04",
+    status: "priority",
+    topObjective: ["dev"],
+    notes: "Équipementier automobile mondial (centre R&D et usines à Tanger). Logiciel embarqué C/C++, ADAS et connectivité véhicule.",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "forum-mhi",
+    category: "3. Télécommunications, industrie et autres organisations",
+    companyName: "MHI Morocco",
+    domain: "mhi.com",
+    logoUrl: null,
+    website: "https://www.mhi.com",
+    domains: ["Industrie", "Ingénierie", "Systèmes techniques"],
+    rawDomainsText: "Industrie/ingénierie à confirmer",
+    stand: "Stand I05",
+    status: "to_visit",
+    notes: "Mitsubishi Heavy Industries. Se renseigner au stand sur leurs opportunités techniques et ingénierie.",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "forum-adm",
+    category: "3. Télécommunications, industrie et autres organisations",
+    companyName: "Autoroutes du Maroc",
+    domain: "adm.co.ma",
+    logoUrl: null,
+    website: "https://www.adm.co.ma",
+    domains: ["Systèmes d'information", "Données de trafic", "Applications opérationnelles"],
+    rawDomainsText: "Systèmes d'information · Données de trafic · Applications opérationnelles",
+    stand: "Stand I06",
+    status: "to_visit",
+    notes: "Gestion autoroutière et télépéage (Jawaz). Collecte et analyse des données de flux routiers.",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "forum-sin",
+    category: "3. Télécommunications, industrie et autres organisations",
+    companyName: "S-IN Groupe",
+    domain: null,
+    logoUrl: null,
+    website: null,
+    domains: ["Services", "Ingénierie"],
+    rawDomainsText: "Spécialité technologique non confirmée sur l'affiche",
+    stand: "Stand I07",
+    status: "to_visit",
+    notes: "À clarifier directement au stand lors du forum.",
     updatedAt: new Date().toISOString(),
   },
 ];
@@ -263,9 +637,11 @@ export function loadForumCompanies(): ForumCompanyEntry[] {
       return INITIAL_FORUM_COMPANIES;
     }
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0) {
+    if (Array.isArray(parsed) && parsed.length >= 25) {
       return parsed;
     }
+    // Upgrade if older smaller list was present
+    localStorage.setItem(FORUM_STORAGE_KEY, JSON.stringify(INITIAL_FORUM_COMPANIES));
     return INITIAL_FORUM_COMPANIES;
   } catch (err) {
     console.error("Failed to load forum companies from storage:", err);
@@ -282,11 +658,15 @@ export function saveForumCompanies(entries: ForumCompanyEntry[]): void {
   }
 }
 
+export function resetForumCompaniesToDefault(): ForumCompanyEntry[] {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(FORUM_STORAGE_KEY, JSON.stringify(INITIAL_FORUM_COMPANIES));
+  }
+  return INITIAL_FORUM_COMPANIES;
+}
+
 /**
  * Intelligent parser that accepts raw text or copied tables (such as from PDF, Word, or Markdown)
- * Example input:
- *   Inetum : DEV · DATA/BI/IA · CLOUD/DEVOPS · SAP/ERP
- *   Capgemini  DEV · DATA/IA · CLOUD/DEVOPS
  */
 export function parseRawForumText(
   text: string,
@@ -301,13 +681,11 @@ export function parseRawForumText(
   let currentCategory = defaultCategory;
 
   for (const line of lines) {
-    // Check if line is a category header (e.g., "1. Entreprises IT...", "### 2. Banques...")
     if (/^(\d+\.|\#{1,3}\s*\d*|[A-Z\s]{4,}:)/i.test(line) && !line.includes("·") && !line.includes("\t")) {
       currentCategory = line.replace(/^[#\s]+/, "");
       continue;
     }
 
-    // Try splitting by tab, colon, or dash
     let companyName = "";
     let domainsText = "";
 
@@ -324,7 +702,6 @@ export function parseRawForumText(
       companyName = line.slice(0, idx).trim();
       domainsText = line.slice(idx + 3).trim();
     } else {
-      // Fallback: take first 2 words as name and the rest as domains
       const words = line.split(/\s+/);
       companyName = words[0] || "";
       domainsText = words.slice(1).join(" ");
@@ -332,7 +709,6 @@ export function parseRawForumText(
 
     if (!companyName) continue;
 
-    // Split domains by "·", "|", ",", "/", or ";"
     const domains = domainsText
       .split(/[·|,;]/)
       .map((d) => d.trim())
@@ -363,8 +739,6 @@ export function parseRawForumText(
 
 /**
  * Synchronize forum companies with Supabase `companies` table.
- * If a company with same name exists, update its `description` and `notes`.
- * Otherwise, insert a new company.
  */
 export async function syncForumCompaniesToSupabase(
   entries: ForumCompanyEntry[]
