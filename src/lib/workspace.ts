@@ -53,10 +53,13 @@ import {
   deleteCvProfileIndexedDB,
   getCachedCvLibrary,
   setCachedCvLibrary,
+  syncWithSupabase,
+  getCloudSyncStatus,
   type CvProfile,
 } from "./cvStorage";
 
 export type { CvProfile };
+export { syncWithSupabase, getCloudSyncStatus };
 
 export const CV_STORAGE_KEY = "truck-app-cv-base64";
 export const CV_FILENAME_KEY = "truck-app-cv-filename";
