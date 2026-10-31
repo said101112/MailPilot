@@ -1,4 +1,5 @@
 import { PROFILE_DEFAULT_NAME } from "@/lib/brand";
+import { supabase } from "@/lib/supabase";
 
 const PROFILE_NAME_KEY = "truck-app-candidate-name";
 const SIDEBAR_COLLAPSED_KEY = "truck-app-sidebar-collapsed";
@@ -174,6 +175,22 @@ export function writeActiveCvId(id: string) {
       // Ignored: base64 is already safe in IndexedDB
     }
   }
+
+  // Directly update is_default in Supabase
+  void (async () => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from("user_cvs").update({ is_default: false }).eq("user_id", user.id);
+        await supabase.from("user_cvs").update({ is_default: true }).eq("user_id", user.id).eq("id", id);
+      }
+    } catch (e) {
+      console.warn("Supabase active CV update warning:", e);
+    }
+  })();
+
   window.dispatchEvent(new Event(WORKSPACE_CV_EVENT));
 }
 

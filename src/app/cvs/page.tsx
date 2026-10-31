@@ -8,8 +8,6 @@ import {
   UploadCloud,
   Trash2,
   Download,
-  CheckCircle2,
-  AlertCircle,
   Eye,
   Star,
   Tag,
@@ -18,13 +16,7 @@ import {
   Upload,
   ShieldCheck,
   FileCheck2,
-  Cloud,
   CloudCheck,
-  RefreshCw,
-  Smartphone,
-  Copy,
-  ExternalLink,
-  Code2,
 } from "lucide-react";
 import {
   type CvProfile,
@@ -34,66 +26,17 @@ import {
   upsertCvProfile,
   removeCvProfile,
   syncWithSupabase,
-  getCloudSyncStatus,
   WORKSPACE_CV_EVENT,
 } from "@/lib/workspace";
 import { cn } from "@/lib/utils";
-
-const SQL_MIGRATION_SNIPPET = `-- ============================================================================
--- Table: public.user_cvs
--- Exécutez ce script dans votre SQL Editor Supabase pour activer la synchro
--- multi-appareils (Téléphone, PC, Tablette)
--- ============================================================================
-
-create table if not exists public.user_cvs (
-  id text primary key,
-  user_id uuid not null references auth.users (id) on delete cascade,
-  label text not null,
-  file_name text not null,
-  base64 text not null,
-  is_default boolean not null default false,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create index if not exists user_cvs_user_id_idx on public.user_cvs (user_id);
-
-alter table public.user_cvs enable row level security;
-
-drop policy if exists "Users can select own cvs" on public.user_cvs;
-create policy "Users can select own cvs"
-  on public.user_cvs for select
-  using (auth.uid() = user_id);
-
-drop policy if exists "Users can insert own cvs" on public.user_cvs;
-create policy "Users can insert own cvs"
-  on public.user_cvs for insert
-  with check (auth.uid() = user_id);
-
-drop policy if exists "Users can update own cvs" on public.user_cvs;
-create policy "Users can update own cvs"
-  on public.user_cvs for update
-  using (auth.uid() = user_id);
-
-drop policy if exists "Users can delete own cvs" on public.user_cvs;
-create policy "Users can delete own cvs"
-  on public.user_cvs for delete
-  using (auth.uid() = user_id);`;
 
 export default function CvLibraryPage() {
   const [library, setLibrary] = useState<CvProfile[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [cloudStatus, setCloudStatus] = useState<{ available: boolean; syncing: boolean }>({
-    available: false,
-    syncing: false,
-  });
   const [previewCv, setPreviewCv] = useState<CvProfile | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editLabelValue, setEditLabelValue] = useState("");
-  const [showSqlModal, setShowSqlModal] = useState(false);
-  const [copiedSql, setCopiedSql] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const syncData = () => {
@@ -101,7 +44,6 @@ export default function CvLibraryPage() {
     setLibrary(items);
     const currActive = readActiveCvId();
     setActiveId(currActive || (items.length > 0 ? items[0].id : null));
-    setCloudStatus(getCloudSyncStatus());
   };
 
   useEffect(() => {
@@ -109,8 +51,10 @@ export default function CvLibraryPage() {
     window.addEventListener(WORKSPACE_CV_EVENT, syncData);
     window.addEventListener("storage", syncData);
 
-    // Initial cloud sync
-    void handleManualSync(false);
+    // Automatic silent background sync on load
+    void syncWithSupabase(() => {
+      syncData();
+    });
 
     return () => {
       window.removeEventListener(WORKSPACE_CV_EVENT, syncData);
@@ -120,31 +64,7 @@ export default function CvLibraryPage() {
 
   const activeCv = library.find((c) => c.id === activeId) || library[0] || null;
 
-  const handleManualSync = async (notify = true) => {
-    setIsSyncing(true);
-    const ok = await syncWithSupabase(() => {
-      syncData();
-    });
-    setIsSyncing(false);
-    setCloudStatus(getCloudSyncStatus());
-
-    if (notify) {
-      if (ok) {
-        toast.success("Synchronisation Cloud réussie ! Vos CVs sont à jour sur tous vos appareils.");
-      } else {
-        toast.info("La table Cloud Supabase n'est pas encore créée. Cliquez sur 'Activer la synchro mobile' ci-dessous.");
-      }
-    }
-  };
-
-  const handleCopySql = () => {
-    navigator.clipboard.writeText(SQL_MIGRATION_SNIPPET);
-    setCopiedSql(true);
-    toast.success("Script SQL copié dans le presse-papier !");
-    setTimeout(() => setCopiedSql(false), 3000);
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -161,7 +81,7 @@ export default function CvLibraryPage() {
     setIsUploading(true);
     const reader = new FileReader();
 
-    reader.onload = () => {
+    reader.onload = async () => {
       const base64 = reader.result as string;
       const cleanName = file.name.replace(/\.pdf$/i, "").replace(/[-_]/g, " ");
       const autoLabel =
@@ -176,9 +96,10 @@ export default function CvLibraryPage() {
         isDefault: library.length === 0,
       };
 
+      // Directly saves to Supabase and IndexedDB
       upsertCvProfile(newProfile, library.length === 0);
       setIsUploading(false);
-      toast.success(`CV "${newProfile.label}" enregistré et synchronisé !`);
+      toast.success(`CV "${newProfile.label}" enregistré directement dans Supabase !`);
     };
 
     reader.onerror = () => {
@@ -259,22 +180,11 @@ export default function CvLibraryPage() {
               <span>Bibliothèque de CVs</span>
             </h1>
             <p className="mt-1 text-xs text-gray-500">
-              Gérez vos différents profils de CV (Data / IA, Fullstack, PFE, etc.) et synchronisez-les automatiquement entre votre ordinateur et votre téléphone.
+              Gérez vos profils de CVs (Data / IA, Fullstack, PFE, etc.). Tout fichier importé est directement sauvegardé dans Supabase et accessible sur tous vos appareils.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => handleManualSync(true)}
-              disabled={isSyncing}
-              className="editorial-button-secondary h-8 px-3 text-xs flex items-center gap-1.5"
-              title="Synchroniser avec le Cloud Supabase"
-            >
-              <RefreshCw className={cn("h-3.5 w-3.5", isSyncing && "animate-spin text-[#ff5722]")} />
-              <span>{isSyncing ? "Synchronisation..." : "Synchroniser Cloud"}</span>
-            </button>
-
             <Link
               href="/upload"
               className="editorial-button-secondary h-8 px-3 text-xs flex items-center gap-1.5"
@@ -290,61 +200,10 @@ export default function CvLibraryPage() {
               className="editorial-button-primary h-8 px-3 text-xs flex items-center gap-1.5 shadow-2xs font-semibold"
             >
               <UploadCloud className="h-3.5 w-3.5" />
-              <span>{isUploading ? "Import en cours..." : "Importer un CV (PDF)"}</span>
+              <span>{isUploading ? "Importation..." : "Importer un CV (PDF)"}</span>
             </button>
           </div>
         </div>
-
-        {/* Cloud Status Banner */}
-        {cloudStatus.available ? (
-          <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50/60 px-4 py-2.5 text-xs text-emerald-800 shadow-2xs">
-            <div className="flex items-center gap-2">
-              <CloudCheck className="h-4 w-4 text-emerald-600 shrink-0" />
-              <span>
-                <strong>Cloud Supabase Actif :</strong> Vos CVs sont automatiquement sauvegardés et synchronisés sur votre téléphone et vos autres appareils.
-              </span>
-            </div>
-            <button
-              onClick={() => handleManualSync(true)}
-              className="text-xs font-semibold text-emerald-700 underline hover:text-emerald-900"
-            >
-              Actualiser
-            </button>
-          </div>
-        ) : (
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50/70 p-4 text-xs text-amber-900 shadow-2xs">
-            <div className="flex items-start gap-2.5">
-              <Smartphone className="h-4 w-4 text-[#ff5722] shrink-0 mt-0.5" />
-              <div>
-                <p className="font-semibold text-gray-900">
-                  Activer la synchronisation mobile (Téléphone & PC)
-                </p>
-                <p className="text-gray-600 mt-0.5">
-                  Pour retrouver automatiquement vos CVs sur votre smartphone, exécutez la table <code className="bg-amber-100/80 px-1 py-0.5 rounded text-[11px] font-mono">user_cvs</code> dans votre console Supabase.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={() => setShowSqlModal(true)}
-                className="editorial-button-primary h-8 px-3 text-xs flex items-center gap-1.5 font-semibold"
-              >
-                <Code2 className="h-3.5 w-3.5" />
-                <span>Voir le script SQL</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleCopySql}
-                className="editorial-button-secondary h-8 px-3 text-xs flex items-center gap-1.5"
-              >
-                {copiedSql ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-                <span>{copiedSql ? "Copié !" : "Copier SQL"}</span>
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Metric Strip */}
         <div className="rounded-lg border border-gray-200 bg-white shadow-2xs">
@@ -360,14 +219,10 @@ export default function CvLibraryPage() {
               </p>
             </div>
             <div className="p-4">
-              <span className="text-xs text-emerald-600 font-medium">Mode de Sauvegarde</span>
+              <span className="text-xs text-emerald-600 font-medium">Synchronisation</span>
               <div className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-emerald-700">
-                <CheckCircle2 className="h-4 w-4" />
-                <span>
-                  {cloudStatus.available
-                    ? "Cloud Supabase + Cache Local (PC & Mobile)"
-                    : "IndexedDB Local (Illimité)"}
-                </span>
+                <CloudCheck className="h-4 w-4" />
+                <span>Supabase Cloud (PC & Téléphone)</span>
               </div>
             </div>
           </div>
@@ -506,7 +361,7 @@ export default function CvLibraryPage() {
               Aucun CV dans votre bibliothèque
             </h3>
             <p className="mt-1 text-xs text-gray-500 max-w-sm mx-auto">
-              Importez vos différents CVs PDF (Data & IA, Développeur Web, PFE, etc.) pour pouvoir les assigner individuellement à chaque entreprise lors de vos envois.
+              Importez vos différents CVs PDF (Data & IA, Développeur Web, PFE, etc.). Ils seront automatiquement sauvegardés dans Supabase pour être accessibles sur votre PC et votre téléphone.
             </p>
             <div className="mt-6">
               <button
@@ -526,107 +381,31 @@ export default function CvLibraryPage() {
         <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-2xs">
           <div className="flex items-center gap-2 text-xs font-semibold text-gray-900 mb-2">
             <ShieldCheck className="h-4 w-4 text-[#ff5722]" />
-            <span>Comment vos CVs sont synchronisés et utilisés</span>
+            <span>Utilisation de vos CVs dans MailPilot</span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3 text-xs text-gray-600 leading-relaxed">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3 text-xs text-gray-600 leading-relaxed">
             <div className="rounded-md border border-gray-100 bg-gray-50/50 p-3.5">
               <span className="font-semibold text-gray-900 flex items-center gap-1.5 mb-1">
-                <Smartphone className="h-3.5 w-3.5 text-[#ff5722]" />
-                Synchro Téléphone & PC
+                <FileCheck2 className="h-3.5 w-3.5 text-[#ff5722]" />
+                Dans l'envoi en masse (Bulk Upload)
               </span>
               <p className="text-gray-500 text-[11.5px]">
-                Connecté avec votre compte, vos CVs importés sur PC sont directement disponibles sur votre smartphone et vice-versa.
+                En haut du tableau, vous disposez d'un sélecteur global de CV par défaut. Dans le tableau, chaque ligne possède également sa colonne <strong>"CV Assigné"</strong> pour personnaliser le profil envoyé.
               </p>
             </div>
 
             <div className="rounded-md border border-gray-100 bg-gray-50/50 p-3.5">
               <span className="font-semibold text-gray-900 flex items-center gap-1.5 mb-1">
                 <FileCheck2 className="h-3.5 w-3.5 text-[#ff5722]" />
-                Dans le Bulk Upload
+                Dans la candidature unitaire (Manual Apply)
               </span>
               <p className="text-gray-500 text-[11.5px]">
-                En haut du tableau, vous disposez du sélecteur global de CV par défaut. Dans le tableau, chaque ligne possède sa colonne <strong>"CV Assigné"</strong>.
-              </p>
-            </div>
-
-            <div className="rounded-md border border-gray-100 bg-gray-50/50 p-3.5">
-              <span className="font-semibold text-gray-900 flex items-center gap-1.5 mb-1">
-                <FileCheck2 className="h-3.5 w-3.5 text-[#ff5722]" />
-                Dans le Manual Apply
-              </span>
-              <p className="text-gray-500 text-[11.5px]">
-                Le CV marqué <strong>"Actif par défaut"</strong> est automatiquement envoyé au webhook n8n pour créer le brouillon Gmail.
+                Le CV marqué <strong>"Actif par défaut"</strong> est automatiquement sélectionné pour vos envois unitaires.
               </p>
             </div>
           </div>
         </div>
-
-        {/* SQL Migration Modal */}
-        {showSqlModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
-            <div className="relative flex flex-col w-full max-w-2xl rounded-xl bg-white shadow-2xl overflow-hidden border border-gray-200">
-              <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3.5 bg-gray-50">
-                <div className="flex items-center gap-2">
-                  <Smartphone className="h-4 w-4 text-[#ff5722]" />
-                  <h3 className="text-sm font-semibold text-gray-900">
-                    Activer la synchronisation Supabase (Multi-Appareils)
-                  </h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowSqlModal(false)}
-                  className="rounded-md p-1.5 text-gray-400 hover:bg-gray-200 hover:text-gray-700 transition"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              <div className="p-5 space-y-3 text-xs text-gray-600">
-                <p>
-                  Pour que vos CVs soient sauvegardés dans le cloud et accessibles depuis votre téléphone, copiez ce script et exécutez-le dans l'<strong>Éditeur SQL de votre console Supabase</strong> :
-                </p>
-
-                <div className="relative">
-                  <pre className="max-h-64 overflow-y-auto rounded-lg bg-gray-900 p-4 font-mono text-[11.5px] text-gray-100 leading-relaxed">
-                    {SQL_MIGRATION_SNIPPET}
-                  </pre>
-                  <button
-                    type="button"
-                    onClick={handleCopySql}
-                    className="absolute top-2.5 right-2.5 flex items-center gap-1.5 rounded bg-white/10 hover:bg-white/20 px-2.5 py-1 text-[11px] font-semibold text-white transition backdrop-blur-xs"
-                  >
-                    {copiedSql ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
-                    <span>{copiedSql ? "Copié !" : "Copier le code"}</span>
-                  </button>
-                </div>
-
-                <div className="pt-2 flex items-center justify-between">
-                  <a
-                    href="https://supabase.com/dashboard/project/lulrhipthiagtaarigmf/sql/new"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="editorial-button-primary h-8 px-3 text-xs flex items-center gap-1.5 font-semibold"
-                  >
-                    <span>Ouvrir l'Éditeur SQL Supabase</span>
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </a>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowSqlModal(false);
-                      void handleManualSync(true);
-                    }}
-                    className="editorial-button-secondary h-8 px-3 text-xs"
-                  >
-                    J'ai exécuté le script, tester la synchro
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* PDF Preview Modal */}
         {previewCv && (
