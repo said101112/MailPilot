@@ -26,15 +26,16 @@ import {
 import { useBulkUpload } from "@/context/BulkUploadContext";
 import { toast } from "sonner";
 import BrandLogo from "@/components/BrandLogo";
-import CvUploadCard from "@/components/CvUploadCard";
 import { PROFILE_DEFAULT_NAME } from "@/lib/brand";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import {
   WORKSPACE_PROFILE_EVENT,
   WORKSPACE_SIDEBAR_EVENT,
+  WORKSPACE_CV_EVENT,
   readCandidateName,
   readSidebarCollapsed,
+  readStoredCvLibrary,
   toggleSidebarCollapsed,
 } from "@/lib/workspace";
 
@@ -61,6 +62,11 @@ const hunterNavSections = [
         name: "Bulk Upload",
         href: "/upload",
         icon: Upload,
+      },
+      {
+        name: "Bibliothèque CVs",
+        href: "/cvs",
+        icon: FileText,
       },
     ],
   },
@@ -137,6 +143,21 @@ export default function Navbar() {
     progress: bulkProgress,
     data: bulkData,
   } = useBulkUpload();
+  const [cvCount, setCvCount] = useState(0);
+
+  useEffect(() => {
+    const syncCv = () => {
+      const libs = readStoredCvLibrary();
+      setCvCount(libs.length);
+    };
+    syncCv();
+    window.addEventListener(WORKSPACE_CV_EVENT, syncCv);
+    window.addEventListener("storage", syncCv);
+    return () => {
+      window.removeEventListener(WORKSPACE_CV_EVENT, syncCv);
+      window.removeEventListener("storage", syncCv);
+    };
+  }, []);
 
   useEffect(() => {
     const syncSidebar = () => setIsCollapsed(readSidebarCollapsed());
@@ -287,16 +308,17 @@ export default function Navbar() {
                           {bulkData.length}
                         </span>
                       )}
+                      {item.href === "/cvs" && cvCount > 0 && (
+                        <span className="ml-auto rounded-full bg-gray-100 px-1.5 py-0.2 text-[10px] font-semibold text-gray-600">
+                          {cvCount}
+                        </span>
+                      )}
                     </Link>
                   );
                 })}
               </nav>
             </div>
           ))}
-        </div>
-
-        <div className="px-1 py-1">
-          <CvUploadCard variant="compact" />
         </div>
 
         <div className="mt-auto border-t border-gray-200 pt-3">
@@ -387,6 +409,11 @@ export default function Navbar() {
                             {bulkData.length}
                           </span>
                         )}
+                        {item.href === "/cvs" && cvCount > 0 && !isCollapsed && (
+                          <span className="ml-auto rounded-full bg-gray-100 px-1.5 py-0.2 text-[10px] font-semibold text-gray-600">
+                            {cvCount}
+                          </span>
+                        )}
                       </Link>
                     );
                   })}
@@ -395,9 +422,6 @@ export default function Navbar() {
             ))}
           </div>
         </div>
-
-        {/* Attached Resume (CV) Card */}
-        {!isCollapsed && <CvUploadCard variant="compact" />}
 
         {/* Bottom User Bar (Hunter.io exact bottom left) */}
         <div className="border-t border-gray-200 p-2.5">

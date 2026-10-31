@@ -38,7 +38,13 @@ import {
 } from "@/lib/templates";
 import { supabase } from "@/lib/supabase";
 import { cn, delay } from "@/lib/utils";
-import { readCandidateName, readStoredCv } from "@/lib/workspace";
+import {
+  readCandidateName,
+  readStoredCv,
+  readStoredCvLibrary,
+  type CvProfile,
+  WORKSPACE_CV_EVENT,
+} from "@/lib/workspace";
 import CvUploadCard from "@/components/CvUploadCard";
 import {
   syncEmailDispatchToTracker,
@@ -170,6 +176,9 @@ export default function UploadPage() {
     deselectAll,
     selectedTemplateId,
     setSelectedTemplateId,
+    selectedCvId,
+    setSelectedCvId,
+    updateRowCv,
     defaultPosition,
     setDefaultPosition,
     defaultContactName,
@@ -188,6 +197,7 @@ export default function UploadPage() {
     clearBatch,
   } = useBulkUpload();
 
+  const [cvLibrary, setCvLibrary] = useState<CvProfile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [templates, setTemplates] = useState(cloneDefaultTemplates);
   const [integrationLoading, setIntegrationLoading] = useState(true);
@@ -196,6 +206,19 @@ export default function UploadPage() {
   const [withdrawnEmails, setWithdrawnEmails] = useState<Set<string>>(new Set());
   const ROWS_PER_PAGE = 10;
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const syncCvLib = () => {
+      setCvLibrary(readStoredCvLibrary());
+    };
+    syncCvLib();
+    window.addEventListener(WORKSPACE_CV_EVENT, syncCvLib);
+    window.addEventListener("storage", syncCvLib);
+    return () => {
+      window.removeEventListener(WORKSPACE_CV_EVENT, syncCvLib);
+      window.removeEventListener("storage", syncCvLib);
+    };
+  }, []);
 
   useEffect(() => {
     void getWithdrawnEmails().then((set) => setWithdrawnEmails(set));
@@ -927,6 +950,31 @@ export default function UploadPage() {
                     ))}
                   </select>
                 </div>
+
+                {/* Global CV Selector */}
+                <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                  <span>CV par défaut :</span>
+                  <select
+                    className="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-800 outline-none focus:border-[#ff5722]"
+                    value={selectedCvId || ""}
+                    onChange={(e) => {
+                      const nextId = e.target.value;
+                      setSelectedCvId(nextId);
+                      const chosen = cvLibrary.find((c) => c.id === nextId);
+                      toast.info(`CV par défaut pour le lot : ${chosen?.label || "Sélectionné"}`);
+                    }}
+                  >
+                    {cvLibrary.length === 0 ? (
+                      <option value="">Aucun CV importé</option>
+                    ) : (
+                      cvLibrary.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          📄 {c.label} ({c.fileName})
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
@@ -1023,6 +1071,7 @@ export default function UploadPage() {
                       <th className="px-4 py-2.5">Company</th>
                       <th className="px-4 py-2.5">Email</th>
                       <th className="px-4 py-2.5">Position / Contact</th>
+                      <th className="px-4 py-2.5">CV Assigné</th>
                       <th className="px-4 py-2.5">Status</th>
                       <th className="px-4 py-2.5">Validation Details</th>
                     </tr>
@@ -1064,6 +1113,27 @@ export default function UploadPage() {
                           <td className="px-4 py-3 text-gray-600">
                             <p>{row.position || "—"}</p>
                             <p className="text-[10.5px] text-gray-400">{row.name}</p>
+                          </td>
+                          <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                            <select
+                              value={row.cvId || selectedCvId || (cvLibrary[0]?.id || "")}
+                              onChange={(e) => {
+                                const newCvId = e.target.value;
+                                const matched = cvLibrary.find((c) => c.id === newCvId);
+                                updateRowCv(index, newCvId, matched?.fileName);
+                              }}
+                              className="rounded border border-gray-200 bg-white px-2 py-1 text-[11px] font-medium text-gray-700 outline-none focus:border-[#ff5722] hover:border-gray-300"
+                            >
+                              {cvLibrary.length === 0 ? (
+                                <option value="">Aucun CV</option>
+                              ) : (
+                                cvLibrary.map((c) => (
+                                  <option key={c.id} value={c.id}>
+                                    📄 {c.label}
+                                  </option>
+                                ))
+                              )}
+                            </select>
                           </td>
                           <td className="px-4 py-3">
                             {renderStatusChip(validationState)}

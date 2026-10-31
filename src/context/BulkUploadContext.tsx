@@ -17,7 +17,13 @@ import {
 import { validateEmailFormat } from "@/lib/email";
 import { supabase } from "@/lib/supabase";
 import { delay } from "@/lib/utils";
-import { readCandidateName, readStoredCv } from "@/lib/workspace";
+import {
+  readCandidateName,
+  readStoredCv,
+  readStoredCvLibrary,
+  getActiveCv,
+  readActiveCvId,
+} from "@/lib/workspace";
 import {
   syncEmailDispatchToTracker,
   syncAllHistoryApplications,
@@ -35,6 +41,8 @@ export interface CSVRow {
   error?: string;
   message?: string;
   subject?: string;
+  cvId?: string;
+  cvFileName?: string;
   [key: string]: string | undefined;
 }
 
@@ -43,6 +51,7 @@ interface StoredBulkState {
   fileName: string;
   selectedRowIndices: number[];
   selectedTemplateId: string | null;
+  selectedCvId?: string | null;
   defaultPosition: string;
   defaultContactName: string;
   inputMode: "file" | "paste";
@@ -63,6 +72,9 @@ interface BulkUploadContextType {
   deselectAll: () => void;
   selectedTemplateId: string | null;
   setSelectedTemplateId: React.Dispatch<React.SetStateAction<string | null>>;
+  selectedCvId: string | null;
+  setSelectedCvId: React.Dispatch<React.SetStateAction<string | null>>;
+  updateRowCv: (rowIndex: number, cvId: string, cvFileName?: string) => void;
   defaultPosition: string;
   setDefaultPosition: (pos: string) => void;
   defaultContactName: string;
@@ -90,6 +102,7 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
   const [fileName, setFileName] = useState("routepilot_batch_template.csv");
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [selectedCvId, setSelectedCvId] = useState<string | null>(null);
   const [defaultPosition, setDefaultPosition] = useState("Stage PFE / Emploi");
   const [defaultContactName, setDefaultContactName] = useState("Hiring Manager");
   const [inputMode, setInputMode] = useState<"file" | "paste">("file");
@@ -114,6 +127,7 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
             setSelectedRows(new Set(parsed.selectedRowIndices));
           }
           if (parsed.selectedTemplateId) setSelectedTemplateId(parsed.selectedTemplateId);
+          if (parsed.selectedCvId) setSelectedCvId(parsed.selectedCvId);
           if (parsed.defaultPosition) setDefaultPosition(parsed.defaultPosition);
           if (parsed.defaultContactName) setDefaultContactName(parsed.defaultContactName);
           if (parsed.inputMode) setInputMode(parsed.inputMode);
@@ -129,6 +143,14 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
     }
   }, []);
 
+  // Sync selectedCvId with active CV if not set
+  useEffect(() => {
+    if (!selectedCvId) {
+      const active = readActiveCvId();
+      if (active) setSelectedCvId(active);
+    }
+  }, [selectedCvId]);
+
   // 2. Persistent Save to LocalStorage on changes
   useEffect(() => {
     if (!isHydratedRef.current) return;
@@ -142,6 +164,7 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
         fileName,
         selectedRowIndices: Array.from(selectedRows),
         selectedTemplateId,
+        selectedCvId,
         defaultPosition,
         defaultContactName,
         inputMode,
@@ -158,6 +181,7 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
     fileName,
     selectedRows,
     selectedTemplateId,
+    selectedCvId,
     defaultPosition,
     defaultContactName,
     inputMode,
@@ -165,6 +189,23 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
     currentPage,
     progress,
   ]);
+
+  const updateRowCv = useCallback(
+    (rowIndex: number, cvId: string, cvFileName?: string) => {
+      setData((prev) => {
+        const next = [...prev];
+        if (next[rowIndex]) {
+          next[rowIndex] = {
+            ...next[rowIndex],
+            cvId,
+            ...(cvFileName ? { cvFileName } : {}),
+          };
+        }
+        return next;
+      });
+    },
+    []
+  );
 
   const toggleRow = useCallback(
     (index: number) => {
@@ -308,14 +349,29 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
 
           const processedMessage = replace(activeTemplate.message).replace(/\n/g, "<br>");
           const processedSubject = replace(activeTemplate.subject);
-          const { base64: cvBase64, fileName: cvFileName } = readStoredCv();
+
+          // Resolve CV for this row: row-specific CV -> batch default CV -> active CV -> legacy fallback
+          const cvLibrary = readStoredCvLibrary();
+          const effectiveCvId = row.cvId || selectedCvId;
+          const matchedCv = effectiveCvId ? cvLibrary.find((c) => c.id === effectiveCvId) : null;
+          const activeCv = getActiveCv();
+          const legacyCv = readStoredCv();
+
+          const finalCvBase64 = matchedCv?.base64 || activeCv?.base64 || legacyCv.base64;
+          const finalCvFileName =
+            matchedCv?.fileName ||
+            activeCv?.fileName ||
+            legacyCv.fileName ||
+            `${savedName.replace(/\s+/g, "_")}_Resume.pdf`;
 
           await sendApplication({
             ...row,
             message: processedMessage,
             subject: processedSubject,
-            cv_base64: cvBase64,
-            cv_filename: cvFileName || `${savedName.replace(/\s+/g, "_")}_Resume.pdf`,
+            cv_base64: finalCvBase64,
+            cv_filename: finalCvFileName,
+            cv_data: finalCvBase64,
+            cv_name: finalCvFileName,
           });
 
           if (user) {
@@ -408,7 +464,7 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
           .catch((err) => console.warn("Background auto-sync failed:", err));
       }
     },
-    [data, selectedRows]
+    [data, selectedRows, selectedCvId]
   );
 
   return (
@@ -425,6 +481,9 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
         deselectAll,
         selectedTemplateId,
         setSelectedTemplateId,
+        selectedCvId,
+        setSelectedCvId,
+        updateRowCv,
         defaultPosition,
         setDefaultPosition,
         defaultContactName,

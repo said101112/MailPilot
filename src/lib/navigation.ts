@@ -46,6 +46,12 @@ export const workspaceNavigationSections: Array<{
         icon: Upload,
       },
       {
+        name: "Bibliothèque CVs",
+        href: "/cvs",
+        description: "Gérer vos profils de CV (Data, Fullstack, PFE...).",
+        icon: FileText,
+      },
+      {
         name: "History",
         href: "/history",
         description: "Review delivery logs and application events.",
@@ -119,6 +125,7 @@ export const workspaceNavigation = workspaceNavigationSections.flatMap(
 
 export const searchPlaceholders: Record<string, string> = {
   "/": "Search applications...",
+  "/cvs": "Rechercher un CV...",
   "/apply": "Search saved jobs...",
   "/upload": "Search bulk jobs...",
   "/history": "Search application log...",
