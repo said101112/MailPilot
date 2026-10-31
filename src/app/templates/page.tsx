@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
+  Cloud,
   Eye,
   Pencil,
   Plus,
+  RefreshCw,
   RotateCcw,
   Save,
   Trash2,
@@ -19,6 +21,7 @@ import {
   TEMPLATE_LIBRARY_EVENT,
   getStoredTemplates,
   saveStoredTemplates,
+  syncTemplatesFromSupabase,
   type MessageTemplate,
 } from "@/lib/templates";
 
@@ -50,6 +53,7 @@ function buildNewTemplate(draft: {
 
 export default function TemplatesPage() {
   const [templates, setTemplates] = useState<MessageTemplate[]>(cloneDefaultTemplates);
+  const [isCloudSyncing, setIsCloudSyncing] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [createDraft, setCreateDraft] = useState(createTemplateDraft);
   const [editingTemplate, setEditingTemplate] = useState<MessageTemplate | null>(null);
@@ -64,19 +68,40 @@ export default function TemplatesPage() {
   );
 
   useEffect(() => {
-    const syncTemplates = () => {
+    // 1. Initial local load
+    const local = getStoredTemplates();
+    setTemplates(local);
+
+    // 2. Immediate background sync with Supabase Cloud
+    let isMounted = true;
+    const performCloudSync = async () => {
+      setIsCloudSyncing(true);
+      try {
+        const synced = await syncTemplatesFromSupabase();
+        if (isMounted && Array.isArray(synced) && synced.length > 0) {
+          setTemplates(synced);
+        }
+      } catch (e) {
+        console.warn("Cloud sync error:", e);
+      } finally {
+        if (isMounted) setIsCloudSyncing(false);
+      }
+    };
+
+    void performCloudSync();
+
+    const handleUpdate = () => {
       const nextTemplates = getStoredTemplates();
       setTemplates(nextTemplates);
     };
 
-    syncTemplates();
-
-    window.addEventListener(TEMPLATE_LIBRARY_EVENT, syncTemplates);
-    window.addEventListener("storage", syncTemplates);
+    window.addEventListener(TEMPLATE_LIBRARY_EVENT, handleUpdate);
+    window.addEventListener("storage", handleUpdate);
 
     return () => {
-      window.removeEventListener(TEMPLATE_LIBRARY_EVENT, syncTemplates);
-      window.removeEventListener("storage", syncTemplates);
+      isMounted = false;
+      window.removeEventListener(TEMPLATE_LIBRARY_EVENT, handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
     };
   }, []);
 
@@ -163,7 +188,28 @@ export default function TemplatesPage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                className="editorial-button-secondary h-8 px-3 text-xs flex items-center gap-1.5"
+                onClick={async () => {
+                  setIsCloudSyncing(true);
+                  try {
+                    const synced = await syncTemplatesFromSupabase();
+                    setTemplates(synced);
+                    toast.success("Templates synchronisés avec Supabase !");
+                  } catch {
+                    toast.error("Erreur de synchronisation cloud");
+                  } finally {
+                    setIsCloudSyncing(false);
+                  }
+                }}
+                disabled={isCloudSyncing}
+                type="button"
+                title="Synchroniser avec Supabase"
+              >
+                <Cloud className={`h-3.5 w-3.5 ${isCloudSyncing ? "animate-pulse text-blue-500" : "text-emerald-500"}`} />
+                <span>{isCloudSyncing ? "Sync..." : "Cloud Sync"}</span>
+              </button>
               <button
                 className="editorial-button-secondary h-8 px-3 text-xs"
                 onClick={handleRestoreDefaults}

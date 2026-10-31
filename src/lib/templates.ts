@@ -81,14 +81,25 @@ function normalizeTemplate(value: unknown): MessageTemplate | null {
 }
 
 import { supabase } from "@/lib/supabase";
+import { getAuthUserId } from "@/lib/auth";
 
-export function getStoredTemplates(): MessageTemplate[] {
+async function resolveUserId(): Promise<string | null> {
+  try {
+    const uid = await getAuthUserId();
+    if (uid) return uid;
+  } catch {}
+  try {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.user?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function getLocalTemplatesOnly(): MessageTemplate[] {
   if (typeof window === "undefined") {
     return cloneDefaultTemplates();
   }
-
-  // Trigger silent background sync from Supabase
-  void syncTemplatesFromSupabase();
 
   try {
     const saved = localStorage.getItem(TEMPLATE_STORAGE_KEY);
@@ -118,71 +129,94 @@ export function getStoredTemplates(): MessageTemplate[] {
   }
 }
 
-let isSyncingTemplates = false;
+export function getStoredTemplates(): MessageTemplate[] {
+  return getLocalTemplatesOnly();
+}
 
-export async function syncTemplatesFromSupabase(): Promise<void> {
-  if (typeof window === "undefined" || isSyncingTemplates) return;
-  try {
-    isSyncingTemplates = true;
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+let syncInFlight: Promise<MessageTemplate[]> | null = null;
 
-    if (!user) {
-      isSyncingTemplates = false;
-      return;
-    }
+export async function syncTemplatesFromSupabase(): Promise<MessageTemplate[]> {
+  if (typeof window === "undefined") {
+    return cloneDefaultTemplates();
+  }
 
-    const { data: remoteRows, error } = await supabase
-      .from("user_templates")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: true });
+  if (syncInFlight) {
+    return syncInFlight;
+  }
 
-    if (error) {
-      // Table does not exist yet or connection error
-      isSyncingTemplates = false;
-      return;
-    }
+  syncInFlight = (async () => {
+    try {
+      const userId = await resolveUserId();
+      if (!userId) {
+        return getLocalTemplatesOnly();
+      }
 
-    const remoteTemplates: MessageTemplate[] = (remoteRows || []).map((row: any) => ({
-      id: row.id,
-      name: row.name,
-      subject: row.subject,
-      message: row.message,
-    }));
+      const { data: remoteRows, error } = await supabase
+        .from("user_templates")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: true });
 
-    if (remoteTemplates.length > 0) {
-      // Ensure defaults are present alongside remote templates
-      const merged = [...remoteTemplates];
+      if (error) {
+        console.warn("Supabase templates query error:", error.message);
+        return getLocalTemplatesOnly();
+      }
+
+      const remoteTemplates: MessageTemplate[] = (remoteRows || []).map((row: any) => ({
+        id: String(row.id),
+        name: String(row.name),
+        subject: String(row.subject),
+        message: String(row.message),
+      }));
+
+      const localTemplates = getLocalTemplatesOnly();
+      const remoteMap = new Map(remoteTemplates.map((t) => [t.id, t]));
+      const localMap = new Map(localTemplates.map((t) => [t.id, t]));
+
+      const merged: MessageTemplate[] = [...remoteTemplates];
+
+      // Bidirectional sync:
+      // 1. Any local template that is missing in Supabase -> upload to Supabase!
+      const missingInRemote = localTemplates.filter((t) => !remoteMap.has(t.id));
+      if (missingInRemote.length > 0) {
+        const toUpsert = missingInRemote.map((t) => ({
+          id: t.id,
+          user_id: userId,
+          name: t.name,
+          subject: t.subject,
+          message: t.message,
+          updated_at: new Date().toISOString(),
+        }));
+        const { error: upsertErr } = await supabase.from("user_templates").upsert(toUpsert);
+        if (upsertErr) {
+          console.warn("Supabase templates initial upload warning:", upsertErr.message);
+        }
+        for (const m of missingInRemote) {
+          merged.push(m);
+        }
+      }
+
+      // 2. Ensure defaults are always present
       for (const def of DEFAULT_TEMPLATES) {
         if (!merged.some((t) => t.id === def.id)) {
           merged.push({ ...def });
         }
       }
 
+      // 3. Save merged list locally and notify listeners
       localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(merged));
       window.dispatchEvent(new Event(TEMPLATE_LIBRARY_EVENT));
-    } else {
-      // If Supabase is empty, upload current local templates to Supabase!
-      const current = getStoredTemplates();
-      if (current.length > 0) {
-        const toInsert = current.map((t) => ({
-          id: t.id,
-          user_id: user.id,
-          name: t.name,
-          subject: t.subject,
-          message: t.message,
-          updated_at: new Date().toISOString(),
-        }));
-        await supabase.from("user_templates").insert(toInsert);
-      }
+
+      return merged;
+    } catch (err) {
+      console.warn("Supabase templates sync error:", err);
+      return getLocalTemplatesOnly();
+    } finally {
+      syncInFlight = null;
     }
-  } catch (err) {
-    console.warn("Supabase templates sync error:", err);
-  } finally {
-    isSyncingTemplates = false;
-  }
+  })();
+
+  return syncInFlight;
 }
 
 export function saveStoredTemplates(templates: MessageTemplate[]) {
@@ -205,24 +239,20 @@ export function saveStoredTemplates(templates: MessageTemplate[]) {
   // 2. Direct automatic save to Supabase Cloud
   void (async () => {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) return;
+      const userId = await resolveUserId();
+      if (!userId) return;
 
       // Fetch remote IDs to delete any templates that were removed locally
       const { data: remoteRows, error: fetchErr } = await supabase
         .from("user_templates")
         .select("id")
-        .eq("user_id", user.id);
+        .eq("user_id", userId);
 
       if (fetchErr) {
-        // Table not yet created in Supabase
         return;
       }
 
-      const remoteIds = new Set((remoteRows || []).map((r: any) => r.id));
+      const remoteIds = new Set((remoteRows || []).map((r: any) => String(r.id)));
       const currentIds = new Set(nextTemplates.map((t) => t.id));
 
       const toDelete = Array.from(remoteIds).filter((id) => !currentIds.has(id));
@@ -231,13 +261,13 @@ export function saveStoredTemplates(templates: MessageTemplate[]) {
           .from("user_templates")
           .delete()
           .in("id", toDelete)
-          .eq("user_id", user.id);
+          .eq("user_id", userId);
       }
 
       // Upsert all current templates
       const toUpsert = nextTemplates.map((t) => ({
         id: t.id,
-        user_id: user.id,
+        user_id: userId,
         name: t.name,
         subject: t.subject,
         message: t.message,
