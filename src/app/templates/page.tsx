@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Cloud,
   Eye,
+  FileText,
   Pencil,
   Plus,
   RefreshCw,
@@ -24,6 +25,7 @@ import {
   syncTemplatesFromSupabase,
   type MessageTemplate,
 } from "@/lib/templates";
+import { CoverLetterModal } from "@/components/CoverLetterModal";
 
 function cloneDefaults() {
   return DEFAULT_TEMPLATES.map((template) => ({ ...template }));
@@ -58,6 +60,7 @@ export default function TemplatesPage() {
   const [createDraft, setCreateDraft] = useState(createTemplateDraft);
   const [editingTemplate, setEditingTemplate] = useState<MessageTemplate | null>(null);
   const [previewTemplate, setPreviewTemplate] = useState<MessageTemplate | null>(null);
+  const [pdfTemplate, setPdfTemplate] = useState<MessageTemplate | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
   const ITEMS_PER_PAGE = 6;
@@ -249,18 +252,26 @@ export default function TemplatesPage() {
                 
                 <div className="flex items-center gap-2 border-t border-[var(--editorial-border)] pt-4 mt-auto">
                   <button 
-                    className="editorial-button-secondary flex items-center justify-center gap-2 flex-1 h-9 text-[13px]" 
+                    className="editorial-button-secondary flex items-center justify-center gap-1.5 flex-1 h-9 text-[13px]" 
                     onClick={() => setPreviewTemplate(template)}
                   >
                     <Eye className="h-3.5 w-3.5" />
                     Preview
                   </button>
                   <button 
-                    className="editorial-button-primary flex items-center justify-center gap-2 flex-1 h-9 text-[13px]" 
+                    className="editorial-button-primary flex items-center justify-center gap-1.5 flex-1 h-9 text-[13px]" 
                     onClick={() => setEditingTemplate(template)}
                   >
                     <Pencil className="h-3.5 w-3.5" />
                     Edit
+                  </button>
+                  <button 
+                    className="editorial-button-secondary flex items-center justify-center gap-1.5 h-9 px-2.5 text-[13px] text-blue-600 hover:text-blue-700 hover:border-blue-200" 
+                    onClick={() => setPdfTemplate(template)}
+                    title="Générer & Télécharger la Lettre PDF"
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    <span>PDF</span>
                   </button>
                   <button 
                     className="editorial-button-secondary flex shrink-0 items-center justify-center h-9 w-9 text-[var(--editorial-danger)] hover:border-[#f4b3ae] hover:bg-[var(--editorial-danger-soft)] transition-colors" 
@@ -519,6 +530,15 @@ export default function TemplatesPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* COVER LETTER MODAL */}
+      {pdfTemplate && (
+        <CoverLetterModal
+          isOpen={Boolean(pdfTemplate)}
+          onClose={() => setPdfTemplate(null)}
+          defaultTemplate={pdfTemplate}
+        />
       )}
     </>
   );

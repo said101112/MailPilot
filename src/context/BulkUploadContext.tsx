@@ -31,6 +31,7 @@ import {
   getWithdrawnEmails,
 } from "@/lib/tracker/syncService";
 import type { MessageTemplate } from "@/lib/templates";
+import { generateCoverLetterPdf } from "@/lib/coverLetterPdf";
 
 export interface CSVRow {
   company: string;
@@ -75,6 +76,8 @@ interface BulkUploadContextType {
   selectedCvId: string | null;
   setSelectedCvId: React.Dispatch<React.SetStateAction<string | null>>;
   updateRowCv: (rowIndex: number, cvId: string, cvFileName?: string) => void;
+  includeCoverLetter: boolean;
+  setIncludeCoverLetter: (value: boolean) => void;
   defaultPosition: string;
   setDefaultPosition: (pos: string) => void;
   defaultContactName: string;
@@ -103,6 +106,7 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [selectedCvId, setSelectedCvId] = useState<string | null>(null);
+  const [includeCoverLetter, setIncludeCoverLetter] = useState(false);
   const [defaultPosition, setDefaultPosition] = useState("Stage PFE / Emploi");
   const [defaultContactName, setDefaultContactName] = useState("Hiring Manager");
   const [inputMode, setInputMode] = useState<"file" | "paste">("file");
@@ -364,6 +368,25 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
             legacyCv.fileName ||
             `${savedName.replace(/\s+/g, "_")}_Resume.pdf`;
 
+          let finalCoverLetterBase64: string | undefined = undefined;
+          let finalCoverLetterFileName: string | undefined = undefined;
+
+          if (includeCoverLetter) {
+            try {
+              const letterPdf = generateCoverLetterPdf({
+                company: row.company || "L'Entreprise",
+                position: row.position || defaultPosition,
+                contactName: row.name || defaultContactName,
+                body: activeTemplate.message,
+                subject: activeTemplate.subject,
+              });
+              finalCoverLetterBase64 = letterPdf.getBase64();
+              finalCoverLetterFileName = letterPdf.fileName;
+            } catch (err) {
+              console.warn("Cover letter PDF generation warning:", err);
+            }
+          }
+
           await sendApplication({
             ...row,
             message: processedMessage,
@@ -372,6 +395,8 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
             cv_filename: finalCvFileName,
             cv_data: finalCvBase64,
             cv_name: finalCvFileName,
+            cover_letter_base64: finalCoverLetterBase64,
+            cover_letter_filename: finalCoverLetterFileName,
           });
 
           if (user) {
@@ -484,6 +509,8 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
         selectedCvId,
         setSelectedCvId,
         updateRowCv,
+        includeCoverLetter,
+        setIncludeCoverLetter,
         defaultPosition,
         setDefaultPosition,
         defaultContactName,

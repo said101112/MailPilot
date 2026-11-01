@@ -54,6 +54,7 @@ import {
   getWithdrawnEmails,
 } from "@/lib/tracker/syncService";
 import { useBulkUpload, type CSVRow } from "@/context/BulkUploadContext";
+import { CoverLetterModal } from "@/components/CoverLetterModal";
 
 type ValidationState =
   | "processing"
@@ -179,6 +180,8 @@ export default function UploadPage() {
     selectedCvId,
     setSelectedCvId,
     updateRowCv,
+    includeCoverLetter,
+    setIncludeCoverLetter,
     defaultPosition,
     setDefaultPosition,
     defaultContactName,
@@ -197,6 +200,7 @@ export default function UploadPage() {
     clearBatch,
   } = useBulkUpload();
 
+  const [coverLetterRow, setCoverLetterRow] = useState<CSVRow | null>(null);
   const [cvLibrary, setCvLibrary] = useState<CvProfile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [templates, setTemplates] = useState(cloneDefaultTemplates);
@@ -975,6 +979,23 @@ export default function UploadPage() {
                     )}
                   </select>
                 </div>
+
+                {/* Cover Letter PDF Toggle */}
+                <label className="flex items-center gap-1.5 cursor-pointer rounded-md border border-gray-200 bg-gray-50 hover:bg-white px-2.5 py-1 text-xs font-medium text-gray-700 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={includeCoverLetter}
+                    onChange={(e) => {
+                      setIncludeCoverLetter(e.target.checked);
+                      if (e.target.checked) {
+                        toast.info("Lettre de motivation PDF incluse lors de l'envoi vers n8n");
+                      }
+                    }}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                  />
+                  <FileText className="h-3.5 w-3.5 text-blue-600" />
+                  <span>Joindre Lettre PDF</span>
+                </label>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
@@ -1138,8 +1159,22 @@ export default function UploadPage() {
                           <td className="px-4 py-3">
                             {renderStatusChip(validationState)}
                           </td>
-                          <td className="px-4 py-3 text-gray-500 text-[11px]">
-                            {getValidationMessage(row, validationState)}
+                          <td className="px-4 py-3 text-gray-500 text-[11px]" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-between gap-2">
+                              <span>{getValidationMessage(row, validationState)}</span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCoverLetterRow(row);
+                                }}
+                                title="Télécharger la Lettre de motivation PDF pour cette entreprise"
+                                className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 hover:text-blue-800 bg-blue-50/80 hover:bg-blue-100 border border-blue-200/60 rounded px-2 py-0.5 shrink-0 transition"
+                              >
+                                <FileText className="h-3 w-3" />
+                                <span>Lettre PDF</span>
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -1180,6 +1215,17 @@ export default function UploadPage() {
           </div>
         )}
       </div>
+
+      {coverLetterRow && (
+        <CoverLetterModal
+          isOpen={Boolean(coverLetterRow)}
+          onClose={() => setCoverLetterRow(null)}
+          defaultTemplate={activeTemplate}
+          initialCompany={coverLetterRow.company}
+          initialPosition={coverLetterRow.position || defaultPosition}
+          initialContactName={coverLetterRow.name || defaultContactName}
+        />
+      )}
     </div>
   );
 }
