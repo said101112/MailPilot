@@ -44,8 +44,15 @@ import {
 } from "@/lib/tracker/syncService";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
-import { readStoredCv } from "@/lib/workspace";
-import CvUploadCard from "@/components/CvUploadCard";
+import {
+  readStoredCv,
+  readStoredCvLibrary,
+  readActiveCvId,
+  writeActiveCvId,
+  type CvProfile,
+  WORKSPACE_CV_EVENT,
+} from "@/lib/workspace";
+import { generateCoverLetterPdf } from "@/lib/coverLetterPdf";
 
 interface DuplicateMatch {
   company: string;
@@ -79,6 +86,27 @@ export default function ApplyPage() {
   // Duplicate detection state
   const [duplicateMatch, setDuplicateMatch] = useState<DuplicateMatch | null>(null);
   const [checkingDuplicate, setCheckingDuplicate] = useState(false);
+
+  // Minimal CV & Cover letter state
+  const [cvLibrary, setCvLibrary] = useState<CvProfile[]>([]);
+  const [selectedCvId, setSelectedCvId] = useState<string | null>(null);
+  const [includeCoverLetter, setIncludeCoverLetter] = useState(false);
+
+  useEffect(() => {
+    const syncCv = () => {
+      const lib = readStoredCvLibrary();
+      setCvLibrary(lib);
+      const active = readActiveCvId();
+      setSelectedCvId(active || (lib.length > 0 ? lib[0].id : null));
+    };
+    syncCv();
+    window.addEventListener(WORKSPACE_CV_EVENT, syncCv);
+    window.addEventListener("storage", syncCv);
+    return () => {
+      window.removeEventListener(WORKSPACE_CV_EVENT, syncCv);
+      window.removeEventListener("storage", syncCv);
+    };
+  }, []);
 
   useEffect(() => {
     const syncInitialState = () => {
@@ -456,18 +484,48 @@ export default function ApplyPage() {
         throw new Error("L'objet de l'email ne peut pas être vide.");
       }
 
+      const matchedCv = selectedCvId ? cvLibrary.find((c) => c.id === selectedCvId) : null;
+      const finalCvBase64 = matchedCv?.base64 || readStoredCv().base64;
+      const finalCvFileName =
+        matchedCv?.fileName ||
+        readStoredCv().fileName ||
+        `${formattedName.replace(/\s+/g, "_")}_Resume.pdf`;
+
+      let finalCoverLetterBase64: string | undefined = undefined;
+      let finalCoverLetterFileName: string | undefined = undefined;
+
+      if (includeCoverLetter) {
+        try {
+          const letterPdf = generateCoverLetterPdf({
+            company: companyDisplayName,
+            position: "Stage PFE / Emploi",
+            contactName: "Hiring Manager",
+            body: finalMessage,
+            subject: finalSubject,
+          });
+          finalCoverLetterBase64 = letterPdf.getBase64();
+          finalCoverLetterFileName = letterPdf.fileName;
+        } catch (err) {
+          console.warn("Cover letter generation warning:", err);
+        }
+      }
+
       const processedSubject = replace(finalSubject);
       const processedMessage = replace(finalMessage);
 
       await sendApplication({
-        company: "Direct Apply",
-        position: "Direct Apply",
+        company: companyDisplayName,
+        position: "Stage PFE / Emploi",
         email: email,
         candidateName: formattedName,
         subject: processedSubject,
         message: processedMessage.replace(/\n/g, "<br>"),
-        cv_base64: cvBase64,
-        cv_filename: cvFileName || `${formattedName.replace(/\s+/g, "_")}_Resume.pdf`,
+        cv_base64: finalCvBase64,
+        cv_filename: finalCvFileName,
+        cv_data: finalCvBase64,
+        cv_name: finalCvFileName,
+        cover_letter_base64: finalCoverLetterBase64,
+        cover_letter_filename: finalCoverLetterFileName,
         notes: "",
         jobUrl: "",
       });
@@ -547,8 +605,49 @@ export default function ApplyPage() {
           </p>
         </div>
 
-        {/* Resume Attachment Banner */}
-        <CvUploadCard variant="banner" />
+        {/* Minimal CV & Cover Letter Selector Strip */}
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-2xs">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-gray-700">CV joint :</span>
+            <select
+              className="rounded-md border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-xs font-medium text-gray-800 outline-none focus:border-[#ff5722] hover:border-gray-300"
+              value={selectedCvId || ""}
+              onChange={(e) => {
+                const newId = e.target.value;
+                setSelectedCvId(newId);
+                writeActiveCvId(newId);
+                const chosen = cvLibrary.find((c) => c.id === newId);
+                if (chosen) toast.info(`CV sélectionné : ${chosen.label}`);
+              }}
+            >
+              {cvLibrary.length === 0 ? (
+                <option value="">Aucun CV</option>
+              ) : (
+                cvLibrary.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    📄 {c.label} ({c.fileName})
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+
+          <label className="flex items-center gap-2 cursor-pointer rounded-md border border-gray-200 bg-gray-50 hover:bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors">
+            <input
+              type="checkbox"
+              checked={includeCoverLetter}
+              onChange={(e) => {
+                setIncludeCoverLetter(e.target.checked);
+                if (e.target.checked) {
+                  toast.info("Lettre de motivation PDF incluse dans le brouillon Gmail !");
+                }
+              }}
+              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+            />
+            <FileText className="h-3.5 w-3.5 text-blue-600" />
+            <span>Joindre Lettre de motivation (PDF)</span>
+          </label>
+        </div>
 
         <div className="grid gap-6 md:grid-cols-2">
           {/* Quick Draft Card */}

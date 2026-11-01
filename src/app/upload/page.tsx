@@ -615,8 +615,7 @@ export default function UploadPage() {
           </div>
         </div>
 
-        {/* Candidate Resume Attachment Section */}
-        <CvUploadCard variant="banner" />
+
 
         {/* Hidden File Input */}
         <input
