@@ -10,6 +10,20 @@ export const TEMPLATE_LIBRARY_EVENT = "routepilot-templates-updated";
 
 export const DEFAULT_TEMPLATES: MessageTemplate[] = [
   {
+    id: "pfe-ensa-tanger",
+    name: "Stage PFE - Génie Info (ENSA Tanger)",
+    subject: "Candidature Stage PFE [Position] - [MyName] - ENSA Tanger",
+    message:
+      "Bonjour [Name],\n\nActuellement élève-ingénieur en dernière année de Génie Informatique à l’École Nationale des Sciences Appliquées de Tanger (ENSA Tanger), je suis à la recherche d’un stage de fin d’études (PFE) de 4 à 6 mois à partir de février 2027 en tant que [Position].\n\nOrienté Software Engineering et développement Full Stack, je conçois des architectures applicatives fiables, évolutives et maintenables. Mon socle technique s'articule notamment autour de Java / Spring Boot, JavaScript / TypeScript, React, Node.js, Angular, les architectures microservices, les API REST, ainsi que les technologies Cloud et DevOps (Docker, CI/CD). Je m’intéresse également de près à l’intégration de modèles d’intelligence artificielle pour répondre à des besoins concrets.\n\nÀ travers mes réalisations — notamment le développement de NextStep AI, une plateforme intelligente où j’ai pris en charge la conception backend et l’intégration de fonctionnalités IA —, j’ai développé une solide culture d’ingénierie, un esprit d’analyse rigoureux et une réelle aisance pour le travail collaboratif.\n\nRejoindre [Company] représente pour moi l’opportunité idéale d'apporter ma rigueur technique, de contribuer activement à vos projets à fort impact et de relever des défis stimulants au sein de vos équipes.\n\nVous trouverez mon CV en pièce jointe. Vous pouvez également consulter mes projets et mon parcours via mes liens :\n• Portfolio : https://said-nichan-three.vercel.app\n• GitHub : https://github.com/said101112\n• LinkedIn : https://linkedin.com/in/nichan-said-940810313\n\nJe serais ravi de pouvoir échanger avec vous lors d'un entretien afin de vous détailler mon parcours, ma motivation et la valeur que je peux apporter à [Company].\n\nJe vous remercie vivement pour votre attention et vous souhaite une excellente journée.\n\nBien cordialement,\n[MyName]",
+  },
+  {
+    id: "pfe-ensa-concise",
+    name: "Stage PFE - Version Directe (ENSA)",
+    subject: "Candidature [Position] chez [Company] - [MyName]",
+    message:
+      "Bonjour [Name],\n\nÉlève-ingénieur en dernière année de Génie Informatique à l’ENSA Tanger, je recherche un stage de fin d'études (PFE) de 4 à 6 mois dès février 2027 en tant que [Position].\n\nSpécialisé en Software Engineering et Full Stack (Java/Spring Boot, TypeScript/React/Node, Cloud/DevOps & IA), j'ai développé des projets complets à l'image de NextStep AI (plateforme d'accompagnement intelligent).\n\nTrès motivé par les projets de [Company], je serais ravi de mettre ma rigueur et ma passion du code au service de vos défis.\n\nMon CV est joint à ce message, et mes réalisations sont accessibles ici :\n• Portfolio : https://said-nichan-three.vercel.app\n• GitHub : https://github.com/said101112\n• LinkedIn : https://linkedin.com/in/nichan-said-940810313\n\nDisponible pour un échange selon vos convenances, je vous remercie pour votre considération.\n\nBien cordialement,\n[MyName]",
+  },
+  {
     id: "standard",
     name: "Standard",
     subject: "Application for [Position] at [Company]",
