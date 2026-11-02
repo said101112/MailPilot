@@ -155,7 +155,7 @@ function guessCompanyFromEmail(email: string): string {
   if (parts.length < 2) return "Recruteur";
   const domain = parts[1].toLowerCase();
   if (COMMON_FREE_PROVIDERS.has(domain)) {
-    return "Recruteur Direct";
+    return "Équipe Recrutement";
   }
   const cleanDomain = domain.replace(
     /^(recrutement|recruitment|carrieres|carriere|careers|career|rh|hr|jobs|job|talent|talents|contact|stages|stage|pfe)\./i,

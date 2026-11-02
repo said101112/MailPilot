@@ -69,6 +69,26 @@ function formatDateEnglish(d: Date = new Date()): string {
   return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
 }
 
+function addClickableText(
+  doc: jsPDF,
+  text: string,
+  x: number,
+  y: number,
+  url: string,
+  color?: readonly [number, number, number]
+): number {
+  if (color) {
+    doc.setTextColor(...color);
+  }
+  doc.text(text, x, y);
+  const width = doc.getTextWidth(text);
+  const fontSizePt = doc.getFontSize();
+  // 1 pt ≈ 0.3528 mm in jsPDF
+  const heightMm = fontSizePt * 0.3528;
+  doc.link(x, y - heightMm * 0.82, width, heightMm * 1.15, { url });
+  return width;
+}
+
 export function generateCoverLetterPdf(opts: CoverLetterOptions) {
   const doc = new jsPDF({
     orientation: "portrait",
@@ -115,7 +135,28 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
     }
   }
 
-  const company = opts.company || (isEnglish ? "The Hiring Team" : "L'Entreprise");
+  // Détection si l'entreprise fournie est générique ou "Recruteur Direct"
+  const rawCompany = (opts.company || "").trim();
+  const lowerCompany = rawCompany.toLowerCase();
+  const isGenericCompany =
+    !rawCompany ||
+    lowerCompany === "recruteur direct" ||
+    lowerCompany === "recrutement direct" ||
+    lowerCompany === "recruteur" ||
+    lowerCompany === "recruiter" ||
+    lowerCompany === "direct" ||
+    lowerCompany === "direct hire" ||
+    lowerCompany === "the hiring team" ||
+    lowerCompany === "hiring team" ||
+    lowerCompany === "hiring manager" ||
+    lowerCompany === "l'entreprise" ||
+    lowerCompany === "entreprise" ||
+    lowerCompany === "company" ||
+    lowerCompany === "société" ||
+    lowerCompany === "societe" ||
+    lowerCompany === "n/a" ||
+    lowerCompany === "-";
+
   const position = opts.position || (isEnglish ? "Internship" : "Stage PFE");
   const dateFormatted = opts.dateStr || (isEnglish ? formatDateEnglish() : `Le ${formatDateFrench()}`);
 
@@ -152,24 +193,75 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
     doc.text(title, leftMargin, y);
   }
 
+  // Ligne de contact (Ville • Email cliquable • Téléphone cliquable)
+  y += 4.5;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.2);
-  doc.setTextColor(...COLOR_MUTED);
+  let curX = leftMargin;
 
-  const contactPieces = [city, email, phone].filter(Boolean);
-  if (contactPieces.length > 0) {
-    y += 4.5;
-    doc.text(contactPieces.join("   •   "), leftMargin, y);
+  if (city) {
+    doc.setTextColor(...COLOR_MUTED);
+    doc.text(city, curX, y);
+    curX += doc.getTextWidth(city);
   }
 
-  // Ligne de portfolio & profils
+  if (email) {
+    if (curX > leftMargin) {
+      doc.setTextColor(...COLOR_MUTED);
+      doc.text("   •   ", curX, y);
+      curX += doc.getTextWidth("   •   ");
+    }
+    curX += addClickableText(doc, email, curX, y, `mailto:${email}`, COLOR_PRIMARY);
+  }
+
+  if (phone) {
+    if (curX > leftMargin) {
+      doc.setTextColor(...COLOR_MUTED);
+      doc.text("   •   ", curX, y);
+      curX += doc.getTextWidth("   •   ");
+    }
+    const cleanPhone = phone.replace(/[\s()-]/g, "");
+    curX += addClickableText(doc, phone, curX, y, `tel:${cleanPhone}`, COLOR_MUTED);
+  }
+
+  // Ligne de portfolio & profils avec liens cliquables
   y += 4.2;
   doc.setFontSize(7.8);
-  doc.setTextColor(130, 140, 155);
-  doc.text(
-    "said-nichan-three.vercel.app   •   github.com/said101112   •   linkedin.com/in/nichan-said-940810313",
-    leftMargin,
-    y
+  curX = leftMargin;
+
+  curX += addClickableText(
+    doc,
+    "said-nichan-three.vercel.app",
+    curX,
+    y,
+    "https://said-nichan-three.vercel.app",
+    COLOR_PRIMARY
+  );
+
+  doc.setTextColor(...COLOR_MUTED);
+  doc.text("   •   ", curX, y);
+  curX += doc.getTextWidth("   •   ");
+
+  curX += addClickableText(
+    doc,
+    "github.com/said101112",
+    curX,
+    y,
+    "https://github.com/said101112",
+    [100, 116, 139]
+  );
+
+  doc.setTextColor(...COLOR_MUTED);
+  doc.text("   •   ", curX, y);
+  curX += doc.getTextWidth("   •   ");
+
+  curX += addClickableText(
+    doc,
+    "linkedin.com/in/nichan-said-940810313",
+    curX,
+    y,
+    "https://linkedin.com/in/nichan-said-940810313",
+    [100, 116, 139]
   );
 
   // 2. Filet séparateur horizontal net sous l'en-tête candidat
@@ -180,7 +272,7 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
 
   // 3. Bloc Destinataire & Date (Sous le filet, calé proprement à droite)
   const recipientBoxY = y + 4.5;
-  const boxWidth = 72;
+  const boxWidth = 75;
   const boxHeight = 22;
   const boxX = rightX - boxWidth;
 
@@ -194,27 +286,45 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
   doc.setFillColor(...COLOR_PRIMARY);
   doc.rect(boxX, recipientBoxY + 2, 1.8, boxHeight - 4, "F");
 
+  // Libellés génériques élégants : Jamais "Recruteur Direct"
+  let recipientHeader: string;
+  let recipientTarget: string;
+
+  if (isGenericCompany) {
+    if (isEnglish) {
+      recipientHeader = "To the attention of the";
+      recipientTarget = "Hiring & Talent Acquisition Team";
+    } else {
+      recipientHeader = "À l'attention de la";
+      recipientTarget = "Direction du Recrutement & Talents";
+    }
+  } else {
+    if (isEnglish) {
+      recipientHeader = "To the attention of the Hiring Team";
+      recipientTarget = rawCompany;
+    } else {
+      recipientHeader = "À l'attention de l'équipe Recrutement";
+      recipientTarget = rawCompany;
+    }
+  }
+
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
   doc.setTextColor(...COLOR_MUTED);
-  doc.text(
-    isEnglish ? "To the attention of the Hiring Team" : "À l'attention de l'équipe Recrutement",
-    boxX + 5,
-    recipientBoxY + 5.8
-  );
+  doc.text(recipientHeader, boxX + 5, recipientBoxY + 5.8);
 
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(9.8);
+  doc.setFontSize(9.5);
   doc.setTextColor(...COLOR_DARK);
-  const companyLines = doc.splitTextToSize(company, boxWidth - 10);
-  doc.text(companyLines[0], boxX + 5, recipientBoxY + 11.5);
+  const targetLines = doc.splitTextToSize(recipientTarget, boxWidth - 9);
+  doc.text(targetLines[0], boxX + 5, recipientBoxY + 11.5);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.8);
   doc.setTextColor(...COLOR_MUTED);
   doc.text(dateFormatted, boxX + 5, recipientBoxY + 17.5);
 
-  // 4. Objet de la lettre (Sous le bloc destinataire)
+  // 4. Objet de la lettre (Sous le bloc destinataire avec gestion dynamique multi-lignes)
   y = recipientBoxY + boxHeight + 7;
   let objectText = opts.subject || "";
   if (!objectText) {
@@ -225,31 +335,47 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
     objectText = isEnglish ? `Subject: ${objectText}` : `Objet : ${objectText}`;
   }
 
-  // Barre d'accentuation verticale #2274A5
-  doc.setFillColor(...COLOR_PRIMARY);
-  doc.rect(leftMargin, y - 3.8, 2.5, 6.2, "F");
-
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(9.8);
+  doc.setFontSize(9.5);
   doc.setTextColor(...COLOR_DARK);
-  doc.text(objectText, leftMargin + 5.5, y);
+
+  const subjectTextX = leftMargin + 5.5;
+  const subjectMaxWidth = rightX - subjectTextX; // 188 - 27.5 = 160.5 mm
+  const subjectLines: string[] = doc.splitTextToSize(objectText, subjectMaxWidth);
+  const subjectLineHeight = 4.4;
+  const totalSubjectHeight = subjectLines.length * subjectLineHeight;
+  const barHeight = Math.max(6.2, totalSubjectHeight + 0.8);
+
+  // Barre d'accentuation verticale #2274A5 adaptée à la hauteur réelle du texte
+  doc.setFillColor(...COLOR_PRIMARY);
+  doc.rect(leftMargin, y - 3.4, 2.5, barHeight, "F");
+
+  doc.text(subjectLines, subjectTextX, y);
+  y += totalSubjectHeight + 4.5;
 
   // 5. Formule d'appel
-  y += 8.5;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9.5);
   doc.setTextColor(...COLOR_DARK);
 
   let salutation = isEnglish ? "Dear Hiring Team," : "Madame, Monsieur,";
-  if (opts.contactName && opts.contactName !== "Hiring Manager" && opts.contactName.trim().length > 0) {
+  if (
+    opts.contactName &&
+    !["hiring manager", "recruteur direct", "direct", "recruteur"].includes(opts.contactName.toLowerCase().trim()) &&
+    opts.contactName.trim().length > 0
+  ) {
     salutation = isEnglish ? `Dear ${opts.contactName},` : `Bonjour ${opts.contactName},`;
   }
   doc.text(salutation, leftMargin, y);
 
   // 6. Corps de la lettre (nettoyage des doublons/en-têtes redondants)
   y += 5.5;
+  const displayCompany = isGenericCompany
+    ? (isEnglish ? "your team" : "votre entreprise")
+    : rawCompany;
+
   const cleanBody = rawBody
-    .replace(/\[Company\]/g, company)
+    .replace(/\[Company\]/g, displayCompany)
     .replace(/\[Position\]/g, position)
     .replace(/\[MyName\]/g, name)
     .replace(/\[Name\]/g, opts.contactName || (isEnglish ? "Hiring Manager" : "Madame, Monsieur"));
@@ -365,7 +491,7 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
     { align: "right" }
   );
 
-  // 9. Pied de page discret
+  // 9. Pied de page discret avec lien portfolio cliquable
   const footerY = 286;
   doc.setDrawColor(...COLOR_BORDER);
   doc.setLineWidth(0.3);
@@ -375,7 +501,24 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
   doc.setFontSize(7.5);
   doc.setTextColor(140, 150, 165);
   doc.text("Saïd NICHAN • ENSA Tanger • Stage de Fin d'Études (PFE 2027)", leftMargin, footerY);
-  doc.text("said-nichan-three.vercel.app • Page 1/1", rightX, footerY, { align: "right" });
+
+  const portfolioUrlText = "said-nichan-three.vercel.app";
+  const pageNumberText = " • Page 1/1";
+  const portfolioWidth = doc.getTextWidth(portfolioUrlText);
+  const pageNumberWidth = doc.getTextWidth(pageNumberText);
+  const totalFooterRightWidth = portfolioWidth + pageNumberWidth;
+  const footerStartX = rightX - totalFooterRightWidth;
+
+  addClickableText(
+    doc,
+    portfolioUrlText,
+    footerStartX,
+    footerY,
+    "https://said-nichan-three.vercel.app",
+    [140, 150, 165]
+  );
+  doc.setTextColor(140, 150, 165);
+  doc.text(pageNumberText, footerStartX + portfolioWidth, footerY);
 
   // Nom de fichier standard sans nom d'entreprise (comme demandé)
   const fileName = isEnglish
