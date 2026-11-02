@@ -571,7 +571,9 @@ export default function UploadPage() {
       case "processing":
         return "Currently generating draft in Gmail.";
       case "sent":
-        return "Draft created successfully in Gmail with CV attached.";
+        return row.coverLetterAttached || includeCoverLetter
+          ? "Brouillon créé avec succès dans Gmail avec CV & Lettre de motivation joints."
+          : "Brouillon créé avec succès dans Gmail avec CV joint.";
       case "error":
         return row.error || "Delivery failed - draft was not created.";
       case "withdrawn":

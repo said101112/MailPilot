@@ -44,7 +44,8 @@ export interface CSVRow {
   subject?: string;
   cvId?: string;
   cvFileName?: string;
-  [key: string]: string | undefined;
+  coverLetterAttached?: boolean;
+  [key: string]: string | boolean | undefined;
 }
 
 interface StoredBulkState {
@@ -345,8 +346,11 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
           const replace = (text: string) => {
             let processedText = text;
             Object.keys(row).forEach((key) => {
-              const regex = new RegExp(`\\[${key}\\]`, "gi");
-              processedText = processedText.replace(regex, row[key as keyof CSVRow] || "");
+              const val = row[key as keyof CSVRow];
+              if (typeof val === "string") {
+                const regex = new RegExp(`\\[${key}\\]`, "gi");
+                processedText = processedText.replace(regex, val);
+              }
             });
             return processedText.replace(/\[MyName\]/gi, savedName);
           };
@@ -424,7 +428,12 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
             }
           }
 
-          nextData[index] = { ...nextData[index], status: "success", error: undefined };
+          nextData[index] = {
+            ...nextData[index],
+            status: "success",
+            error: undefined,
+            coverLetterAttached: !!finalCoverLetterBase64,
+          };
           successCount += 1;
         } catch (error) {
           const message =
