@@ -33,8 +33,8 @@ export default function DailyGoalChallengeCard({
   applicationsTodayCount = 0,
   onActivityLogged,
 }: DailyGoalChallengeCardProps) {
-  // 1. Quota paramétrable (Par défaut 5 candidatures / jour = 1 à 2 entretiens par semaine)
-  const [dailyGoal, setDailyGoal] = useState<number>(5);
+  // 1. Quota paramétrable (Par défaut 20 candidatures / jour = calibré pour le marché PFE Maroc)
+  const [dailyGoal, setDailyGoal] = useState<number>(20);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
 
@@ -209,8 +209,8 @@ export default function DailyGoalChallengeCard({
               </span>
             </div>
             <p className="text-xs text-gray-500">
-              Formule de conversion : <strong className="text-gray-700">5 candidatures / jour</strong> ={" "}
-              <span className="text-[#ff5722] font-semibold">1 à 2 entretiens garantis par semaine</span>.
+              Marché Maroc &amp; Nearshore : <strong className="text-gray-700">15 à 20 candidatures / jour</strong> ={" "}
+              <span className="text-[#ff5722] font-semibold">2 à 3 entretiens par semaine</span> (100 envois/semaine).
             </p>
           </div>
         </div>
@@ -233,7 +233,7 @@ export default function DailyGoalChallengeCard({
         <div className="mt-3 rounded-xl border border-gray-200 bg-white p-4 shadow-md animate-in fade-in-50 duration-150">
           <div className="flex items-center justify-between pb-2 border-b border-gray-100 mb-3">
             <span className="text-xs font-bold text-gray-900">
-              Choisissez votre rythme pour décrocher votre PFE :
+              Calibrage Maroc &amp; PFE (ENSA / Ingénieur) :
             </span>
             <button
               onClick={() => setIsSettingsOpen(false)}
@@ -245,25 +245,25 @@ export default function DailyGoalChallengeCard({
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {[
               {
-                goal: 3,
-                title: "Démarrage",
-                desc: "3/jour • ~2 sem / entretien",
+                goal: 10,
+                title: "Cadence Modérée 🇲🇦",
+                desc: "10/jour • ~50/sem (1 entretien)",
               },
               {
-                goal: 5,
-                title: "Recommandé 🎯",
-                desc: "5/jour • 1 à 2 entretiens / sem",
+                goal: 20,
+                title: "Recommandé Maroc 🎯",
+                desc: "20/jour • ~100/sem (2-3 entretiens)",
                 highlight: true,
               },
               {
-                goal: 8,
-                title: "Challenger 🔥",
-                desc: "8/jour • 2 à 3 entretiens / sem",
+                goal: 30,
+                title: "Challenger ESN 🔥",
+                desc: "30/jour • ~150/sem (Offres rapides)",
               },
               {
-                goal: 12,
-                title: "Beast Mode ⚡",
-                desc: "12/jour • Blitz 3 semaines",
+                goal: 50,
+                title: "Blitz Batch Send ⚡",
+                desc: "50/jour • Campagne massive Nearshore",
               },
             ].map((option) => (
               <button
@@ -391,8 +391,7 @@ export default function DailyGoalChallengeCard({
         <div className="flex items-center gap-1.5 text-gray-600">
           <Sparkles className="h-3.5 w-3.5 text-amber-500" />
           <span>
-            Astuce : <strong>3 emails ciblés + 2 candidatures LinkedIn par jour</strong> suffisent pour
-            remplir votre agenda d&apos;entretiens.
+            Astuce Maroc : <strong>15 emails ciblés + 5 candidatures LinkedIn par jour</strong> = 100 opportunités/semaine (2 à 4 entretiens garantis).
           </span>
         </div>
 
