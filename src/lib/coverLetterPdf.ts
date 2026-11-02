@@ -124,28 +124,37 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
   const contentWidth = 166; // 210 - 22 * 2
   const rightX = pageWidth - leftMargin;
 
-  // 0. Liseré supérieur élégant (Bandeau de marque moderne)
-  doc.setFillColor(37, 99, 235); // Royal Blue #2563eb
-  doc.rect(0, 0, 210, 3.5, "F");
+  // Palette officielle du Portfolio (https://said-nichan-three.vercel.app/)
+  const COLOR_PRIMARY = [34, 116, 165] as const; // #2274A5 - Bleu Canard Signature Portfolio
+  const COLOR_DARK = [32, 32, 35] as const;       // #202023 - Charcoal Signature Portfolio
+  const COLOR_CARD = [248, 248, 245] as const;    // #F8F8F5 - Fond Crème Signature Portfolio
+  const COLOR_MUTED = [100, 116, 139] as const;   // #64748B - Gris Neutre
+  const COLOR_BORDER = [226, 232, 240] as const;  // #E2E8F0 - Filet subtil
+
+  // 0. Liseré supérieur bicolore signature Portfolio
+  doc.setFillColor(...COLOR_PRIMARY); // #2274A5
+  doc.rect(0, 0, 210, 3.2, "F");
+  doc.setFillColor(...COLOR_DARK);    // #202023
+  doc.rect(0, 3.2, 210, 0.6, "F");
 
   // 1. En-tête Candidat (Haut Gauche)
   let y = 19;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
-  doc.setTextColor(15, 23, 42); // slate-900
+  doc.setTextColor(...COLOR_DARK);
   doc.text(name.toUpperCase(), leftMargin, y);
 
   if (title) {
     y += 5.2;
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(9.5);
-    doc.setTextColor(37, 99, 235); // royal-blue
+    doc.setFontSize(9.2);
+    doc.setTextColor(...COLOR_PRIMARY); // #2274A5
     doc.text(title, leftMargin, y);
   }
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.2);
-  doc.setTextColor(100, 116, 139); // slate-500
+  doc.setTextColor(...COLOR_MUTED);
 
   const contactPieces = [city, email, phone].filter(Boolean);
   if (contactPieces.length > 0) {
@@ -153,11 +162,15 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
     doc.text(contactPieces.join("   •   "), leftMargin, y);
   }
 
-  // Ligne de portfolio & profils
+  // Ligne de portfolio & profils inspirée du site
   y += 4;
   doc.setFontSize(7.8);
-  doc.setTextColor(148, 163, 184); // slate-400
-  doc.text("Portfolio : said-nichan-three.vercel.app   •   GitHub : said101112   •   LinkedIn : said-nichan", leftMargin, y);
+  doc.setTextColor(130, 140, 155);
+  doc.text(
+    "said-nichan-three.vercel.app   •   github.com/said101112   •   linkedin.com/in/nichan-said-940810313",
+    leftMargin,
+    y
+  );
 
   // 2. Destinataire & Date (Haut Droite)
   let rightY = 18;
@@ -165,39 +178,43 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
   const boxHeight = 22;
   const boxX = rightX - boxWidth;
 
-  // Fond cartouche récepteur discret
-  doc.setFillColor(248, 250, 252); // slate-50
-  doc.setDrawColor(226, 232, 240); // slate-200
-  doc.setLineWidth(0.3);
-  doc.roundedRect(boxX, rightY, boxWidth, boxHeight, 2.5, 2.5, "FD");
+  // Cartouche destinataire avec fond crème et bordure #E2E8F0
+  doc.setFillColor(...COLOR_CARD);
+  doc.setDrawColor(...COLOR_BORDER);
+  doc.setLineWidth(0.35);
+  doc.roundedRect(boxX, rightY, boxWidth, boxHeight, 2, 2, "FD");
+
+  // Accent vertical gauche sur le cartouche
+  doc.setFillColor(...COLOR_PRIMARY);
+  doc.rect(boxX, rightY + 2, 1.8, boxHeight - 4, "F");
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(7.8);
-  doc.setTextColor(100, 116, 139);
+  doc.setFontSize(7.5);
+  doc.setTextColor(...COLOR_MUTED);
   doc.text(
     isEnglish ? "To the attention of the Hiring Team" : "À l'attention de l'équipe Recrutement",
-    boxX + 4,
+    boxX + 5,
     rightY + 6
   );
 
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
-  doc.setTextColor(15, 23, 42);
-  const companyLines = doc.splitTextToSize(company, boxWidth - 8);
-  doc.text(companyLines[0], boxX + 4, rightY + 11.5);
+  doc.setFontSize(9.8);
+  doc.setTextColor(...COLOR_DARK);
+  const companyLines = doc.splitTextToSize(company, boxWidth - 9);
+  doc.text(companyLines[0], boxX + 5, rightY + 11.5);
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  doc.setTextColor(100, 116, 139);
-  doc.text(dateFormatted, boxX + 4, rightY + 17.5);
+  doc.setFontSize(7.8);
+  doc.setTextColor(...COLOR_MUTED);
+  doc.text(dateFormatted, boxX + 5, rightY + 17.5);
 
   // 3. Filet séparateur subtil
   y = Math.max(y + 6, rightY + boxHeight + 4);
-  doc.setDrawColor(226, 232, 240); // slate-200
-  doc.setLineWidth(0.4);
+  doc.setDrawColor(...COLOR_BORDER);
+  doc.setLineWidth(0.35);
   doc.line(leftMargin, y, rightX, y);
 
-  // 4. Objet de la lettre (avec barre d'accentuation verticale moderne)
+  // 4. Objet de la lettre (avec barre d'accentuation verticale #2274A5)
   y += 8;
   let objectText = opts.subject || "";
   if (!objectText) {
@@ -209,19 +226,19 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
   }
 
   // Barre d'accentuation verticale
-  doc.setFillColor(37, 99, 235);
+  doc.setFillColor(...COLOR_PRIMARY);
   doc.rect(leftMargin, y - 3.8, 2.5, 6.2, "F");
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9.8);
-  doc.setTextColor(15, 23, 42);
+  doc.setTextColor(...COLOR_DARK);
   doc.text(objectText, leftMargin + 5.5, y);
 
   // 5. Formule d'appel
   y += 8.5;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9.5);
-  doc.setTextColor(30, 41, 59); // slate-800
+  doc.setTextColor(...COLOR_DARK);
 
   let salutation = isEnglish ? "Dear Hiring Team," : "Madame, Monsieur,";
   if (opts.contactName && opts.contactName !== "Hiring Manager" && opts.contactName.trim().length > 0) {
@@ -272,7 +289,7 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
-    doc.setTextColor(30, 41, 59);
+    doc.setTextColor(...COLOR_DARK);
 
     const lines = doc.splitTextToSize(trimmed, maxWidth);
 
@@ -283,8 +300,8 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
     }
 
     if (isBullet) {
-      // Petite puce stylisée
-      doc.setFillColor(37, 99, 235);
+      // Petite puce stylisée #2274A5
+      doc.setFillColor(...COLOR_PRIMARY);
       doc.circle(leftMargin + 1.5, y - 1, 0.8, "F");
     }
 
@@ -306,7 +323,7 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-  doc.setTextColor(30, 41, 59);
+  doc.setTextColor(...COLOR_DARK);
   const closingLines = doc.splitTextToSize(closing, contentWidth);
   doc.text(closingLines, leftMargin, y);
   y += closingLines.length * 4.4 + 6;
@@ -314,13 +331,13 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
   // 8. Signature
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10.5);
-  doc.setTextColor(15, 23, 42);
+  doc.setTextColor(...COLOR_DARK);
   doc.text(name, rightX, y, { align: "right" });
 
   y += 4.5;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.2);
-  doc.setTextColor(100, 116, 139);
+  doc.setTextColor(...COLOR_MUTED);
   doc.text(
     isEnglish ? "Candidate – Final-Year Engineering" : "Élève-Ingénieur Génie Informatique (ENSA Tanger)",
     rightX,
@@ -330,21 +347,20 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
 
   // 9. Pied de page discret
   const footerY = 286;
-  doc.setDrawColor(241, 245, 249); // slate-100
+  doc.setDrawColor(...COLOR_BORDER);
   doc.setLineWidth(0.3);
   doc.line(leftMargin, footerY - 3, rightX, footerY - 3);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
-  doc.setTextColor(148, 163, 184);
+  doc.setTextColor(140, 150, 165);
   doc.text("Saïd NICHAN • ENSA Tanger • Stage de Fin d'Études (PFE 2027)", leftMargin, footerY);
-  doc.text("Page 1/1", rightX, footerY, { align: "right" });
+  doc.text("said-nichan-three.vercel.app • Page 1/1", rightX, footerY, { align: "right" });
 
-  const safeCompany = company.replace(/[^a-zA-Z0-9_-]/g, "_");
-  const prefix = isDataAi ? "Data_AI" : "Dev";
+  // Nom de fichier standard sans nom d'entreprise (comme demandé)
   const fileName = isEnglish
-    ? `Cover_Letter_PFE_${prefix}_${safeCompany}.pdf`
-    : `Lettre_Motivation_PFE_${prefix}_${safeCompany}.pdf`;
+    ? "Cover_Letter.pdf"
+    : "Lettre_de_Motivation.pdf";
 
   return {
     doc,
