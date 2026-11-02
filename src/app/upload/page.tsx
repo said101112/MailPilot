@@ -555,7 +555,7 @@ export default function UploadPage() {
       return;
     }
 
-    await contextStartBatchProcess(activeTemplate);
+    await contextStartBatchProcess(activeTemplate, { includeCoverLetter });
   };
 
   const getValidationMessage = (row: CSVRow, state: ValidationState) => {

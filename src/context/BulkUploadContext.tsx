@@ -54,6 +54,7 @@ interface StoredBulkState {
   selectedRowIndices: number[];
   selectedTemplateId: string | null;
   selectedCvId?: string | null;
+  includeCoverLetter?: boolean;
   defaultPosition: string;
   defaultContactName: string;
   inputMode: "file" | "paste";
@@ -92,7 +93,7 @@ interface BulkUploadContextType {
   isProcessing: boolean;
   progress: { current: number; total: number };
   setProgress: React.Dispatch<React.SetStateAction<{ current: number; total: number }>>;
-  startBatchProcess: (activeTemplate: MessageTemplate) => Promise<void>;
+  startBatchProcess: (activeTemplate: MessageTemplate, options?: { includeCoverLetter?: boolean }) => Promise<void>;
   cancelBatchProcess: () => void;
   clearBatch: () => void;
 }
@@ -118,6 +119,11 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
 
   const cancelRequestedRef = useRef(false);
   const isHydratedRef = useRef(false);
+  const includeCoverLetterRef = useRef(includeCoverLetter);
+
+  useEffect(() => {
+    includeCoverLetterRef.current = includeCoverLetter;
+  }, [includeCoverLetter]);
 
   // 1. Initial Load from LocalStorage
   useEffect(() => {
@@ -133,6 +139,10 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
           }
           if (parsed.selectedTemplateId) setSelectedTemplateId(parsed.selectedTemplateId);
           if (parsed.selectedCvId) setSelectedCvId(parsed.selectedCvId);
+          if (typeof parsed.includeCoverLetter === "boolean") {
+            setIncludeCoverLetter(parsed.includeCoverLetter);
+            includeCoverLetterRef.current = parsed.includeCoverLetter;
+          }
           if (parsed.defaultPosition) setDefaultPosition(parsed.defaultPosition);
           if (parsed.defaultContactName) setDefaultContactName(parsed.defaultContactName);
           if (parsed.inputMode) setInputMode(parsed.inputMode);
@@ -170,6 +180,7 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
         selectedRowIndices: Array.from(selectedRows),
         selectedTemplateId,
         selectedCvId,
+        includeCoverLetter,
         defaultPosition,
         defaultContactName,
         inputMode,
@@ -187,6 +198,7 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
     selectedRows,
     selectedTemplateId,
     selectedCvId,
+    includeCoverLetter,
     defaultPosition,
     defaultContactName,
     inputMode,
@@ -265,7 +277,10 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
   }, [isProcessing]);
 
   const startBatchProcess = useCallback(
-    async (activeTemplate: MessageTemplate) => {
+    async (
+      activeTemplate: MessageTemplate,
+      options?: { includeCoverLetter?: boolean }
+    ) => {
       const selectedIndexes = Array.from(selectedRows).sort((a, b) => a - b);
       if (selectedIndexes.length === 0) {
         toast.error("Veuillez sélectionner au moins une ligne à traiter.");
@@ -375,7 +390,12 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
           let finalCoverLetterBase64: string | undefined = undefined;
           let finalCoverLetterFileName: string | undefined = undefined;
 
-          if (includeCoverLetter) {
+          const shouldAttachCoverLetter =
+            options?.includeCoverLetter !== undefined
+              ? options.includeCoverLetter
+              : (includeCoverLetterRef.current || includeCoverLetter);
+
+          if (shouldAttachCoverLetter) {
             try {
               const letterPdf = generateCoverLetterPdf({
                 company: row.company || "L'Entreprise",
@@ -386,6 +406,9 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
               });
               finalCoverLetterBase64 = letterPdf.getBase64();
               finalCoverLetterFileName = letterPdf.fileName;
+              console.log(
+                `[MailPilot] Cover letter generated for ${row.company || "Company"}: ${finalCoverLetterFileName} (${finalCoverLetterBase64.length} chars)`
+              );
             } catch (err) {
               console.warn("Cover letter PDF generation warning:", err);
             }
@@ -498,7 +521,14 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
           .catch((err) => console.warn("Background auto-sync failed:", err));
       }
     },
-    [data, selectedRows, selectedCvId]
+    [
+      data,
+      selectedRows,
+      selectedCvId,
+      includeCoverLetter,
+      defaultPosition,
+      defaultContactName,
+    ]
   );
 
   return (
