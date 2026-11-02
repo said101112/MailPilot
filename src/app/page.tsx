@@ -22,6 +22,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import InteractiveDashboardCharts from "@/components/dashboard/InteractiveDashboardCharts";
 import DailyGoalChallengeCard from "@/components/dashboard/DailyGoalChallengeCard";
+import PfeCountdownClock from "@/components/dashboard/PfeCountdownClock";
 import CompanyLogo from "@/components/tracker/CompanyLogo";
 import UpdatePasswordModal from "@/components/profile/UpdatePasswordModal";
 import { KNOWN_COMPANIES } from "@/lib/tracker/companyDirectory";
@@ -201,6 +202,9 @@ export default function Home() {
           </Link>
         </div>
       </div>
+
+      {/* 1.2. Retro Mechanical / Split-Flap Countdown to 1er Février 2027 */}
+      <PfeCountdownClock />
 
       {/* 1.5. Daily Goal & Streak Challenge Banner */}
       <DailyGoalChallengeCard
