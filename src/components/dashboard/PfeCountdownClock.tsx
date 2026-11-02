@@ -6,7 +6,6 @@ import {
   Sparkles,
   Calendar,
   Flame,
-  Layers,
   Palette,
   Timer,
   Compass,
@@ -73,284 +72,242 @@ export default function PfeCountdownClock() {
   const pad = (n: number) => n.toString().padStart(2, "0");
 
   return (
-    <div className="mb-8 overflow-hidden rounded-3xl border border-gray-200/90 bg-white shadow-xs transition-all duration-300">
-      {/* 1. Header du Compteur avec sélecteur de design */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 bg-gray-50/60 px-5 py-3.5 sm:px-6">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-100 text-[#ff5722]">
-            <Timer className="h-4 w-4" />
+    <div className="mb-6 overflow-hidden rounded-2xl border border-gray-200/90 bg-white p-3.5 shadow-xs transition-all duration-300 sm:px-5 sm:py-3.5">
+      <div className="flex flex-col gap-3.5 lg:flex-row lg:items-center lg:justify-between">
+        {/* 1. Titre & Contexte PFE (Gauche) */}
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-[#ff5722] shadow-xs">
+            <Timer className="h-5 w-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-xs font-black uppercase tracking-wider text-gray-900 sm:text-sm">
+              <span className="text-xs font-black uppercase tracking-wider text-gray-900">
                 Compte à Rebours PFE 2027
-              </h3>
+              </span>
               <span className="rounded-full bg-[#ff5722] px-2 py-0.2 text-[10px] font-black text-white">
                 1er FÉVRIER 2027
               </span>
             </div>
             <p className="text-[11px] text-gray-500">
-              Début officiel du Stage de Fin d&apos;Études (ENSA Tanger) • Prise de poste en entreprise
+              Septembre 2026 → Février 2027 • Démarrage Stage PFE ENSA Tanger
             </p>
           </div>
         </div>
 
-        {/* 3 Styles Rétro & Élégants au Choix */}
-        <div className="flex items-center gap-1.5 rounded-xl border border-gray-200/80 bg-white p-1 text-xs shadow-2xs">
-          <Palette className="h-3.5 w-3.5 text-gray-400 ml-1.5 mr-0.5 hidden sm:block" />
-          <button
-            onClick={() => changeTheme("split-flap")}
-            className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all ${
-              theme === "split-flap"
-                ? "bg-gray-900 text-white shadow-xs"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-            title="Style Horloge à volets mécaniques (Split-Flap vintage)"
-          >
-            📟 Flip Clock
-          </button>
-          <button
-            onClick={() => changeTheme("vintage-odometer")}
-            className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all ${
-              theme === "vintage-odometer"
-                ? "bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-xs"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-            title="Style Odomètre vintage & cuivre"
-          >
-            🧭 Odomètre Rétro
-          </button>
-          <button
-            onClick={() => changeTheme("minimal-luxury")}
-            className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all ${
-              theme === "minimal-luxury"
-                ? "bg-orange-500 text-white shadow-xs"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-            title="Style Studio Minimaliste Épuré"
-          >
-            ✨ Studio Épuré
-          </button>
-        </div>
-      </div>
-
-      {/* 2. LE COMPTEUR PRINCIPAL (3 VARIANTES VISUELLES SPECTACULAIRES) */}
-      <div className="p-5 sm:p-7">
-        {/* ========================================================
-            VARIANTE 1 : FLIP CLOCK RÉTRO VINTAGE (SPLIT-FLAP SOLARI)
-           ======================================================== */}
-        {theme === "split-flap" && (
-          <div className="rounded-2xl bg-gradient-to-b from-[#111317] via-[#1a1d24] to-[#0f1115] p-5 sm:p-7 shadow-2xl border border-gray-800">
-            <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6">
-              {/* Carte Jours */}
-              <div className="flex flex-col items-center">
-                <div className="relative flex h-20 w-20 sm:h-26 sm:w-26 items-center justify-center rounded-xl bg-gradient-to-b from-[#232731] via-[#1c1f27] to-[#121419] border border-gray-700/60 shadow-inner">
-                  {/* Charnière centrale du volet */}
-                  <div className="absolute inset-x-0 top-1/2 h-[1.5px] bg-[#0c0d10] shadow-[0_1px_1px_rgba(255,255,255,0.08)] z-10" />
-                  <div className="absolute -left-1 top-1/2 -mt-1 h-2 w-1 rounded-r-xs bg-gray-600" />
-                  <div className="absolute -right-1 top-1/2 -mt-1 h-2 w-1 rounded-l-xs bg-gray-600" />
-
-                  <span className="font-mono text-3xl sm:text-5xl font-black text-gray-100 tracking-tight tabular-nums select-none drop-shadow-md">
+        {/* 2. Le Compteur Horizontal Rétro & Compact (Centre) */}
+        <div className="flex items-center justify-center">
+          {/* VARIANTE 1 : FLIP CLOCK RÉTRO COMPACT */}
+          {theme === "split-flap" && (
+            <div className="flex items-center gap-1.5 rounded-xl bg-[#12141a] px-3.5 py-2 border border-gray-800 shadow-md">
+              {/* Jours */}
+              <div className="relative flex flex-col items-center">
+                <div className="relative flex h-10 min-w-10 px-1.5 items-center justify-center rounded-lg bg-gradient-to-b from-[#252a36] via-[#1c202a] to-[#14171f] border border-gray-700/60 shadow-inner">
+                  <div className="absolute inset-x-0 top-1/2 h-[1px] bg-black/80 z-10" />
+                  <span className="font-mono text-base font-black text-white tracking-tight tabular-nums select-none">
                     {timeLeft.days}
                   </span>
                 </div>
-                <span className="mt-2.5 text-[10px] sm:text-xs font-black uppercase tracking-widest text-orange-400">
+                <span className="text-[9px] font-black uppercase tracking-wider text-orange-400 mt-0.5">
                   JOURS
                 </span>
               </div>
 
-              {/* Séparateur mécanique à deux points */}
-              <div className="hidden sm:flex flex-col gap-3 self-center pb-6">
-                <span className="h-2 w-2 rounded-full bg-orange-500 shadow-sm shadow-orange-500/50 animate-pulse" />
-                <span className="h-2 w-2 rounded-full bg-orange-500 shadow-sm shadow-orange-500/50 animate-pulse" />
-              </div>
+              <span className="text-orange-500 font-bold font-mono text-sm pb-3 animate-pulse">
+                :
+              </span>
 
-              {/* Carte Heures */}
-              <div className="flex flex-col items-center">
-                <div className="relative flex h-20 w-20 sm:h-26 sm:w-26 items-center justify-center rounded-xl bg-gradient-to-b from-[#232731] via-[#1c1f27] to-[#121419] border border-gray-700/60 shadow-inner">
-                  <div className="absolute inset-x-0 top-1/2 h-[1.5px] bg-[#0c0d10] shadow-[0_1px_1px_rgba(255,255,255,0.08)] z-10" />
-                  <div className="absolute -left-1 top-1/2 -mt-1 h-2 w-1 rounded-r-xs bg-gray-600" />
-                  <div className="absolute -right-1 top-1/2 -mt-1 h-2 w-1 rounded-l-xs bg-gray-600" />
-
-                  <span className="font-mono text-3xl sm:text-5xl font-black text-gray-100 tracking-tight tabular-nums select-none drop-shadow-md">
+              {/* Heures */}
+              <div className="relative flex flex-col items-center">
+                <div className="relative flex h-10 w-9 items-center justify-center rounded-lg bg-gradient-to-b from-[#252a36] via-[#1c202a] to-[#14171f] border border-gray-700/60 shadow-inner">
+                  <div className="absolute inset-x-0 top-1/2 h-[1px] bg-black/80 z-10" />
+                  <span className="font-mono text-base font-black text-gray-100 tracking-tight tabular-nums select-none">
                     {pad(timeLeft.hours)}
                   </span>
                 </div>
-                <span className="mt-2.5 text-[10px] sm:text-xs font-black uppercase tracking-widest text-gray-400">
+                <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 mt-0.5">
                   HEURES
                 </span>
               </div>
 
-              {/* Séparateur mécanique à deux points */}
-              <div className="hidden sm:flex flex-col gap-3 self-center pb-6">
-                <span className="h-2 w-2 rounded-full bg-orange-500 shadow-sm shadow-orange-500/50 animate-pulse" />
-                <span className="h-2 w-2 rounded-full bg-orange-500 shadow-sm shadow-orange-500/50 animate-pulse" />
-              </div>
+              <span className="text-orange-500 font-bold font-mono text-sm pb-3 animate-pulse">
+                :
+              </span>
 
-              {/* Carte Minutes */}
-              <div className="flex flex-col items-center">
-                <div className="relative flex h-20 w-20 sm:h-26 sm:w-26 items-center justify-center rounded-xl bg-gradient-to-b from-[#232731] via-[#1c1f27] to-[#121419] border border-gray-700/60 shadow-inner">
-                  <div className="absolute inset-x-0 top-1/2 h-[1.5px] bg-[#0c0d10] shadow-[0_1px_1px_rgba(255,255,255,0.08)] z-10" />
-                  <div className="absolute -left-1 top-1/2 -mt-1 h-2 w-1 rounded-r-xs bg-gray-600" />
-                  <div className="absolute -right-1 top-1/2 -mt-1 h-2 w-1 rounded-l-xs bg-gray-600" />
-
-                  <span className="font-mono text-3xl sm:text-5xl font-black text-gray-100 tracking-tight tabular-nums select-none drop-shadow-md">
+              {/* Minutes */}
+              <div className="relative flex flex-col items-center">
+                <div className="relative flex h-10 w-9 items-center justify-center rounded-lg bg-gradient-to-b from-[#252a36] via-[#1c202a] to-[#14171f] border border-gray-700/60 shadow-inner">
+                  <div className="absolute inset-x-0 top-1/2 h-[1px] bg-black/80 z-10" />
+                  <span className="font-mono text-base font-black text-gray-100 tracking-tight tabular-nums select-none">
                     {pad(timeLeft.minutes)}
                   </span>
                 </div>
-                <span className="mt-2.5 text-[10px] sm:text-xs font-black uppercase tracking-widest text-gray-400">
-                  MINUTES
+                <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 mt-0.5">
+                  MIN
                 </span>
               </div>
 
-              {/* Séparateur mécanique à deux points */}
-              <div className="hidden sm:flex flex-col gap-3 self-center pb-6">
-                <span className="h-2 w-2 rounded-full bg-orange-500 shadow-sm shadow-orange-500/50 animate-pulse" />
-                <span className="h-2 w-2 rounded-full bg-orange-500 shadow-sm shadow-orange-500/50 animate-pulse" />
-              </div>
+              <span className="text-orange-500 font-bold font-mono text-sm pb-3 animate-pulse">
+                :
+              </span>
 
-              {/* Carte Secondes (avec accent chaud animé) */}
-              <div className="flex flex-col items-center">
-                <div className="relative flex h-20 w-20 sm:h-26 sm:w-26 items-center justify-center rounded-xl bg-gradient-to-b from-[#2d2119] via-[#241a13] to-[#18110c] border border-orange-500/50 shadow-inner ring-1 ring-orange-500/30">
-                  <div className="absolute inset-x-0 top-1/2 h-[1.5px] bg-[#0c0d10] shadow-[0_1px_1px_rgba(255,255,255,0.08)] z-10" />
-                  <div className="absolute -left-1 top-1/2 -mt-1 h-2 w-1 rounded-r-xs bg-orange-600" />
-                  <div className="absolute -right-1 top-1/2 -mt-1 h-2 w-1 rounded-l-xs bg-orange-600" />
-
-                  <span className="font-mono text-3xl sm:text-5xl font-black text-[#ff7043] tracking-tight tabular-nums select-none drop-shadow-md">
+              {/* Secondes */}
+              <div className="relative flex flex-col items-center">
+                <div className="relative flex h-10 w-9 items-center justify-center rounded-lg bg-gradient-to-b from-[#352317] via-[#2a1a11] to-[#1a110a] border border-orange-500/50 shadow-inner ring-1 ring-orange-500/30">
+                  <div className="absolute inset-x-0 top-1/2 h-[1px] bg-black/80 z-10" />
+                  <span className="font-mono text-base font-black text-[#ff7043] tracking-tight tabular-nums select-none">
                     {pad(timeLeft.seconds)}
                   </span>
                 </div>
-                <span className="mt-2.5 text-[10px] sm:text-xs font-black uppercase tracking-widest text-[#ff5722]">
-                  SECONDES
+                <span className="text-[9px] font-black uppercase tracking-wider text-[#ff5722] mt-0.5">
+                  SEC
                 </span>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* ========================================================
-            VARIANTE 2 : ODOMÈTRE RÉTRO & CHRONO CUIVRE/AMBRE
-           ======================================================== */}
-        {theme === "vintage-odometer" && (
-          <div className="rounded-2xl bg-gradient-to-br from-[#2a1b12] via-[#1f150e] to-[#140d09] p-5 sm:p-7 shadow-2xl border-2 border-[#b45309]/50">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-center">
-              {/* Odomètre Jours */}
-              <div className="rounded-2xl border border-amber-500/30 bg-[#1a110a] p-4 shadow-inner relative overflow-hidden">
-                <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-500 to-orange-500" />
-                <span className="block font-mono text-3xl sm:text-5xl font-extrabold text-amber-200 tracking-wider">
+          {/* VARIANTE 2 : ODOMÈTRE RÉTRO CUIVRE COMPACT */}
+          {theme === "vintage-odometer" && (
+            <div className="flex items-center gap-1.5 rounded-xl bg-[#1b120c] px-3.5 py-2 border border-amber-600/50 shadow-md">
+              <div className="flex flex-col items-center">
+                <div className="flex h-10 min-w-10 px-1.5 items-center justify-center rounded-lg bg-[#27170c] border border-amber-500/30">
+                  <span className="font-mono text-base font-extrabold text-amber-200 tabular-nums">
+                    {timeLeft.days}
+                  </span>
+                </div>
+                <span className="text-[9px] font-black uppercase tracking-wider text-amber-400 mt-0.5">
+                  JOURS
+                </span>
+              </div>
+
+              <span className="text-amber-500 font-bold font-mono text-sm pb-3">:</span>
+
+              <div className="flex flex-col items-center">
+                <div className="flex h-10 w-9 items-center justify-center rounded-lg bg-[#27170c] border border-amber-500/20">
+                  <span className="font-mono text-base font-extrabold text-amber-100 tabular-nums">
+                    {pad(timeLeft.hours)}
+                  </span>
+                </div>
+                <span className="text-[9px] font-black uppercase tracking-wider text-amber-500/80 mt-0.5">
+                  H
+                </span>
+              </div>
+
+              <span className="text-amber-500 font-bold font-mono text-sm pb-3">:</span>
+
+              <div className="flex flex-col items-center">
+                <div className="flex h-10 w-9 items-center justify-center rounded-lg bg-[#27170c] border border-amber-500/20">
+                  <span className="font-mono text-base font-extrabold text-amber-100 tabular-nums">
+                    {pad(timeLeft.minutes)}
+                  </span>
+                </div>
+                <span className="text-[9px] font-black uppercase tracking-wider text-amber-500/80 mt-0.5">
+                  MIN
+                </span>
+              </div>
+
+              <span className="text-orange-500 font-bold font-mono text-sm pb-3">:</span>
+
+              <div className="flex flex-col items-center">
+                <div className="flex h-10 w-9 items-center justify-center rounded-lg bg-[#3d1d0c] border border-orange-500/60 ring-1 ring-orange-500/30">
+                  <span className="font-mono text-base font-extrabold text-orange-400 tabular-nums animate-pulse">
+                    {pad(timeLeft.seconds)}
+                  </span>
+                </div>
+                <span className="text-[9px] font-black uppercase tracking-wider text-orange-400 mt-0.5">
+                  SEC
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* VARIANTE 3 : STUDIO ÉPURÉ COMPACT */}
+          {theme === "minimal-luxury" && (
+            <div className="flex items-center gap-1.5 rounded-xl border border-orange-200/80 bg-orange-50/40 px-3 py-1.5">
+              <div className="flex items-baseline gap-1">
+                <span className="font-sans text-lg font-black text-gray-900 tabular-nums">
                   {timeLeft.days}
                 </span>
-                <span className="mt-1 block text-[10px] sm:text-xs font-black tracking-widest text-amber-400/90 uppercase">
-                  JOURS RESTANTS
-                </span>
+                <span className="text-[10px] font-bold text-[#ff5722] uppercase">j</span>
               </div>
-
-              {/* Odomètre Heures */}
-              <div className="rounded-2xl border border-amber-500/20 bg-[#1a110a] p-4 shadow-inner">
-                <span className="block font-mono text-3xl sm:text-5xl font-extrabold text-amber-100 tracking-wider">
+              <span className="text-gray-300 font-bold">:</span>
+              <div className="flex items-baseline gap-1">
+                <span className="font-sans text-lg font-black text-gray-800 tabular-nums">
                   {pad(timeLeft.hours)}
                 </span>
-                <span className="mt-1 block text-[10px] sm:text-xs font-black tracking-widest text-amber-500/70 uppercase">
-                  HEURES
-                </span>
+                <span className="text-[10px] font-bold text-gray-400 uppercase">h</span>
               </div>
-
-              {/* Odomètre Minutes */}
-              <div className="rounded-2xl border border-amber-500/20 bg-[#1a110a] p-4 shadow-inner">
-                <span className="block font-mono text-3xl sm:text-5xl font-extrabold text-amber-100 tracking-wider">
+              <span className="text-gray-300 font-bold">:</span>
+              <div className="flex items-baseline gap-1">
+                <span className="font-sans text-lg font-black text-gray-800 tabular-nums">
                   {pad(timeLeft.minutes)}
                 </span>
-                <span className="mt-1 block text-[10px] sm:text-xs font-black tracking-widest text-amber-500/70 uppercase">
-                  MINUTES
-                </span>
+                <span className="text-[10px] font-bold text-gray-400 uppercase">m</span>
               </div>
-
-              {/* Odomètre Secondes */}
-              <div className="rounded-2xl border border-orange-500/50 bg-[#28150c] p-4 shadow-inner ring-1 ring-orange-500/40">
-                <span className="block font-mono text-3xl sm:text-5xl font-extrabold text-orange-400 tracking-wider animate-pulse">
+              <span className="text-gray-300 font-bold">:</span>
+              <div className="flex items-baseline gap-1 rounded-md bg-orange-100/80 px-1.5 py-0.5">
+                <span className="font-sans text-lg font-black text-[#ff5722] tabular-nums">
                   {pad(timeLeft.seconds)}
                 </span>
-                <span className="mt-1 block text-[10px] sm:text-xs font-black tracking-widest text-orange-400 uppercase">
-                  SECONDES
-                </span>
+                <span className="text-[10px] font-black text-[#ff5722] uppercase">s</span>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* ========================================================
-            VARIANTE 3 : STUDIO ÉPURÉ & ÉLÉGANT (EDITORIAL WHITE & ORANGE)
-           ======================================================== */}
-        {theme === "minimal-luxury" && (
-          <div className="rounded-2xl border border-orange-200/80 bg-gradient-to-br from-orange-50/40 via-white to-amber-50/20 p-5 sm:p-7 shadow-xs">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-center">
-              <div className="rounded-2xl border border-orange-200 bg-white p-4 shadow-xs">
-                <span className="block text-3xl sm:text-5xl font-black text-gray-900 tracking-tight">
-                  {timeLeft.days}
-                </span>
-                <span className="mt-1 block text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#ff5722]">
-                  Jours
-                </span>
+        {/* 3. Progression du Sprint & Switcher de Thème (Droite) */}
+        <div className="flex items-center justify-between lg:justify-end gap-3 pt-2 lg:pt-0 border-t lg:border-t-0 border-gray-100">
+          <div className="flex flex-col items-start lg:items-end">
+            <span className="text-[10px] font-semibold text-gray-400">
+              Sprint PFE 2027
+            </span>
+            <div className="flex items-center gap-1.5">
+              <div className="h-1.5 w-16 overflow-hidden rounded-full bg-gray-200">
+                <div
+                  className="h-full rounded-full bg-[#ff5722]"
+                  style={{ width: `${progressPercent}%` }}
+                />
               </div>
-
-              <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-xs">
-                <span className="block text-3xl sm:text-5xl font-black text-gray-800 tracking-tight">
-                  {pad(timeLeft.hours)}
-                </span>
-                <span className="mt-1 block text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500">
-                  Heures
-                </span>
-              </div>
-
-              <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-xs">
-                <span className="block text-3xl sm:text-5xl font-black text-gray-800 tracking-tight">
-                  {pad(timeLeft.minutes)}
-                </span>
-                <span className="mt-1 block text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500">
-                  Minutes
-                </span>
-              </div>
-
-              <div className="rounded-2xl border border-orange-200 bg-orange-50/70 p-4 shadow-xs">
-                <span className="block text-3xl sm:text-5xl font-black text-[#ff5722] tracking-tight">
-                  {pad(timeLeft.seconds)}
-                </span>
-                <span className="mt-1 block text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#ff5722]">
-                  Secondes
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 3. Barre de Sprint & Contexte Stratégique */}
-        <div className="mt-5 rounded-xl border border-gray-100 bg-gray-50/70 p-3.5 sm:p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
-            <div className="flex items-center gap-2">
-              <Compass className="h-4 w-4 text-[#ff5722]" />
-              <span className="text-xs font-bold text-gray-800">
-                Progression du Sprint PFE (Septembre 2026 $\rightarrow$ Février 2027)
+              <span className="text-xs font-bold text-gray-700">
+                {progressPercent}%
               </span>
             </div>
-            <span className="text-xs font-bold text-gray-600">
-              {progressPercent}% du compte à rebours écoulé
-            </span>
           </div>
 
-          <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-orange-500 to-[#ff5722] transition-all duration-500"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-
-          <div className="mt-2.5 flex flex-wrap items-center justify-between text-[11px] text-gray-500">
-            <span>
-              🎯 Objectif : Avoir <strong>2 à 3 offres signées</strong> avant mi-janvier 2027 pour démarrer sereinement.
-            </span>
-            <span className="font-semibold text-gray-700">
-              {timeLeft.days} jours restants pour faire la différence
-            </span>
+          {/* Boutons Thèmes Compacts */}
+          <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50/80 p-0.5">
+            <button
+              onClick={() => changeTheme("split-flap")}
+              className={`rounded-md px-2 py-1 text-[10px] font-bold transition-all ${
+                theme === "split-flap"
+                  ? "bg-gray-900 text-white shadow-xs"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+              title="Flip Clock"
+            >
+              📟 Flip
+            </button>
+            <button
+              onClick={() => changeTheme("vintage-odometer")}
+              className={`rounded-md px-2 py-1 text-[10px] font-bold transition-all ${
+                theme === "vintage-odometer"
+                  ? "bg-amber-700 text-white shadow-xs"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+              title="Odomètre Rétro"
+            >
+              🧭 Odomètre
+            </button>
+            <button
+              onClick={() => changeTheme("minimal-luxury")}
+              className={`rounded-md px-2 py-1 text-[10px] font-bold transition-all ${
+                theme === "minimal-luxury"
+                  ? "bg-[#ff5722] text-white shadow-xs"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+              title="Studio Épuré"
+            >
+              ✨ Épuré
+            </button>
           </div>
         </div>
       </div>
