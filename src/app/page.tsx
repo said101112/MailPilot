@@ -205,6 +205,7 @@ export default function Home() {
       {/* 1.5. Daily Goal & Streak Challenge Banner */}
       <DailyGoalChallengeCard
         applicationsTodayCount={applicationsTodayCount}
+        allApplications={allApplications}
         onActivityLogged={fetchDashboardData}
       />
 

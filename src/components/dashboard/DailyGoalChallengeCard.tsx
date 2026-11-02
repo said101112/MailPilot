@@ -16,13 +16,37 @@ import {
   Settings2,
   X,
   Sparkles,
-  ArrowRight,
+  Calendar,
+  Check,
+  ChevronRight,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
+export interface ActivityItem {
+  id: string;
+  company: string | null;
+  position: string | null;
+  email: string;
+  status: string;
+  created_at: string;
+}
+
 interface DailyGoalChallengeCardProps {
   applicationsTodayCount?: number;
+  allApplications?: ActivityItem[];
   onActivityLogged?: () => void;
+}
+
+interface WeekDayItem {
+  dateStr: string;
+  dayShort: string;
+  dayFull: string;
+  dayNum: number;
+  isToday: boolean;
+  isPast: boolean;
+  isFuture: boolean;
+  count: number;
+  isCompleted: boolean;
 }
 
 const STORAGE_KEY_GOAL = "mailpilot_daily_goal_target";
@@ -31,6 +55,7 @@ const STORAGE_KEY_OFFLINE_LOGS = "mailpilot_daily_offline_logs";
 
 export default function DailyGoalChallengeCard({
   applicationsTodayCount = 0,
+  allApplications = [],
   onActivityLogged,
 }: DailyGoalChallengeCardProps) {
   // 1. Quota paramétrable (Par défaut 20 candidatures / jour = calibré pour le marché PFE Maroc)
@@ -130,6 +155,80 @@ export default function DailyGoalChallengeCard({
     }
   }, [isGoalReached, todayStr]);
 
+  // 2. Calcul des 7 jours de la semaine courante (Style Duolingo)
+  const weekDays = useMemo<WeekDayItem[]>(() => {
+    const now = new Date();
+    // En JS : 0 = Dimanche, 1 = Lundi, ..., 6 = Samedi. On translate pour que Lundi = 0.
+    const dayOfWeek = (now.getDay() + 6) % 7;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - dayOfWeek);
+
+    const shortLabels = ["LUN", "MAR", "MER", "JEU", "VEN", "SAM", "DIM"];
+    const fullLabels = [
+      "Lundi",
+      "Mardi",
+      "Mercredi",
+      "Jeudi",
+      "Vendredi",
+      "Samedi",
+      "Dimanche",
+    ];
+
+    const result: WeekDayItem[] = [];
+
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const dateStr = d.toISOString().split("T")[0];
+      const isToday = i === dayOfWeek;
+      const isPast = i < dayOfWeek;
+      const isFuture = i > dayOfWeek;
+
+      let count = 0;
+      if (isToday) {
+        count = applicationsTodayCount + platformCountToday;
+      } else if (allApplications && allApplications.length > 0) {
+        const dbCount = allApplications.filter(
+          (app) => app.created_at && app.created_at.startsWith(dateStr)
+        ).length;
+        let offlineCount = 0;
+        if (typeof window !== "undefined") {
+          try {
+            const raw = localStorage.getItem(`${STORAGE_KEY_OFFLINE_LOGS}_${dateStr}`);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              offlineCount = parsed.platforms || 0;
+            }
+          } catch {
+            // ignore
+          }
+        }
+        count = dbCount + offlineCount;
+      }
+
+      const isCompleted = count >= dailyGoal;
+
+      result.push({
+        dateStr,
+        dayShort: shortLabels[i],
+        dayFull: fullLabels[i],
+        dayNum: d.getDate(),
+        isToday,
+        isPast,
+        isFuture,
+        count,
+        isCompleted,
+      });
+    }
+
+    return result;
+  }, [allApplications, applicationsTodayCount, platformCountToday, dailyGoal]);
+
+  const completedDaysCount = useMemo(
+    () => weekDays.filter((w) => w.isCompleted).length,
+    [weekDays]
+  );
+
   const saveDailyGoal = (goal: number) => {
     setDailyGoal(goal);
     localStorage.setItem(STORAGE_KEY_GOAL, goal.toString());
@@ -158,7 +257,6 @@ export default function DailyGoalChallengeCard({
         data: { user },
       } = await supabase.auth.getUser();
 
-      // Sauvegarde dans Supabase pour alimenter aussi le compteur global
       await supabase.from("applications").insert([
         {
           user_id: user?.id,
@@ -169,7 +267,6 @@ export default function DailyGoalChallengeCard({
         },
       ]);
 
-      // Incrémentation locale
       const nextPlatforms = platformCountToday + 1;
       setPlatformCountToday(nextPlatforms);
       localStorage.setItem(
@@ -191,26 +288,26 @@ export default function DailyGoalChallengeCard({
   };
 
   return (
-    <div className="mb-8 rounded-2xl border border-orange-200/70 bg-gradient-to-br from-orange-50/40 via-white to-amber-50/20 p-5 shadow-xs sm:p-6">
+    <div className="mb-8 rounded-2xl border border-orange-200/80 bg-gradient-to-br from-orange-50/50 via-white to-amber-50/30 p-5 shadow-xs sm:p-6 transition-all">
       {/* 1. Header du Défi Quotidien */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#ff5722] text-white shadow-sm shadow-orange-500/20">
-            <Target className="h-6 w-6" />
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#ff5722] to-amber-500 text-white shadow-md shadow-orange-500/20">
+            <Flame className="h-6 w-6 fill-white" />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-base font-extrabold text-gray-900 sm:text-lg">
-                Défi Quotidien PFE 2027
+                Défi &amp; Agenda PFE 2027
               </h2>
-              <span className="inline-flex items-center gap-1 rounded-full bg-orange-100/80 px-2.5 py-0.5 text-xs font-bold text-[#ff5722]">
-                <Flame className="h-3.5 w-3.5 fill-[#ff5722]" />
+              <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 px-2.5 py-0.5 text-xs font-black text-white shadow-xs">
+                <Flame className="h-3.5 w-3.5 fill-white" />
                 {streakDays > 0 ? `${streakDays} j de suite` : "Jour 1"}
               </span>
             </div>
             <p className="text-xs text-gray-500">
-              Marché Maroc &amp; Nearshore : <strong className="text-gray-700">15 à 20 candidatures / jour</strong> ={" "}
-              <span className="text-[#ff5722] font-semibold">2 à 3 entretiens par semaine</span> (100 envois/semaine).
+              Marché Maroc &amp; PFE : <strong className="text-gray-700">15 à 20 candidatures / jour</strong> ={" "}
+              <span className="text-[#ff5722] font-semibold">2 à 3 entretiens par semaine</span>.
             </p>
           </div>
         </div>
@@ -283,33 +380,147 @@ export default function DailyGoalChallengeCard({
         </div>
       )}
 
-      {/* 2. Jauge de Progression Animée */}
-      <div className="mt-5">
-        <div className="flex items-end justify-between mb-2">
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black tracking-tight text-gray-900 sm:text-3xl">
-              {totalCompletedToday}
+      {/* 2. AGENDA DE LA SEMAINE (STYLE DUOLINGO STREAK) */}
+      <div className="mt-5 rounded-2xl border border-orange-200/70 bg-white/90 p-4 shadow-xs">
+        <div className="flex items-center justify-between mb-3.5">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-[#ff5722]" />
+            <span className="text-xs font-black uppercase tracking-wider text-gray-700">
+              Agenda de la Semaine
             </span>
-            <span className="text-sm font-semibold text-gray-400">/ {dailyGoal} candidatures</span>
-            <span className="ml-1 text-xs font-bold text-gray-500">({progressPercent}%)</span>
+          </div>
+          <span className="rounded-full bg-orange-50 px-2.5 py-0.5 text-[11px] font-bold text-[#ff5722] border border-orange-200/50">
+            {completedDaysCount}/7 jours validés
+          </span>
+        </div>
+
+        {/* 7 Jours de la semaine (LUN à DIM) */}
+        <div className="grid grid-cols-7 gap-1.5 sm:gap-3 text-center">
+          {weekDays.map((day) => {
+            return (
+              <div
+                key={day.dateStr}
+                className={`flex flex-col items-center justify-between rounded-xl py-2 px-1 transition-all ${
+                  day.isToday
+                    ? "bg-orange-50/80 ring-2 ring-[#ff5722]/60 shadow-xs"
+                    : "hover:bg-gray-50"
+                }`}
+              >
+                {/* Nom du jour */}
+                <span
+                  className={`text-[10px] sm:text-xs font-black tracking-wider ${
+                    day.isToday ? "text-[#ff5722]" : "text-gray-400"
+                  }`}
+                >
+                  {day.dayShort}
+                </span>
+
+                {/* Badge circulaire Duolingo */}
+                <div className="my-1.5 flex items-center justify-center">
+                  {day.isCompleted ? (
+                    // Validé avec Flamme Duolingo
+                    <div className="flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-gradient-to-tr from-[#ff5722] to-amber-500 text-white shadow-sm shadow-orange-500/30 ring-2 ring-orange-200 animate-in zoom-in-75">
+                      <Flame className="h-4 w-4 sm:h-5 sm:w-5 fill-white" />
+                    </div>
+                  ) : day.isToday ? (
+                    // Aujourd'hui en cours
+                    <div className="relative flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-full border-2 border-dashed border-[#ff5722] bg-orange-50/50 text-[#ff5722]">
+                      <span className="text-[10px] sm:text-xs font-black">
+                        {day.count}
+                      </span>
+                      {day.count > 0 && (
+                        <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#ff5722] opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-3 w-3 bg-[#ff5722]"></span>
+                        </span>
+                      )}
+                    </div>
+                  ) : day.isPast ? (
+                    // Passé non complété
+                    <div className="flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-gray-100 text-gray-300">
+                      <span className="text-xs font-bold text-gray-400">•</span>
+                    </div>
+                  ) : (
+                    // Futur
+                    <div className="flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-full border border-gray-200 text-gray-400">
+                      <span className="text-[10px] sm:text-xs font-medium">
+                        {day.dayNum}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Label Date ou "Aujourd'hui" */}
+                {day.isToday ? (
+                  <span className="rounded-full bg-[#ff5722] px-1.5 py-0.2 text-[9px] font-black text-white">
+                    Auj.
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-medium text-gray-400">
+                    {day.dayNum}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Message de Mission Duolingo pour aujourd'hui */}
+        <div className="mt-3.5 flex items-center justify-between rounded-xl bg-gradient-to-r from-orange-100/70 via-amber-50 to-orange-50 px-3.5 py-2.5 border border-orange-200/50">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">
+              {isGoalReached ? "🎉" : totalCompletedToday > 0 ? "⚡" : "🎯"}
+            </span>
+            <div className="text-xs">
+              {isGoalReached ? (
+                <p className="font-bold text-gray-900">
+                  Mission d&apos;aujourd&apos;hui validée !{" "}
+                  <span className="text-emerald-700 font-extrabold">
+                    ({totalCompletedToday}/{dailyGoal})
+                  </span>{" "}
+                  – Ta flamme est allumée ! 🔥
+                </p>
+              ) : (
+                <p className="font-semibold text-gray-800">
+                  Mission du jour :{" "}
+                  <strong className="text-[#ff5722]">
+                    {totalCompletedToday} / {dailyGoal}
+                  </strong>{" "}
+                  candidatures faites •{" "}
+                  <span className="text-gray-600">
+                    Encore {remainingCount} pour valider ta journée !
+                  </span>
+                </p>
+              )}
+            </div>
           </div>
 
-          <div className="text-xs font-medium">
+          <div className="hidden sm:block">
             {isGoalReached ? (
-              <span className="inline-flex items-center gap-1 font-bold text-emerald-600">
-                <CheckCircle2 className="h-4 w-4" />
-                Défi du jour validé ! 🎉
+              <span className="inline-flex items-center gap-1 text-[11px] font-black text-emerald-700">
+                <Check className="h-3.5 w-3.5 stroke-[3]" />
+                COMPLÉTÉ
               </span>
             ) : (
-              <span className="text-gray-600">
-                Encore <strong className="text-[#ff5722]">{remainingCount}</strong> pour valider aujourd&apos;hui
+              <span className="text-[11px] font-bold text-[#ff5722]">
+                {progressPercent}%
               </span>
             )}
           </div>
         </div>
+      </div>
 
-        {/* Barre de progression */}
-        <div className="h-3 w-full overflow-hidden rounded-full bg-gray-200/80 p-0.5">
+      {/* 3. Jauge de Progression de la Journée */}
+      <div className="mt-4">
+        <div className="flex items-end justify-between mb-1.5">
+          <span className="text-xs font-semibold text-gray-500">
+            Avancement aujourd&apos;hui
+          </span>
+          <span className="text-xs font-bold text-gray-700">
+            {totalCompletedToday} sur {dailyGoal} requis ({progressPercent}%)
+          </span>
+        </div>
+        <div className="h-2.5 w-full overflow-hidden rounded-full bg-gray-200/80 p-0.5">
           <div
             className={`h-full rounded-full transition-all duration-500 ${
               isGoalReached
@@ -323,7 +534,7 @@ export default function DailyGoalChallengeCard({
         </div>
       </div>
 
-      {/* 3. Répartition des Actions Réalisées Aujourd'hui */}
+      {/* 4. Répartition des Actions Réalisées Aujourd'hui */}
       <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
         {/* Actions Emails direct MailPilot */}
         <div className="flex items-center justify-between rounded-xl border border-gray-200/80 bg-white/80 px-3.5 py-2.5">
@@ -386,7 +597,7 @@ export default function DailyGoalChallengeCard({
         </div>
       </div>
 
-      {/* 4. Barre d'action rapide en bas */}
+      {/* 5. Barre d'action rapide en bas */}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-orange-100 text-xs">
         <div className="flex items-center gap-1.5 text-gray-600">
           <Sparkles className="h-3.5 w-3.5 text-amber-500" />
