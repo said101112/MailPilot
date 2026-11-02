@@ -18,7 +18,11 @@ import {
   Sparkles,
   Calendar,
   Check,
+  ChevronLeft,
   ChevronRight,
+  Clock,
+  Snowflake,
+  RotateCcw,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -42,6 +46,7 @@ interface WeekDayItem {
   dayShort: string;
   dayFull: string;
   dayNum: number;
+  monthName: string;
   isToday: boolean;
   isPast: boolean;
   isFuture: boolean;
@@ -63,6 +68,12 @@ export default function DailyGoalChallengeCard({
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
 
+  // Décalage de semaine pour naviguer dans l'historique (0 = cette semaine, -1 = semaine passée, +1 = suivante)
+  const [weekOffset, setWeekOffset] = useState<number>(0);
+
+  // Compte à rebours jusqu'à minuit (00h00)
+  const [countdownText, setCountdownText] = useState<string>("");
+
   // Activités locales du jour (plateformes externes + leads sourcés)
   const [platformCountToday, setPlatformCountToday] = useState(0);
   const [leadsCountToday, setLeadsCountToday] = useState(0);
@@ -75,6 +86,23 @@ export default function DailyGoalChallengeCard({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const todayStr = useMemo(() => new Date().toISOString().split("T")[0], []);
+
+  // Compte à rebours temps réel jusqu'à 00h00 (Minuit)
+  useEffect(() => {
+    function updateCountdown() {
+      const now = new Date();
+      const midnight = new Date(now);
+      midnight.setHours(24, 0, 0, 0); // Prochain minuit
+      const diffMs = midnight.getTime() - now.getTime();
+      const hours = Math.floor(diffMs / (1000 * 60 * 60));
+      const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      setCountdownText(`${hours}h ${minutes < 10 ? "0" + minutes : minutes}m`);
+    }
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 30000); // màj toutes les 30s
+    return () => clearInterval(interval);
+  }, []);
 
   // Charger les paramètres et l'état du streak
   useEffect(() => {
@@ -99,7 +127,7 @@ export default function DailyGoalChallengeCard({
       // ignore
     }
 
-    // Calcul du streak
+    // Calcul du streak (se maintient si validé hier ou aujourd'hui)
     try {
       const rawStreak = localStorage.getItem(STORAGE_KEY_STREAK);
       if (rawStreak) {
@@ -108,7 +136,7 @@ export default function DailyGoalChallengeCard({
         if (lastCompletedDate === todayStr || lastCompletedDate === yesterday) {
           setStreakDays(currentStreak || 1);
         } else {
-          // Streak brisé si plus d'un jour d'inactivité
+          // Streak brisé si plus d'un jour d'inactivité avant 00h00
           setStreakDays(0);
         }
       }
@@ -123,7 +151,7 @@ export default function DailyGoalChallengeCard({
   const remainingCount = Math.max(0, dailyGoal - totalCompletedToday);
   const isGoalReached = totalCompletedToday >= dailyGoal;
 
-  // Mise à jour du streak quand l'objectif est franchi
+  // Mise à jour du streak quand l'objectif est franchi avant 00h00
   useEffect(() => {
     if (typeof window === "undefined" || !isGoalReached) return;
 
@@ -155,13 +183,14 @@ export default function DailyGoalChallengeCard({
     }
   }, [isGoalReached, todayStr]);
 
-  // 2. Calcul des 7 jours de la semaine courante (Style Duolingo)
+  // 2. Calcul dynamique et perpétuel des 7 jours de la semaine (avec navigation dans le temps)
   const weekDays = useMemo<WeekDayItem[]>(() => {
     const now = new Date();
     // En JS : 0 = Dimanche, 1 = Lundi, ..., 6 = Samedi. On translate pour que Lundi = 0.
-    const dayOfWeek = (now.getDay() + 6) % 7;
+    const currentDayOfWeek = (now.getDay() + 6) % 7;
     const monday = new Date(now);
-    monday.setDate(now.getDate() - dayOfWeek);
+    // Décalage selon weekOffset pour voyager dans les semaines
+    monday.setDate(now.getDate() - currentDayOfWeek + weekOffset * 7);
 
     const shortLabels = ["LUN", "MAR", "MER", "JEU", "VEN", "SAM", "DIM"];
     const fullLabels = [
@@ -173,16 +202,21 @@ export default function DailyGoalChallengeCard({
       "Samedi",
       "Dimanche",
     ];
+    const monthNames = [
+      "janv.", "févr.", "mars", "avr.", "mai", "juin",
+      "juil.", "août", "sept.", "oct.", "nov.", "déc."
+    ];
 
     const result: WeekDayItem[] = [];
+    const todayYMD = now.toISOString().split("T")[0];
 
     for (let i = 0; i < 7; i++) {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
       const dateStr = d.toISOString().split("T")[0];
-      const isToday = i === dayOfWeek;
-      const isPast = i < dayOfWeek;
-      const isFuture = i > dayOfWeek;
+      const isToday = dateStr === todayYMD;
+      const isPast = dateStr < todayYMD;
+      const isFuture = dateStr > todayYMD;
 
       let count = 0;
       if (isToday) {
@@ -213,6 +247,7 @@ export default function DailyGoalChallengeCard({
         dayShort: shortLabels[i],
         dayFull: fullLabels[i],
         dayNum: d.getDate(),
+        monthName: monthNames[d.getMonth()],
         isToday,
         isPast,
         isFuture,
@@ -222,7 +257,22 @@ export default function DailyGoalChallengeCard({
     }
 
     return result;
-  }, [allApplications, applicationsTodayCount, platformCountToday, dailyGoal]);
+  }, [allApplications, applicationsTodayCount, platformCountToday, dailyGoal, weekOffset]);
+
+  // Label de la semaine en cours d'affichage
+  const weekLabel = useMemo(() => {
+    if (weekDays.length === 0) return "";
+    const first = weekDays[0];
+    const last = weekDays[6];
+    if (weekOffset === 0) {
+      return `Cette semaine (${first.dayNum} ${first.monthName} – ${last.dayNum} ${last.monthName})`;
+    } else if (weekOffset === -1) {
+      return `Semaine précédente (${first.dayNum} ${first.monthName} – ${last.dayNum} ${last.monthName})`;
+    } else if (weekOffset === 1) {
+      return `Semaine prochaine (${first.dayNum} ${first.monthName} – ${last.dayNum} ${last.monthName})`;
+    }
+    return `Semaine du ${first.dayNum} ${first.monthName} au ${last.dayNum} ${last.monthName}`;
+  }, [weekDays, weekOffset]);
 
   const completedDaysCount = useMemo(
     () => weekDays.filter((w) => w.isCompleted).length,
@@ -380,18 +430,50 @@ export default function DailyGoalChallengeCard({
         </div>
       )}
 
-      {/* 2. AGENDA DE LA SEMAINE (STYLE DUOLINGO STREAK) */}
+      {/* 2. AGENDA DE LA SEMAINE (STYLE DUOLINGO STREAK & CYCLE PERPÉTUEL) */}
       <div className="mt-5 rounded-2xl border border-orange-200/70 bg-white/90 p-4 shadow-xs">
-        <div className="flex items-center justify-between mb-3.5">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3.5">
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-[#ff5722]" />
-            <span className="text-xs font-black uppercase tracking-wider text-gray-700">
-              Agenda de la Semaine
+            <span className="text-xs font-black uppercase tracking-wider text-gray-800">
+              {weekLabel}
             </span>
           </div>
-          <span className="rounded-full bg-orange-50 px-2.5 py-0.5 text-[11px] font-bold text-[#ff5722] border border-orange-200/50">
-            {completedDaysCount}/7 jours validés
-          </span>
+
+          <div className="flex items-center gap-1.5 self-end sm:self-auto">
+            {weekOffset !== 0 && (
+              <button
+                onClick={() => setWeekOffset(0)}
+                className="text-[10px] font-bold text-[#ff5722] hover:underline mr-1 inline-flex items-center gap-1"
+                title="Revenir à aujourd'hui"
+              >
+                <RotateCcw className="h-3 w-3" />
+                Aujourd&apos;hui
+              </button>
+            )}
+
+            {/* Navigation entre semaines */}
+            <div className="flex items-center rounded-lg border border-gray-200 bg-gray-50/80 p-0.5">
+              <button
+                onClick={() => setWeekOffset((prev) => prev - 1)}
+                className="rounded-md p-1 text-gray-600 hover:bg-white hover:text-gray-900 transition"
+                title="Semaine précédente"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => setWeekOffset((prev) => prev + 1)}
+                className="rounded-md p-1 text-gray-600 hover:bg-white hover:text-gray-900 transition"
+                title="Semaine suivante"
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            <span className="rounded-full bg-orange-50 px-2.5 py-0.5 text-[11px] font-bold text-[#ff5722] border border-orange-200/50">
+              {completedDaysCount}/7 jours validés
+            </span>
+          </div>
         </div>
 
         {/* 7 Jours de la semaine (LUN à DIM) */}
@@ -402,7 +484,7 @@ export default function DailyGoalChallengeCard({
                 key={day.dateStr}
                 className={`flex flex-col items-center justify-between rounded-xl py-2 px-1 transition-all ${
                   day.isToday
-                    ? "bg-orange-50/80 ring-2 ring-[#ff5722]/60 shadow-xs"
+                    ? "bg-orange-50/80 ring-2 ring-[#ff5722]/70 shadow-xs"
                     : "hover:bg-gray-50"
                 }`}
               >
@@ -418,13 +500,19 @@ export default function DailyGoalChallengeCard({
                 {/* Badge circulaire Duolingo */}
                 <div className="my-1.5 flex items-center justify-center">
                   {day.isCompleted ? (
-                    // Validé avec Flamme Duolingo
-                    <div className="flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-gradient-to-tr from-[#ff5722] to-amber-500 text-white shadow-sm shadow-orange-500/30 ring-2 ring-orange-200 animate-in zoom-in-75">
+                    // 1. Validé avec Flamme Duolingo
+                    <div
+                      className="flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-gradient-to-tr from-[#ff5722] to-amber-500 text-white shadow-sm shadow-orange-500/30 ring-2 ring-orange-200 animate-in zoom-in-75"
+                      title={`${day.dayFull} : Validé (${day.count}/${dailyGoal})`}
+                    >
                       <Flame className="h-4 w-4 sm:h-5 sm:w-5 fill-white" />
                     </div>
                   ) : day.isToday ? (
-                    // Aujourd'hui en cours
-                    <div className="relative flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-full border-2 border-dashed border-[#ff5722] bg-orange-50/50 text-[#ff5722]">
+                    // 2. Aujourd'hui en cours avec compteurs et pulsion
+                    <div
+                      className="relative flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-full border-2 border-dashed border-[#ff5722] bg-orange-50/50 text-[#ff5722]"
+                      title={`Aujourd'hui : ${day.count}/${dailyGoal} faites`}
+                    >
                       <span className="text-[10px] sm:text-xs font-black">
                         {day.count}
                       </span>
@@ -436,13 +524,25 @@ export default function DailyGoalChallengeCard({
                       )}
                     </div>
                   ) : day.isPast ? (
-                    // Passé non complété
-                    <div className="flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-gray-100 text-gray-300">
-                      <span className="text-xs font-bold text-gray-400">•</span>
+                    // 3. Passé et non complété avant 00h00 (Flocon / Jour gelé style Duolingo)
+                    <div
+                      className="flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-gray-100 text-gray-400 border border-gray-200/80"
+                      title={`${day.dayFull} ${day.dayNum} : Non validé avant minuit (${day.count}/${dailyGoal})`}
+                    >
+                      {day.count > 0 ? (
+                        <span className="text-[10px] font-semibold text-gray-500">
+                          {day.count}
+                        </span>
+                      ) : (
+                        <Snowflake className="h-3.5 w-3.5 text-blue-300" />
+                      )}
                     </div>
                   ) : (
-                    // Futur
-                    <div className="flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-full border border-gray-200 text-gray-400">
+                    // 4. Futur
+                    <div
+                      className="flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-full border border-gray-200 text-gray-400"
+                      title={`${day.dayFull} ${day.dayNum} ${day.monthName}`}
+                    >
                       <span className="text-[10px] sm:text-xs font-medium">
                         {day.dayNum}
                       </span>
@@ -465,8 +565,8 @@ export default function DailyGoalChallengeCard({
           })}
         </div>
 
-        {/* Message de Mission Duolingo pour aujourd'hui */}
-        <div className="mt-3.5 flex items-center justify-between rounded-xl bg-gradient-to-r from-orange-100/70 via-amber-50 to-orange-50 px-3.5 py-2.5 border border-orange-200/50">
+        {/* Message de Mission & Compte à rebours avant 00h00 */}
+        <div className="mt-3.5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-xl bg-gradient-to-r from-orange-100/70 via-amber-50 to-orange-50 px-3.5 py-2.5 border border-orange-200/50">
           <div className="flex items-center gap-2">
             <span className="text-lg">
               {isGoalReached ? "🎉" : totalCompletedToday > 0 ? "⚡" : "🎯"}
@@ -474,11 +574,11 @@ export default function DailyGoalChallengeCard({
             <div className="text-xs">
               {isGoalReached ? (
                 <p className="font-bold text-gray-900">
-                  Mission d&apos;aujourd&apos;hui validée !{" "}
+                  Mission du jour validée !{" "}
                   <span className="text-emerald-700 font-extrabold">
                     ({totalCompletedToday}/{dailyGoal})
                   </span>{" "}
-                  – Ta flamme est allumée ! 🔥
+                  – Ta flamme est gravée avant 00h00 ! 🔥
                 </p>
               ) : (
                 <p className="font-semibold text-gray-800">
@@ -488,14 +588,20 @@ export default function DailyGoalChallengeCard({
                   </strong>{" "}
                   candidatures faites •{" "}
                   <span className="text-gray-600">
-                    Encore {remainingCount} pour valider ta journée !
+                    Encore {remainingCount} pour allumer la flamme !
                   </span>
                 </p>
               )}
             </div>
           </div>
 
-          <div className="hidden sm:block">
+          <div className="flex items-center gap-2 self-end sm:self-auto">
+            {/* Compteur temps restant avant Minuit */}
+            <div className="inline-flex items-center gap-1 rounded-md bg-white/80 px-2 py-0.5 text-[11px] font-semibold text-gray-600 border border-orange-200/40">
+              <Clock className="h-3 w-3 text-orange-500" />
+              <span>{countdownText} avant 00h00</span>
+            </div>
+
             {isGoalReached ? (
               <span className="inline-flex items-center gap-1 text-[11px] font-black text-emerald-700">
                 <Check className="h-3.5 w-3.5 stroke-[3]" />
