@@ -8,6 +8,7 @@ import {
   Ban,
   CheckCircle2,
   CheckSquare,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ClipboardPaste,
@@ -211,8 +212,29 @@ export default function UploadPage() {
   const [integrationStatus, setIntegrationStatus] =
     useState<IntegrationStatusResponse | null>(null);
   const [withdrawnEmails, setWithdrawnEmails] = useState<Set<string>>(new Set());
+  const [isTemplateDropdownOpen, setIsTemplateDropdownOpen] = useState(false);
   const ROWS_PER_PAGE = 10;
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const currentTplId = selectedTemplateId || templates[0]?.id || DEFAULT_TEMPLATES[0].id;
+  const isDataTrack = currentTplId.includes("data");
+  const isEnglishLang = currentTplId.includes("_en");
+
+  const handleSelectTrack = (track: "dev" | "data") => {
+    if (track === "dev") {
+      setSelectedTemplateId(isEnglishLang ? "pfe_dev_en" : "pfe_dev_fr");
+    } else {
+      setSelectedTemplateId(isEnglishLang ? "pfe_data_ai_en" : "pfe_data_ai_fr");
+    }
+  };
+
+  const handleSelectLang = (lang: "fr" | "en") => {
+    if (lang === "fr") {
+      setSelectedTemplateId(isDataTrack ? "pfe_data_ai_fr" : "pfe_dev_fr");
+    } else {
+      setSelectedTemplateId(isDataTrack ? "pfe_data_ai_en" : "pfe_dev_en");
+    }
+  };
 
   useEffect(() => {
     const syncCvLib = () => {
@@ -943,19 +965,154 @@ export default function UploadPage() {
                   <span className="max-w-[200px] truncate">{fileName}</span>
                 </div>
 
-                <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                  <span>Template:</span>
-                  <select
-                    className="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-800 outline-none focus:border-[#ff5722]"
-                    value={selectedTemplateId || activeTemplate.id}
-                    onChange={(e) => setSelectedTemplateId(e.target.value)}
-                  >
-                    {templates.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {formatTemplateName(t)}
-                      </option>
-                    ))}
-                  </select>
+                {/* Modern Track & Language Selector */}
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Track Switcher (Dév vs Data) */}
+                  <div className="flex items-center rounded-lg border border-gray-200 bg-gray-50/80 p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectTrack("dev")}
+                      className={cn(
+                        "flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold transition cursor-pointer",
+                        !isDataTrack
+                          ? "bg-white text-blue-600 shadow-2xs border border-blue-200/80 font-bold"
+                          : "text-gray-500 hover:text-gray-800"
+                      )}
+                      title="Profil Développement Logiciel, Full Stack & IA"
+                    >
+                      <span>💻 Dév Full Stack</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectTrack("data")}
+                      className={cn(
+                        "flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold transition cursor-pointer",
+                        isDataTrack
+                          ? "bg-white text-emerald-600 shadow-2xs border border-emerald-200/80 font-bold"
+                          : "text-gray-500 hover:text-gray-800"
+                      )}
+                      title="Profil Data Science & Intelligence Artificielle"
+                    >
+                      <span>🤖 Data & IA</span>
+                    </button>
+                  </div>
+
+                  {/* Language Switcher (FR vs EN) */}
+                  <div className="flex items-center rounded-lg border border-gray-200 bg-gray-50/80 p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectLang("fr")}
+                      className={cn(
+                        "rounded-md px-2 py-1 text-xs font-bold transition cursor-pointer",
+                        !isEnglishLang
+                          ? "bg-blue-600 text-white shadow-2xs"
+                          : "text-gray-500 hover:text-gray-800"
+                      )}
+                      title="Version Française (FR)"
+                    >
+                      FR
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectLang("en")}
+                      className={cn(
+                        "rounded-md px-2 py-1 text-xs font-bold transition cursor-pointer",
+                        isEnglishLang
+                          ? "bg-indigo-600 text-white shadow-2xs"
+                          : "text-gray-500 hover:text-gray-800"
+                      )}
+                      title="English Version (EN)"
+                    >
+                      EN
+                    </button>
+                  </div>
+
+                  {/* Dropdown Menu for Full Details / Relances */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsTemplateDropdownOpen(!isTemplateDropdownOpen)}
+                      className="flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 transition"
+                    >
+                      <span className="max-w-[140px] truncate text-[11px] font-semibold text-gray-800">
+                        {templates.find((t) => t.id === currentTplId)?.name || "Modèle"}
+                      </span>
+                      <ChevronDown className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                    </button>
+
+                    {isTemplateDropdownOpen && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-40"
+                          onClick={() => setIsTemplateDropdownOpen(false)}
+                        />
+                        <div className="absolute left-0 sm:right-0 sm:left-auto top-[calc(100%+6px)] z-50 w-72 rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl animate-in fade-in zoom-in-95 duration-100">
+                          <div className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                            Candidatures PFE 2027
+                          </div>
+                          {templates
+                            .filter((t) => t.id.startsWith("pfe_"))
+                            .map((t) => (
+                              <button
+                                key={t.id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedTemplateId(t.id);
+                                  setIsTemplateDropdownOpen(false);
+                                }}
+                                className={cn(
+                                  "flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs text-left transition",
+                                  t.id === currentTplId
+                                    ? "bg-blue-50 text-blue-700 font-semibold"
+                                    : "text-gray-700 hover:bg-gray-50"
+                                )}
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="truncate">{t.name}</span>
+                                    <span className="rounded bg-gray-100 px-1 py-0.2 text-[9px] font-bold text-gray-600">
+                                      {t.id.includes("_en") ? "EN" : "FR"}
+                                    </span>
+                                  </div>
+                                  <p className="truncate text-[10px] text-gray-400">{t.subject}</p>
+                                </div>
+                                {t.id === currentTplId && (
+                                  <span className="text-blue-600 font-bold ml-1">✓</span>
+                                )}
+                              </button>
+                            ))}
+
+                          <div className="my-1 border-t border-gray-100" />
+                          <div className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                            Relances & Suivis
+                          </div>
+                          {templates
+                            .filter((t) => !t.id.startsWith("pfe_"))
+                            .map((t) => (
+                              <button
+                                key={t.id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedTemplateId(t.id);
+                                  setIsTemplateDropdownOpen(false);
+                                }}
+                                className={cn(
+                                  "flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs text-left transition",
+                                  t.id === currentTplId
+                                    ? "bg-amber-50 text-amber-800 font-semibold"
+                                    : "text-gray-700 hover:bg-gray-50"
+                                )}
+                              >
+                                <span className="truncate">{t.name}</span>
+                                {t.id === currentTplId && (
+                                  <span className="text-amber-600 font-bold ml-1">✓</span>
+                                )}
+                              </button>
+                            ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {/* Global CV Selector */}

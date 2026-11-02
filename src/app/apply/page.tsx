@@ -160,6 +160,23 @@ export default function ApplyPage() {
     }
   };
 
+  const isDataTrack = selectedTemplateId?.includes("data");
+  const isEnglishLang = selectedTemplateId?.includes("_en");
+
+  const handleSelectTrack = (track: "dev" | "data") => {
+    const nextId = track === "dev"
+      ? (isEnglishLang ? "pfe_dev_en" : "pfe_dev_fr")
+      : (isEnglishLang ? "pfe_data_ai_en" : "pfe_data_ai_fr");
+    handleSelectTemplate(nextId);
+  };
+
+  const handleSelectLang = (lang: "fr" | "en") => {
+    const nextId = lang === "fr"
+      ? (isDataTrack ? "pfe_data_ai_fr" : "pfe_dev_fr")
+      : (isDataTrack ? "pfe_data_ai_en" : "pfe_dev_en");
+    handleSelectTemplate(nextId);
+  };
+
   const handleOpenCustomModal = () => {
     const current = templates.find((t) => t.id === selectedTemplateId) || DEFAULT_TEMPLATES[0];
     setTempSubject(isCustomized ? customSubject : (customSubject || current.subject));
@@ -752,7 +769,71 @@ export default function ApplyPage() {
               </div>
 
               <div className="space-y-2 relative">
-                <label className="editorial-label">Select Template</label>
+                <div className="flex items-center justify-between">
+                  <label className="editorial-label !mb-0">Modèle de candidature (Email & Lettre)</label>
+                  <div className="flex items-center gap-1.5">
+                    {/* Track Quick Switcher */}
+                    <div className="flex items-center rounded-lg border border-gray-200 bg-gray-50/80 p-0.5">
+                      <button
+                        type="button"
+                        onClick={() => handleSelectTrack("dev")}
+                        className={cn(
+                          "rounded-md px-2 py-0.5 text-[11px] font-semibold transition cursor-pointer",
+                          !isDataTrack
+                            ? "bg-white text-blue-600 shadow-2xs border border-blue-200/80 font-bold"
+                            : "text-gray-500 hover:text-gray-800"
+                        )}
+                        title="Profil Dév Full Stack"
+                      >
+                        💻 Dév
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectTrack("data")}
+                        className={cn(
+                          "rounded-md px-2 py-0.5 text-[11px] font-semibold transition cursor-pointer",
+                          isDataTrack
+                            ? "bg-white text-emerald-600 shadow-2xs border border-emerald-200/80 font-bold"
+                            : "text-gray-500 hover:text-gray-800"
+                        )}
+                        title="Profil Data Science & IA"
+                      >
+                        🤖 Data
+                      </button>
+                    </div>
+
+                    {/* Language Quick Switcher */}
+                    <div className="flex items-center rounded-lg border border-gray-200 bg-gray-50/80 p-0.5">
+                      <button
+                        type="button"
+                        onClick={() => handleSelectLang("fr")}
+                        className={cn(
+                          "rounded-md px-1.5 py-0.5 text-[10.5px] font-bold transition cursor-pointer",
+                          !isEnglishLang
+                            ? "bg-blue-600 text-white shadow-2xs"
+                            : "text-gray-500 hover:text-gray-800"
+                        )}
+                        title="Français"
+                      >
+                        FR
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectLang("en")}
+                        className={cn(
+                          "rounded-md px-1.5 py-0.5 text-[10.5px] font-bold transition cursor-pointer",
+                          isEnglishLang
+                            ? "bg-indigo-600 text-white shadow-2xs"
+                            : "text-gray-500 hover:text-gray-800"
+                        )}
+                        title="English"
+                      >
+                        EN
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
                 <button
                   className="editorial-input flex w-full items-center justify-between text-left transition-shadow"
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}

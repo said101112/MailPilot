@@ -1,18 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Download, FileText, Settings, X, Check, Eye } from "lucide-react";
+import { Download, FileText, Settings, X, Check, Eye, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import {
   generateCoverLetterPdf,
   getStoredCandidateProfile,
   saveStoredCandidateProfile,
 } from "@/lib/coverLetterPdf";
+import { DEFAULT_TEMPLATES, type MessageTemplate } from "@/lib/templates";
+import { cn } from "@/lib/utils";
 
 interface CoverLetterModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultTemplate?: {
+    id?: string;
     name: string;
     subject: string;
     message: string;
@@ -27,23 +30,39 @@ export function CoverLetterModal({
   onClose,
   defaultTemplate,
   initialCompany = "Capgemini",
-  initialPosition = "Stage PFE / Emploi",
+  initialPosition = "Stage PFE",
   initialContactName = "Hiring Manager",
 }: CoverLetterModalProps) {
   const [profile, setProfile] = useState(getStoredCandidateProfile);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
 
+  const [activeVersionId, setActiveVersionId] = useState<string>(() => {
+    if (defaultTemplate?.id && DEFAULT_TEMPLATES.some((t) => t.id === defaultTemplate.id)) {
+      return defaultTemplate.id;
+    }
+    const subj = (defaultTemplate?.subject || "").toLowerCase();
+    const isEn = subj.includes("application") || subj.includes("internship");
+    const isData = subj.includes("data") || subj.includes("intelligence");
+    if (isData) return isEn ? "pfe_data_ai_en" : "pfe_data_ai_fr";
+    return isEn ? "pfe_dev_en" : "pfe_dev_fr";
+  });
+
   const [company, setCompany] = useState(initialCompany);
-  const [position, setPosition] = useState(initialPosition);
+  const [position, setPosition] = useState(() => {
+    return initialPosition || "Stage PFE";
+  });
+  const [subjectText, setSubjectText] = useState(
+    defaultTemplate?.subject || DEFAULT_TEMPLATES[0].subject
+  );
   const [contactName, setContactName] = useState(initialContactName);
   const [messageBody, setMessageBody] = useState(
-    defaultTemplate?.message ||
-      "Actuellement élève-ingénieur en dernière année de Génie Informatique à l’École Nationale des Sciences Appliquées de Tanger (ENSA Tanger), je suis à la recherche d’un stage de fin d’études (PFE) de 4 à 6 mois à partir de février 2027 en tant que [Position].\n\nOrienté Software Engineering et développement Full Stack, je conçois des architectures applicatives fiables, évolutives et maintenables. Mon socle technique s'articule notamment autour de Java / Spring Boot, JavaScript / TypeScript, React, Node.js, Angular, les architectures microservices, les API REST, ainsi que les technologies Cloud et DevOps (Docker, CI/CD). Je m’intéresse également à l’intégration de modèles d’intelligence artificielle dans les applications pour répondre à des besoins concrets.\n\nÀ travers mes réalisations académiques et projets personnels — notamment le développement de NextStep AI, une plateforme intelligente où j’ai pris en charge la conception backend et l’intégration de fonctionnalités IA —, j’ai développé une solide culture d’ingénierie, un esprit d’analyse rigoureux et une réelle aisance pour le travail collaboratif.\n\nRejoindre [Company] représente pour moi l’opportunité idéale d'apporter ma réactivité technique, de m'investir sur des projets à fort impact et de progresser au sein de vos équipes.\n\nVous trouverez mon CV en pièce jointe ainsi que mes projets (Portfolio : https://said-nichan-three.vercel.app | GitHub : https://github.com/said101112 | LinkedIn : https://linkedin.com/in/nichan-said-940810313).\n\nJe serais ravi de pouvoir échanger avec vous lors d'un entretien afin de vous détailler ma motivation et la valeur que je peux apporter à [Company]."
+    defaultTemplate?.message || DEFAULT_TEMPLATES[0].message
   );
 
   useEffect(() => {
     if (defaultTemplate?.message) {
       setMessageBody(defaultTemplate.message);
+      if (defaultTemplate.subject) setSubjectText(defaultTemplate.subject);
     }
   }, [defaultTemplate]);
 
@@ -52,6 +71,27 @@ export function CoverLetterModal({
     if (initialPosition) setPosition(initialPosition);
     if (initialContactName) setContactName(initialContactName);
   }, [initialCompany, initialPosition, initialContactName]);
+
+  const handleSelectVersion = (versionId: string) => {
+    setActiveVersionId(versionId);
+    const target = DEFAULT_TEMPLATES.find((t) => t.id === versionId);
+    if (target) {
+      setMessageBody(target.message);
+      setSubjectText(target.subject);
+      const isData = target.id.includes("data");
+      const isEn = target.id.includes("_en");
+      setPosition(
+        isData
+          ? isEn
+            ? "Final-Year Internship – Data Science & AI"
+            : "Stage PFE – Data Science & Intelligence Artificielle"
+          : isEn
+          ? "Final-Year Internship – Software Engineering & AI"
+          : "Stage PFE – Développement Full Stack, IA & DevOps"
+      );
+      toast.info(`Lettre basculée sur : ${target.name}`);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -72,6 +112,7 @@ export function CoverLetterModal({
         company: company.trim() || "Entreprise",
         position: position.trim() || "Poste",
         contactName: contactName.trim() || "Madame, Monsieur",
+        subject: subjectText,
         body: messageBody,
       });
 
@@ -95,6 +136,7 @@ export function CoverLetterModal({
         company: company.trim() || "Entreprise",
         position: position.trim() || "Poste",
         contactName: contactName.trim() || "Madame, Monsieur",
+        subject: subjectText,
         body: messageBody,
       });
 
@@ -114,7 +156,7 @@ export function CoverLetterModal({
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-[rgba(9,12,16,0.65)] p-4 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="flex w-full max-w-[620px] flex-col max-h-[92vh] rounded-[20px] border border-[var(--editorial-border)] bg-white shadow-[0_30px_90px_rgba(15,23,42,0.3)]">
+      <div className="flex w-full max-w-[640px] flex-col max-h-[92vh] rounded-[20px] border border-[var(--editorial-border)] bg-white shadow-[0_30px_90px_rgba(15,23,42,0.3)]">
         {/* Modal Header */}
         <div className="flex shrink-0 items-center justify-between border-b border-[var(--editorial-border)] px-6 py-4.5">
           <div className="flex items-center gap-3">
@@ -123,7 +165,7 @@ export function CoverLetterModal({
             </div>
             <div>
               <p className="text-[11px] font-bold uppercase tracking-widest text-blue-600">
-                GÉNÉRATEUR DE LETTRE FORMELLE
+                GÉNÉRATEUR DE LETTRE FORMELLE PFE 2027
               </p>
               <h2 className="text-lg font-bold text-[var(--editorial-text)]">
                 Lettre de Motivation en PDF (1-Clic)
@@ -142,6 +184,74 @@ export function CoverLetterModal({
 
         {/* Modal Body */}
         <div className="flex-1 overflow-y-auto space-y-4 px-6 py-5">
+          {/* 4 Version Switcher Bar */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-[10.5px] font-bold uppercase tracking-wider text-slate-500">
+                Modèle de lettre ciblé :
+              </label>
+              <span className="text-[11px] text-blue-600 font-medium">
+                4 versions spécialisées
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <button
+                type="button"
+                onClick={() => handleSelectVersion("pfe_dev_fr")}
+                className={cn(
+                  "flex flex-col items-center justify-center p-2 rounded-xl border text-center transition-all cursor-pointer",
+                  activeVersionId === "pfe_dev_fr"
+                    ? "border-blue-500 bg-blue-50/90 text-blue-700 shadow-2xs font-semibold ring-1 ring-blue-500"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                )}
+              >
+                <span className="text-xs">🇫🇷 Dév Full Stack</span>
+                <span className="text-[10px] text-slate-400">Français</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSelectVersion("pfe_dev_en")}
+                className={cn(
+                  "flex flex-col items-center justify-center p-2 rounded-xl border text-center transition-all cursor-pointer",
+                  activeVersionId === "pfe_dev_en"
+                    ? "border-indigo-500 bg-indigo-50/90 text-indigo-700 shadow-2xs font-semibold ring-1 ring-indigo-500"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                )}
+              >
+                <span className="text-xs">🇬🇧 Software Eng</span>
+                <span className="text-[10px] text-slate-400">English</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSelectVersion("pfe_data_ai_fr")}
+                className={cn(
+                  "flex flex-col items-center justify-center p-2 rounded-xl border text-center transition-all cursor-pointer",
+                  activeVersionId === "pfe_data_ai_fr"
+                    ? "border-emerald-500 bg-emerald-50/90 text-emerald-700 shadow-2xs font-semibold ring-1 ring-emerald-500"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                )}
+              >
+                <span className="text-xs">🇫🇷 Data & IA</span>
+                <span className="text-[10px] text-slate-400">Français</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSelectVersion("pfe_data_ai_en")}
+                className={cn(
+                  "flex flex-col items-center justify-center p-2 rounded-xl border text-center transition-all cursor-pointer",
+                  activeVersionId === "pfe_data_ai_en"
+                    ? "border-teal-500 bg-teal-50/90 text-teal-700 shadow-2xs font-semibold ring-1 ring-teal-500"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                )}
+              >
+                <span className="text-xs">🇬🇧 Data & AI</span>
+                <span className="text-[10px] text-slate-400">English</span>
+              </button>
+            </div>
+          </div>
           {/* Header Profile Info Bar */}
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
             <div className="flex items-center justify-between">

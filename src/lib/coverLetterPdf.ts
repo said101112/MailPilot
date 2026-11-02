@@ -122,70 +122,83 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
   const leftMargin = 22;
   const pageWidth = 210;
   const contentWidth = 166; // 210 - 22 * 2
+  const rightX = pageWidth - leftMargin;
+
+  // 0. Liseré supérieur élégant (Bandeau de marque moderne)
+  doc.setFillColor(37, 99, 235); // Royal Blue #2563eb
+  doc.rect(0, 0, 210, 3.5, "F");
 
   // 1. En-tête Candidat (Haut Gauche)
-  let y = 22;
+  let y = 19;
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
+  doc.setFontSize(13);
   doc.setTextColor(15, 23, 42); // slate-900
-  doc.text(name, leftMargin, y);
+  doc.text(name.toUpperCase(), leftMargin, y);
 
   if (title) {
-    y += 5;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
+    y += 5.2;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9.5);
     doc.setTextColor(37, 99, 235); // royal-blue
     doc.text(title, leftMargin, y);
   }
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(8.5);
+  doc.setFontSize(8.2);
   doc.setTextColor(100, 116, 139); // slate-500
 
   const contactPieces = [city, email, phone].filter(Boolean);
   if (contactPieces.length > 0) {
     y += 4.5;
-    doc.text(contactPieces.join("  |  "), leftMargin, y);
+    doc.text(contactPieces.join("   •   "), leftMargin, y);
   }
 
+  // Ligne de portfolio & profils
+  y += 4;
+  doc.setFontSize(7.8);
+  doc.setTextColor(148, 163, 184); // slate-400
+  doc.text("Portfolio : said-nichan-three.vercel.app   •   GitHub : said101112   •   LinkedIn : said-nichan", leftMargin, y);
+
   // 2. Destinataire & Date (Haut Droite)
-  const rightX = pageWidth - leftMargin;
-  let rightY = 22;
+  let rightY = 18;
+  const boxWidth = 68;
+  const boxHeight = 22;
+  const boxX = rightX - boxWidth;
+
+  // Fond cartouche récepteur discret
+  doc.setFillColor(248, 250, 252); // slate-50
+  doc.setDrawColor(226, 232, 240); // slate-200
+  doc.setLineWidth(0.3);
+  doc.roundedRect(boxX, rightY, boxWidth, boxHeight, 2.5, 2.5, "FD");
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(8.5);
+  doc.setFontSize(7.8);
   doc.setTextColor(100, 116, 139);
   doc.text(
-    isEnglish ? "To the attention of the Hiring Team" : "À l'attention de l'équipe de Recrutement",
-    rightX,
-    rightY,
-    { align: "right" }
+    isEnglish ? "To the attention of the Hiring Team" : "À l'attention de l'équipe Recrutement",
+    boxX + 4,
+    rightY + 6
   );
 
-  rightY += 5;
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(10.5);
+  doc.setFontSize(10);
   doc.setTextColor(15, 23, 42);
-  doc.text(company, rightX, rightY, { align: "right" });
+  const companyLines = doc.splitTextToSize(company, boxWidth - 8);
+  doc.text(companyLines[0], boxX + 4, rightY + 11.5);
 
-  rightY += 4.5;
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(8.5);
+  doc.setFontSize(8);
   doc.setTextColor(100, 116, 139);
-  doc.text(dateFormatted, rightX, rightY, { align: "right" });
+  doc.text(dateFormatted, boxX + 4, rightY + 17.5);
 
-  // 3. Filet de séparation
-  y = Math.max(y + 7, rightY + 7);
+  // 3. Filet séparateur subtil
+  y = Math.max(y + 6, rightY + boxHeight + 4);
   doc.setDrawColor(226, 232, 240); // slate-200
   doc.setLineWidth(0.4);
   doc.line(leftMargin, y, rightX, y);
 
-  // 4. Objet de la lettre
+  // 4. Objet de la lettre (avec barre d'accentuation verticale moderne)
   y += 8;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
-  doc.setTextColor(15, 23, 42);
-
   let objectText = opts.subject || "";
   if (!objectText) {
     objectText = isEnglish
@@ -194,11 +207,19 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
   } else if (!objectText.toLowerCase().startsWith("objet") && !objectText.toLowerCase().startsWith("subject")) {
     objectText = isEnglish ? `Subject: ${objectText}` : `Objet : ${objectText}`;
   }
-  doc.text(objectText, leftMargin, y);
+
+  // Barre d'accentuation verticale
+  doc.setFillColor(37, 99, 235);
+  doc.rect(leftMargin, y - 3.8, 2.5, 6.2, "F");
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9.8);
+  doc.setTextColor(15, 23, 42);
+  doc.text(objectText, leftMargin + 5.5, y);
 
   // 5. Formule d'appel
-  y += 8;
-  doc.setFont("helvetica", "normal");
+  y += 8.5;
+  doc.setFont("helvetica", "bold");
   doc.setFontSize(9.5);
   doc.setTextColor(30, 41, 59); // slate-800
 
@@ -209,7 +230,7 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
   doc.text(salutation, leftMargin, y);
 
   // 6. Corps de la lettre (nettoyage des doublons/en-têtes redondants)
-  y += 6;
+  y += 5.5;
   const cleanBody = rawBody
     .replace(/\[Company\]/g, company)
     .replace(/\[Position\]/g, position)
@@ -246,31 +267,37 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
     }
 
     const isBullet = trimmed.startsWith("•") || trimmed.startsWith("-");
-    const indent = isBullet ? leftMargin + 3 : leftMargin;
-    const maxWidth = isBullet ? contentWidth - 3 : contentWidth;
+    const indent = isBullet ? leftMargin + 4 : leftMargin;
+    const maxWidth = isBullet ? contentWidth - 4 : contentWidth;
 
-    doc.setFont("helvetica", isBullet ? "normal" : "normal");
-    doc.setFontSize(9.2);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
     doc.setTextColor(30, 41, 59);
 
     const lines = doc.splitTextToSize(trimmed, maxWidth);
 
     // Vérification saut de page
-    if (y + lines.length * 4.6 > 275) {
+    if (y + lines.length * 4.4 > 268) {
       doc.addPage();
-      y = 22;
+      y = 20;
+    }
+
+    if (isBullet) {
+      // Petite puce stylisée
+      doc.setFillColor(37, 99, 235);
+      doc.circle(leftMargin + 1.5, y - 1, 0.8, "F");
     }
 
     doc.text(lines, indent, y);
-    y += lines.length * 4.6 + (isBullet ? 2 : 3);
+    y += lines.length * 4.4 + (isBullet ? 2 : 3);
   }
 
   // 7. Formule de politesse finale
-  if (y + 24 > 275) {
+  if (y + 22 > 268) {
     doc.addPage();
-    y = 22;
+    y = 20;
   } else {
-    y += 2;
+    y += 1.5;
   }
 
   const closing = isEnglish
@@ -278,17 +305,40 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
     : "Je serais ravi de pouvoir échanger avec vous lors d’un entretien. Je vous remercie pour votre attention et vous prie d’agréer, Madame, Monsieur, l’expression de mes salutations distinguées.";
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(9.2);
+  doc.setFontSize(9);
   doc.setTextColor(30, 41, 59);
   const closingLines = doc.splitTextToSize(closing, contentWidth);
   doc.text(closingLines, leftMargin, y);
-  y += closingLines.length * 4.6 + 6;
+  y += closingLines.length * 4.4 + 6;
 
   // 8. Signature
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
+  doc.setFontSize(10.5);
   doc.setTextColor(15, 23, 42);
   doc.text(name, rightX, y, { align: "right" });
+
+  y += 4.5;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.2);
+  doc.setTextColor(100, 116, 139);
+  doc.text(
+    isEnglish ? "Candidate – Final-Year Engineering" : "Élève-Ingénieur Génie Informatique (ENSA Tanger)",
+    rightX,
+    y,
+    { align: "right" }
+  );
+
+  // 9. Pied de page discret
+  const footerY = 286;
+  doc.setDrawColor(241, 245, 249); // slate-100
+  doc.setLineWidth(0.3);
+  doc.line(leftMargin, footerY - 3, rightX, footerY - 3);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.5);
+  doc.setTextColor(148, 163, 184);
+  doc.text("Saïd NICHAN • ENSA Tanger • Stage de Fin d'Études (PFE 2027)", leftMargin, footerY);
+  doc.text("Page 1/1", rightX, footerY, { align: "right" });
 
   const safeCompany = company.replace(/[^a-zA-Z0-9_-]/g, "_");
   const prefix = isDataAi ? "Data_AI" : "Dev";
