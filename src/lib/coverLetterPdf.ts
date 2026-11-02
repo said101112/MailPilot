@@ -260,7 +260,7 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
     const trimmed = para.trim();
     const lower = trimmed.toLowerCase();
 
-    // Ignorer les lignes de headers redondants
+    // Ignorer les lignes de headers, coordonnées, liens redondants et formules de fin
     if (
       lower === name.toLowerCase() ||
       lower.includes("saidnichan6@gmail.com") ||
@@ -273,12 +273,32 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
       lower.startsWith("dear hiring team") ||
       lower.startsWith("dear ") ||
       lower.startsWith("bonjour ") ||
+      // Supprimer les liens redondants avec l'en-tête (portfolio, github, linkedin)
+      lower.includes("consulter mes réalisations") ||
+      lower.includes("explore my projects") ||
+      lower.includes("said-nichan-three.vercel.app") ||
+      lower.includes("github.com/said101112") ||
+      lower.includes("linkedin.com/in/nichan") ||
+      lower.startsWith("• portfolio") ||
+      lower.startsWith("- portfolio") ||
+      lower.startsWith("• github") ||
+      lower.startsWith("- github") ||
+      lower.startsWith("• linkedin") ||
+      lower.startsWith("- linkedin") ||
+      // Supprimer les formules de clôture pour éviter la duplication
+      lower.includes("je serais ravi de pouvoir échanger") ||
+      lower.includes("would welcome the opportunity to discuss") ||
+      lower.includes("thank you for your time and consideration") ||
+      lower.includes("salutations distinguées") ||
+      lower.includes("je vous remercie pour votre attention") ||
+      lower.includes("je vous prie d’agréer") ||
+      lower.includes("je vous prie d'agréer") ||
+      lower.includes("dans l'attente d'un échange") ||
+      lower.includes("dans l'attente de votre retour") ||
       lower.startsWith("kind regards") ||
       lower.startsWith("bien cordialement") ||
-      lower.startsWith("sincerely") ||
-      lower.startsWith("je vous prie d’agréer") ||
-      lower.startsWith("je vous prie d'agréer") ||
-      lower.startsWith("dans l'attente d'un échange")
+      lower.startsWith("cordialement") ||
+      lower.startsWith("sincerely")
     ) {
       continue;
     }
