@@ -255,7 +255,8 @@ export default function UploadPage() {
       const stored = getStoredTemplates();
       setTemplates(stored);
       if (stored.length > 0) {
-        setSelectedTemplateId((prev) => prev || stored[0].id);
+        const defaultDevId = stored.find((t) => t.id === "pfe_dev_fr")?.id;
+        setSelectedTemplateId((prev) => prev || defaultDevId || stored[0].id);
       }
     };
 

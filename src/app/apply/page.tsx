@@ -112,7 +112,10 @@ export default function ApplyPage() {
     const syncInitialState = () => {
       const nextTemplates = getStoredTemplates();
       setTemplates(nextTemplates);
-      const initialTpl = nextTemplates[0] ?? DEFAULT_TEMPLATES[0];
+      const initialTpl =
+        nextTemplates.find((t) => t.id === "pfe_dev_fr") ??
+        nextTemplates[0] ??
+        DEFAULT_TEMPLATES[0];
       setSelectedTemplateId(initialTpl.id);
       setCustomSubject(initialTpl.subject);
       setCustomMessage(initialTpl.message);
@@ -126,6 +129,7 @@ export default function ApplyPage() {
       setSelectedTemplateId((previousId) => {
         const nextTemplate =
           nextTemplates.find((item) => item.id === previousId) ??
+          nextTemplates.find((item) => item.id === "pfe_dev_fr") ??
           nextTemplates[0] ??
           DEFAULT_TEMPLATES[0];
         return nextTemplate.id;
