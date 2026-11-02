@@ -87,6 +87,13 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
     rawBody.toLowerCase().includes("kind regards") ||
     rawBody.toLowerCase().includes("dear ");
 
+  // Détection du domaine (Data/IA vs Développement)
+  const isDataAi =
+    rawSubject.toLowerCase().includes("data") ||
+    rawSubject.toLowerCase().includes("intelligence artificielle") ||
+    rawBody.toLowerCase().includes("data science") ||
+    rawBody.toLowerCase().includes("trafficsignnet");
+
   const profile = getStoredCandidateProfile();
   const name = opts.candidateName || profile.name || "Saïd NICHAN";
   const email = opts.candidateEmail || profile.email || "saidnichan6@gmail.com";
@@ -96,10 +103,16 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
   if (isEnglish && city === "Salé, Maroc") city = "Salé, Morocco";
 
   let title = opts.candidateTitle || profile.title || "";
-  if (!title) {
-    title = isEnglish
-      ? "Computer Engineering Student (ENSA Tangier)"
-      : "Élève-Ingénieur Génie Informatique (ENSA Tanger)";
+  if (!title || title.includes("Génie Info") || title.includes("Élève")) {
+    if (isDataAi) {
+      title = isEnglish
+        ? "Computer Engineering Student – Data Science & Artificial Intelligence (ENSA Tangier)"
+        : "Élève-Ingénieur – Data Science & Intelligence Artificielle (ENSA Tanger)";
+    } else {
+      title = isEnglish
+        ? "Computer Engineering Student – Software Engineering, Full Stack & AI (ENSA Tangier)"
+        : "Élève-Ingénieur – Génie Informatique, Full Stack & IA (ENSA Tanger)";
+    }
   }
 
   const company = opts.company || (isEnglish ? "The Hiring Team" : "L'Entreprise");
@@ -278,9 +291,10 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
   doc.text(name, rightX, y, { align: "right" });
 
   const safeCompany = company.replace(/[^a-zA-Z0-9_-]/g, "_");
+  const prefix = isDataAi ? "Data_AI" : "Dev";
   const fileName = isEnglish
-    ? `Cover_Letter_${safeCompany}.pdf`
-    : `Lettre_Motivation_${safeCompany}.pdf`;
+    ? `Cover_Letter_PFE_${prefix}_${safeCompany}.pdf`
+    : `Lettre_Motivation_PFE_${prefix}_${safeCompany}.pdf`;
 
   return {
     doc,
