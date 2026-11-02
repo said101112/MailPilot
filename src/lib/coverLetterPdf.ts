@@ -137,17 +137,17 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
   doc.setFillColor(...COLOR_DARK);    // #202023
   doc.rect(0, 3.2, 210, 0.6, "F");
 
-  // 1. En-tête Candidat (Haut Gauche)
-  let y = 19;
+  // 1. En-tête Candidat (Pleine largeur supérieure, sans aucun chevauchement)
+  let y = 16.5;
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(13);
+  doc.setFontSize(14);
   doc.setTextColor(...COLOR_DARK);
   doc.text(name.toUpperCase(), leftMargin, y);
 
   if (title) {
     y += 5.2;
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(9.2);
+    doc.setFontSize(9.5);
     doc.setTextColor(...COLOR_PRIMARY); // #2274A5
     doc.text(title, leftMargin, y);
   }
@@ -162,8 +162,8 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
     doc.text(contactPieces.join("   •   "), leftMargin, y);
   }
 
-  // Ligne de portfolio & profils inspirée du site
-  y += 4;
+  // Ligne de portfolio & profils
+  y += 4.2;
   doc.setFontSize(7.8);
   doc.setTextColor(130, 140, 155);
   doc.text(
@@ -172,9 +172,15 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
     y
   );
 
-  // 2. Destinataire & Date (Haut Droite)
-  let rightY = 18;
-  const boxWidth = 68;
+  // 2. Filet séparateur horizontal net sous l'en-tête candidat
+  y += 5;
+  doc.setDrawColor(...COLOR_BORDER);
+  doc.setLineWidth(0.35);
+  doc.line(leftMargin, y, rightX, y);
+
+  // 3. Bloc Destinataire & Date (Sous le filet, calé proprement à droite)
+  const recipientBoxY = y + 4.5;
+  const boxWidth = 72;
   const boxHeight = 22;
   const boxX = rightX - boxWidth;
 
@@ -182,11 +188,11 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
   doc.setFillColor(...COLOR_CARD);
   doc.setDrawColor(...COLOR_BORDER);
   doc.setLineWidth(0.35);
-  doc.roundedRect(boxX, rightY, boxWidth, boxHeight, 2, 2, "FD");
+  doc.roundedRect(boxX, recipientBoxY, boxWidth, boxHeight, 2, 2, "FD");
 
   // Accent vertical gauche sur le cartouche
   doc.setFillColor(...COLOR_PRIMARY);
-  doc.rect(boxX, rightY + 2, 1.8, boxHeight - 4, "F");
+  doc.rect(boxX, recipientBoxY + 2, 1.8, boxHeight - 4, "F");
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
@@ -194,28 +200,22 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
   doc.text(
     isEnglish ? "To the attention of the Hiring Team" : "À l'attention de l'équipe Recrutement",
     boxX + 5,
-    rightY + 6
+    recipientBoxY + 5.8
   );
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9.8);
   doc.setTextColor(...COLOR_DARK);
-  const companyLines = doc.splitTextToSize(company, boxWidth - 9);
-  doc.text(companyLines[0], boxX + 5, rightY + 11.5);
+  const companyLines = doc.splitTextToSize(company, boxWidth - 10);
+  doc.text(companyLines[0], boxX + 5, recipientBoxY + 11.5);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.8);
   doc.setTextColor(...COLOR_MUTED);
-  doc.text(dateFormatted, boxX + 5, rightY + 17.5);
+  doc.text(dateFormatted, boxX + 5, recipientBoxY + 17.5);
 
-  // 3. Filet séparateur subtil
-  y = Math.max(y + 6, rightY + boxHeight + 4);
-  doc.setDrawColor(...COLOR_BORDER);
-  doc.setLineWidth(0.35);
-  doc.line(leftMargin, y, rightX, y);
-
-  // 4. Objet de la lettre (avec barre d'accentuation verticale #2274A5)
-  y += 8;
+  // 4. Objet de la lettre (Sous le bloc destinataire)
+  y = recipientBoxY + boxHeight + 7;
   let objectText = opts.subject || "";
   if (!objectText) {
     objectText = isEnglish
@@ -225,7 +225,7 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
     objectText = isEnglish ? `Subject: ${objectText}` : `Objet : ${objectText}`;
   }
 
-  // Barre d'accentuation verticale
+  // Barre d'accentuation verticale #2274A5
   doc.setFillColor(...COLOR_PRIMARY);
   doc.rect(leftMargin, y - 3.8, 2.5, 6.2, "F");
 
