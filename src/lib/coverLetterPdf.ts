@@ -23,20 +23,20 @@ const STORAGE_KEY_TITLE = "truck-app-candidate-title";
 export function getStoredCandidateProfile() {
   if (typeof window === "undefined") {
     return {
-      name: "Said Nichan",
-      email: "",
-      phone: "",
-      city: "",
-      title: "Élève Ingénieur / Data & IA",
+      name: "Saïd NICHAN",
+      email: "saidnichan6@gmail.com",
+      phone: "+212 713 668 431",
+      city: "Salé, Maroc",
+      title: "Élève-Ingénieur Génie Informatique (ENSA Tanger)",
     };
   }
 
   return {
-    name: readCandidateName() || "Said Nichan",
-    email: localStorage.getItem(STORAGE_KEY_EMAIL) || "",
-    phone: localStorage.getItem(STORAGE_KEY_PHONE) || "",
-    city: localStorage.getItem(STORAGE_KEY_CITY) || "",
-    title: localStorage.getItem(STORAGE_KEY_TITLE) || "Élève Ingénieur / Data & IA",
+    name: readCandidateName() || "Saïd NICHAN",
+    email: localStorage.getItem(STORAGE_KEY_EMAIL) || "saidnichan6@gmail.com",
+    phone: localStorage.getItem(STORAGE_KEY_PHONE) || "+212 713 668 431",
+    city: localStorage.getItem(STORAGE_KEY_CITY) || "Salé, Maroc",
+    title: localStorage.getItem(STORAGE_KEY_TITLE) || "Élève-Ingénieur Génie Informatique (ENSA Tanger)",
   };
 }
 
@@ -61,6 +61,14 @@ function formatDateFrench(d: Date = new Date()): string {
   return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
 }
 
+function formatDateEnglish(d: Date = new Date()): string {
+  const months = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
+
 export function generateCoverLetterPdf(opts: CoverLetterOptions) {
   const doc = new jsPDF({
     orientation: "portrait",
@@ -68,23 +76,42 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
     format: "a4",
   });
 
-  const profile = getStoredCandidateProfile();
-  const name = opts.candidateName || profile.name || "Said Nichan";
-  const email = opts.candidateEmail || profile.email || "";
-  const phone = opts.candidatePhone || profile.phone || "";
-  const city = opts.candidateCity || profile.city || "";
-  const title = opts.candidateTitle || profile.title || "";
+  const rawBody = opts.body || "";
+  const rawSubject = opts.subject || "";
 
-  const company = opts.company || "L'Entreprise";
-  const position = opts.position || "Stage / Emploi";
-  const dateFormatted = opts.dateStr || `Le ${formatDateFrench()}`;
+  // Détection de la langue
+  const isEnglish =
+    rawSubject.toLowerCase().includes("application") ||
+    rawSubject.toLowerCase().includes("internship") ||
+    rawBody.toLowerCase().includes("dear hiring") ||
+    rawBody.toLowerCase().includes("kind regards") ||
+    rawBody.toLowerCase().includes("dear ");
+
+  const profile = getStoredCandidateProfile();
+  const name = opts.candidateName || profile.name || "Saïd NICHAN";
+  const email = opts.candidateEmail || profile.email || "saidnichan6@gmail.com";
+  const phone = opts.candidatePhone || profile.phone || "+212 713 668 431";
+  
+  let city = opts.candidateCity || profile.city || (isEnglish ? "Salé, Morocco" : "Salé, Maroc");
+  if (isEnglish && city === "Salé, Maroc") city = "Salé, Morocco";
+
+  let title = opts.candidateTitle || profile.title || "";
+  if (!title) {
+    title = isEnglish
+      ? "Computer Engineering Student (ENSA Tangier)"
+      : "Élève-Ingénieur Génie Informatique (ENSA Tanger)";
+  }
+
+  const company = opts.company || (isEnglish ? "The Hiring Team" : "L'Entreprise");
+  const position = opts.position || (isEnglish ? "Internship" : "Stage PFE");
+  const dateFormatted = opts.dateStr || (isEnglish ? formatDateEnglish() : `Le ${formatDateFrench()}`);
 
   const leftMargin = 22;
   const pageWidth = 210;
   const contentWidth = 166; // 210 - 22 * 2
 
   // 1. En-tête Candidat (Haut Gauche)
-  let y = 24;
+  let y = 22;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
   doc.setTextColor(15, 23, 42); // slate-900
@@ -93,7 +120,7 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
   if (title) {
     y += 5;
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(9.5);
+    doc.setFontSize(9);
     doc.setTextColor(37, 99, 235); // royal-blue
     doc.text(title, leftMargin, y);
   }
@@ -102,24 +129,29 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
   doc.setFontSize(8.5);
   doc.setTextColor(100, 116, 139); // slate-500
 
-  const contactPieces = [email, phone, city].filter(Boolean);
+  const contactPieces = [city, email, phone].filter(Boolean);
   if (contactPieces.length > 0) {
     y += 4.5;
-    doc.text(contactPieces.join("  •  "), leftMargin, y);
+    doc.text(contactPieces.join("  |  "), leftMargin, y);
   }
 
   // 2. Destinataire & Date (Haut Droite)
   const rightX = pageWidth - leftMargin;
-  let rightY = 32;
+  let rightY = 22;
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
   doc.setTextColor(100, 116, 139);
-  doc.text("À l'attention du service Recrutement", rightX, rightY, { align: "right" });
+  doc.text(
+    isEnglish ? "To the attention of the Hiring Team" : "À l'attention de l'équipe de Recrutement",
+    rightX,
+    rightY,
+    { align: "right" }
+  );
 
-  rightY += 4.5;
+  rightY += 5;
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
+  doc.setFontSize(10.5);
   doc.setTextColor(15, 23, 42);
   doc.text(company, rightX, rightY, { align: "right" });
 
@@ -129,83 +161,126 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
   doc.setTextColor(100, 116, 139);
   doc.text(dateFormatted, rightX, rightY, { align: "right" });
 
-  // 3. Filet séparateur subtil
-  y = Math.max(y + 8, rightY + 8);
+  // 3. Filet de séparation
+  y = Math.max(y + 7, rightY + 7);
   doc.setDrawColor(226, 232, 240); // slate-200
   doc.setLineWidth(0.4);
   doc.line(leftMargin, y, rightX, y);
 
   // 4. Objet de la lettre
-  y += 9;
+  y += 8;
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(10.5);
+  doc.setFontSize(10);
   doc.setTextColor(15, 23, 42);
-  const objectText = opts.subject || `Objet : Candidature pour le poste de ${position}`;
+
+  let objectText = opts.subject || "";
+  if (!objectText) {
+    objectText = isEnglish
+      ? `Subject: Application for a Final-Year Internship – February 2027`
+      : `Objet : Candidature pour un stage PFE – Février 2027`;
+  } else if (!objectText.toLowerCase().startsWith("objet") && !objectText.toLowerCase().startsWith("subject")) {
+    objectText = isEnglish ? `Subject: ${objectText}` : `Objet : ${objectText}`;
+  }
   doc.text(objectText, leftMargin, y);
 
   // 5. Formule d'appel
-  y += 10;
+  y += 8;
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
+  doc.setFontSize(9.5);
   doc.setTextColor(30, 41, 59); // slate-800
-  const salutation = opts.contactName && opts.contactName !== "Hiring Manager"
-    ? `Bonjour ${opts.contactName},`
-    : "Madame, Monsieur,";
+
+  let salutation = isEnglish ? "Dear Hiring Team," : "Madame, Monsieur,";
+  if (opts.contactName && opts.contactName !== "Hiring Manager" && opts.contactName.trim().length > 0) {
+    salutation = isEnglish ? `Dear ${opts.contactName},` : `Bonjour ${opts.contactName},`;
+  }
   doc.text(salutation, leftMargin, y);
 
-  // 6. Corps de la lettre
-  y += 7;
-  let cleanBody = opts.body
+  // 6. Corps de la lettre (nettoyage des doublons/en-têtes redondants)
+  y += 6;
+  const cleanBody = rawBody
     .replace(/\[Company\]/g, company)
     .replace(/\[Position\]/g, position)
     .replace(/\[MyName\]/g, name)
-    .replace(/\[Name\]/g, opts.contactName || "Hiring Manager");
+    .replace(/\[Name\]/g, opts.contactName || (isEnglish ? "Hiring Manager" : "Madame, Monsieur"));
 
-  // Si le message commence par une salutation redondante, on peut la laisser propre
-  const paragraphs = cleanBody.split(/\n+/).filter(Boolean);
+  const rawParagraphs = cleanBody.split(/\n+/).filter(Boolean);
 
-  for (const para of paragraphs) {
-    // Si le paragraphe est juste la formule d'appel ou la signature, on évite les doublons
+  for (const para of rawParagraphs) {
     const trimmed = para.trim();
-    if (trimmed.toLowerCase().startsWith("bonjour") || trimmed.toLowerCase().startsWith("madame, monsieur")) {
-      continue;
-    }
-    if (trimmed.toLowerCase().startsWith("sincerely") || trimmed.toLowerCase().startsWith("cordialement") || trimmed.toLowerCase() === name.toLowerCase()) {
+    const lower = trimmed.toLowerCase();
+
+    // Ignorer les lignes de headers redondants
+    if (
+      lower === name.toLowerCase() ||
+      lower.includes("saidnichan6@gmail.com") ||
+      lower.includes("+212 713 668 431") ||
+      lower.includes("salé, maroc") ||
+      lower.includes("salé, morocco") ||
+      lower.startsWith("objet :") ||
+      lower.startsWith("subject:") ||
+      lower.startsWith("madame, monsieur") ||
+      lower.startsWith("dear hiring team") ||
+      lower.startsWith("dear ") ||
+      lower.startsWith("bonjour ") ||
+      lower.startsWith("kind regards") ||
+      lower.startsWith("bien cordialement") ||
+      lower.startsWith("sincerely") ||
+      lower.startsWith("je vous prie d’agréer") ||
+      lower.startsWith("je vous prie d'agréer") ||
+      lower.startsWith("dans l'attente d'un échange")
+    ) {
       continue;
     }
 
-    const lines = doc.splitTextToSize(trimmed, contentWidth);
-    
-    // Vérification saut de page éventuel
-    if (y + lines.length * 5.2 > 270) {
+    const isBullet = trimmed.startsWith("•") || trimmed.startsWith("-");
+    const indent = isBullet ? leftMargin + 3 : leftMargin;
+    const maxWidth = isBullet ? contentWidth - 3 : contentWidth;
+
+    doc.setFont("helvetica", isBullet ? "normal" : "normal");
+    doc.setFontSize(9.2);
+    doc.setTextColor(30, 41, 59);
+
+    const lines = doc.splitTextToSize(trimmed, maxWidth);
+
+    // Vérification saut de page
+    if (y + lines.length * 4.6 > 275) {
       doc.addPage();
-      y = 25;
+      y = 22;
     }
 
-    doc.text(lines, leftMargin, y);
-    y += lines.length * 5.2 + 3.5;
+    doc.text(lines, indent, y);
+    y += lines.length * 4.6 + (isBullet ? 2 : 3);
   }
 
   // 7. Formule de politesse finale
-  if (y + 25 > 270) {
+  if (y + 24 > 275) {
     doc.addPage();
-    y = 25;
+    y = 22;
   } else {
     y += 2;
   }
 
-  const closing = "Dans l'attente d'un échange constructif, je vous prie d'agréer, Madame, Monsieur, l'expression de mes salutations distinguées.";
+  const closing = isEnglish
+    ? "Thank you for your time and consideration. I would welcome the opportunity to discuss my background and motivation in an interview."
+    : "Je serais ravi de pouvoir échanger avec vous lors d’un entretien. Je vous remercie pour votre attention et vous prie d’agréer, Madame, Monsieur, l’expression de mes salutations distinguées.";
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.2);
+  doc.setTextColor(30, 41, 59);
   const closingLines = doc.splitTextToSize(closing, contentWidth);
   doc.text(closingLines, leftMargin, y);
-  y += closingLines.length * 5.2 + 8;
+  y += closingLines.length * 4.6 + 6;
 
   // 8. Signature
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(10.5);
+  doc.setFontSize(10);
   doc.setTextColor(15, 23, 42);
   doc.text(name, rightX, y, { align: "right" });
 
-  const fileName = `Lettre_Motivation_${company.replace(/[^a-zA-Z0-9_-]/g, "_")}.pdf`;
+  const safeCompany = company.replace(/[^a-zA-Z0-9_-]/g, "_");
+  const fileName = isEnglish
+    ? `Cover_Letter_${safeCompany}.pdf`
+    : `Lettre_Motivation_${safeCompany}.pdf`;
 
   return {
     doc,

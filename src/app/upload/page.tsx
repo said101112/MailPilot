@@ -97,8 +97,11 @@ const VALIDATION_LABELS: Record<ValidationState, string> = {
   ready: "Ready",
 };
 
-function formatTemplateName(name: string) {
-  return name === "Standard" ? "Standard Application" : name;
+function formatTemplateName(t: { id: string; name: string }) {
+  if (t.id.includes("_fr")) return `🇫🇷 ${t.name}`;
+  if (t.id.includes("_en")) return `🇬🇧 ${t.name}`;
+  if (t.id.startsWith("followup")) return `📬 ${t.name}`;
+  return t.name;
 }
 
 function getValidationState(
@@ -948,7 +951,7 @@ export default function UploadPage() {
                   >
                     {templates.map((t) => (
                       <option key={t.id} value={t.id}>
-                        {formatTemplateName(t.name)}
+                        {formatTemplateName(t)}
                       </option>
                     ))}
                   </select>

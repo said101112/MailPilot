@@ -10,39 +10,32 @@ export const TEMPLATE_LIBRARY_EVENT = "routepilot-templates-updated";
 
 export const DEFAULT_TEMPLATES: MessageTemplate[] = [
   {
-    id: "pfe-ensa-tanger",
-    name: "Stage PFE - Génie Info (ENSA Tanger)",
-    subject: "Candidature Stage PFE [Position] - [MyName] - ENSA Tanger",
+    id: "pfe_dev_fr",
+    name: "PFE – Développement logiciel, Full Stack & IA",
+    subject: "Candidature pour un stage PFE en développement logiciel – Février 2027",
     message:
-      "Bonjour [Name],\n\nActuellement élève-ingénieur en dernière année de Génie Informatique à l’École Nationale des Sciences Appliquées de Tanger (ENSA Tanger), je suis à la recherche d’un stage de fin d’études (PFE) de 4 à 6 mois à partir de février 2027 en tant que [Position].\n\nOrienté Software Engineering et développement Full Stack, je conçois des architectures applicatives fiables, évolutives et maintenables. Mon socle technique s'articule notamment autour de Java / Spring Boot, JavaScript / TypeScript, React, Node.js, Angular, les architectures microservices, les API REST, ainsi que les technologies Cloud et DevOps (Docker, CI/CD). Je m’intéresse également de près à l’intégration de modèles d’intelligence artificielle pour répondre à des besoins concrets.\n\nÀ travers mes réalisations — notamment le développement de NextStep AI, une plateforme intelligente où j’ai pris en charge la conception backend et l’intégration de fonctionnalités IA —, j’ai développé une solide culture d’ingénierie, un esprit d’analyse rigoureux et une réelle aisance pour le travail collaboratif.\n\nRejoindre [Company] représente pour moi l’opportunité idéale d'apporter ma rigueur technique, de contribuer activement à vos projets à fort impact et de relever des défis stimulants au sein de vos équipes.\n\nVous trouverez mon CV en pièce jointe. Vous pouvez également consulter mes projets et mon parcours via mes liens :\n• Portfolio : https://said-nichan-three.vercel.app\n• GitHub : https://github.com/said101112\n• LinkedIn : https://linkedin.com/in/nichan-said-940810313\n\nJe serais ravi de pouvoir échanger avec vous lors d'un entretien afin de vous détailler mon parcours, ma motivation et la valeur que je peux apporter à [Company].\n\nJe vous remercie vivement pour votre attention et vous souhaite une excellente journée.\n\nBien cordialement,\n[MyName]",
+      "Madame, Monsieur,\n\nActuellement élève-ingénieur en cinquième année de Génie Informatique à l’ENSA Tanger, je recherche un stage de fin d’études de 4 à 6 mois à partir de février 2027. Je souhaite rejoindre votre équipe pour contribuer au développement de solutions logicielles fiables et évolutives, tout en approfondissant mes compétences en développement Full Stack, intégration de l’IA et Cloud/DevOps.\n\nLors de mon stage chez FOCUS NEXT COMPUTING, j’ai participé au développement d’une plateforme de gestion clinique en concevant des microservices Spring Boot autour des ressources HL7 FHIR R4 et en contribuant à la sécurisation des accès avec Keycloak et OPA. Cette expérience m’a permis de mieux comprendre l’architecture microservices, la sécurité applicative et les exigences liées aux données sensibles.\n\nChez Smart Automation Technologie, j’ai contribué à la refonte d’une marketplace avec Angular, développé un chatbot de support client basé sur le RAG et automatisé des workflows avec n8n. J’y ai renforcé mes compétences en développement web, intégration de l’IA et automatisation des processus métiers.\n\nEn parallèle, j’ai développé NextStep, une plateforme intelligente de recherche d’emploi intégrant des agents IA, Docker, AWS et des pipelines CI/CD. Ma participation à des hackathons, avec une troisième place au IT Wave & SOLI Hackathon et une place de finaliste au Hackathon IDS, témoigne également de mon goût pour l’innovation et le travail en équipe.\n\nCertifié Oracle Java SE 17 OCP, je suis motivé à mettre mes compétences, ma curiosité et ma capacité d’apprentissage au service de vos projets.\n\nVous pouvez également consulter mes réalisations et mon parcours :\n• Portfolio : https://said-nichan-three.vercel.app\n• GitHub : https://github.com/said101112\n• LinkedIn : https://linkedin.com/in/nichan-said-940810313\n\nJe serais ravi de pouvoir échanger avec vous lors d’un entretien. Je vous remercie pour votre attention et vous prie d’agréer, Madame, Monsieur, l’expression de mes salutations distinguées.\n\n[MyName]",
   },
   {
-    id: "pfe-ensa-concise",
-    name: "Stage PFE - Version Directe (ENSA)",
-    subject: "Candidature [Position] chez [Company] - [MyName]",
+    id: "pfe_dev_en",
+    name: "PFE Internship – Software Engineering, Full Stack & AI",
+    subject: "Application for a Final-Year Internship in Software Engineering – February 2027",
     message:
-      "Bonjour [Name],\n\nÉlève-ingénieur en dernière année de Génie Informatique à l’ENSA Tanger, je recherche un stage de fin d'études (PFE) de 4 à 6 mois dès février 2027 en tant que [Position].\n\nSpécialisé en Software Engineering et Full Stack (Java/Spring Boot, TypeScript/React/Node, Cloud/DevOps & IA), j'ai développé des projets complets à l'image de NextStep AI (plateforme d'accompagnement intelligent).\n\nTrès motivé par les projets de [Company], je serais ravi de mettre ma rigueur et ma passion du code au service de vos défis.\n\nMon CV est joint à ce message, et mes réalisations sont accessibles ici :\n• Portfolio : https://said-nichan-three.vercel.app\n• GitHub : https://github.com/said101112\n• LinkedIn : https://linkedin.com/in/nichan-said-940810313\n\nDisponible pour un échange selon vos convenances, je vous remercie pour votre considération.\n\nBien cordialement,\n[MyName]",
+      "Dear Hiring Team,\n\nI am a fifth-year Computer Engineering student at ENSA Tangier, Morocco, seeking a 4-to-6-month final-year internship starting in February 2027. I am eager to join your team, contribute to meaningful software projects, and further develop my skills in Full Stack development, AI integration, and Cloud/DevOps.\n\nDuring my internship at FOCUS NEXT COMPUTING, I contributed to a clinical management platform by developing Spring Boot microservices around HL7 FHIR R4 resources and helping secure access using Keycloak and OPA. This experience strengthened my understanding of microservices architecture, application security, and sensitive data management.\n\nAt Smart Automation Technologie, I contributed to an Angular marketplace redesign, developed a RAG-based customer support chatbot, and automated workflows using n8n. This experience helped me improve my web development skills and understand how AI and automation can address practical business needs.\n\nAlongside these internships, I developed NextStep, an intelligent job-search platform integrating AI agents, Docker, AWS, and CI/CD pipelines. I also earned third place at the IT Wave & SOLI Hackathon and reached the final of the IDS Hackathon, experiences that strengthened my problem-solving skills and collaborative mindset.\n\nAs an Oracle Certified Professional in Java SE 17, I am motivated to apply my technical knowledge, adaptability, and willingness to learn to your team's projects.\n\nYou can also explore my projects and profile:\n• Portfolio: https://said-nichan-three.vercel.app\n• GitHub: https://github.com/said101112\n• LinkedIn: https://linkedin.com/in/nichan-said-940810313\n\nI would welcome the opportunity to discuss my background and motivation in an interview. Thank you for your time and consideration.\n\nKind regards,\n[MyName]",
   },
   {
-    id: "standard",
-    name: "Standard",
-    subject: "Application for [Position] at [Company]",
+    id: "pfe_data_ai_fr",
+    name: "PFE – Data Science & Intelligence Artificielle",
+    subject: "Candidature pour un stage PFE en Data Science & Intelligence Artificielle – Février 2027",
     message:
-      "Hello Hiring Manager,\n\nI am writing to express my interest in the [Position] role at [Company]. With strong experience in logistics, dispatch support, and operational coordination, I can contribute quickly and reliably to your team.\n\nMy background aligns with the requirements outlined in the role, and I would welcome the opportunity to discuss how I can support your operations.\n\nSincerely,\n[MyName]",
+      "Madame, Monsieur,\n\nActuellement élève-ingénieur en cinquième année de Génie Informatique à l’ENSA Tanger, avec une orientation en Data Science et Intelligence Artificielle, je recherche un stage PFE de 4 à 6 mois à partir de février 2027. Je souhaite rejoindre votre équipe afin de contribuer à des projets innovants exploitant les données et l’IA pour répondre à des problématiques concrètes.\n\nLors de mon stage chez Smart Automation Technologie, j’ai développé un chatbot de support client basé sur le RAG et participé à la refonte d’une marketplace ainsi qu’à l’automatisation de workflows avec n8n. Chez FOCUS NEXT COMPUTING, j’ai contribué au développement d’une plateforme de gestion clinique reposant sur des microservices Spring Boot et les standards HL7 FHIR R4, avec une attention particulière portée à la sécurité des données.\n\nMes projets personnels m’ont permis d’approfondir mes compétences en IA et en analyse de données. J’ai notamment réalisé TrafficSignNet, un projet de classification d’images par réseaux de neurones convolutifs (CNN), et Predictive Maintenance BI, portant sur le traitement de données IoT et leur visualisation avec Power BI. J’ai également développé NextStep, une plateforme intelligente intégrant des agents IA pour faciliter la recherche d’emploi et le suivi des candidatures.\n\nEn parallèle, ma troisième place au IT Wave & SOLI Hackathon et ma qualification en finale du Hackathon IDS témoignent de mon esprit d’innovation et de mon goût pour le travail en équipe.\n\nCurieux, rigoureux et motivé, je souhaite mettre mes compétences au service de vos projets et continuer à progresser au sein de votre équipe.\n\nVous pouvez également consulter mes réalisations et mon profil :\n• Portfolio : https://said-nichan-three.vercel.app\n• GitHub : https://github.com/said101112\n• LinkedIn : https://linkedin.com/in/nichan-said-940810313\n\nJe serais ravi de pouvoir échanger avec vous lors d’un entretien.\n\nJe vous prie d’agréer, Madame, Monsieur, l’expression de mes salutations distinguées.\n\n[MyName]",
   },
   {
-    id: "concise",
-    name: "Concise",
-    subject: "Application for [Position] at [Company]",
+    id: "pfe_data_ai_en",
+    name: "PFE Internship – Data Science & Artificial Intelligence",
+    subject: "Application for a Final-Year Internship in Data Science & Artificial Intelligence – February 2027",
     message:
-      "Hello Hiring Manager,\n\nI am interested in the [Position] opportunity at [Company]. My logistics and fleet support experience would allow me to add value quickly.\n\nThank you for your consideration.\n\nSincerely,\n[MyName]",
-  },
-  {
-    id: "creative",
-    name: "Creative",
-    subject: "[Position] application for [Company]",
-    message:
-      "Hello Hiring Manager,\n\nI am excited by the [Position] opening at [Company]. I bring a practical mix of transportation operations, structured execution, and process improvement that fits fast-moving logistics teams.\n\nI would be glad to discuss how I can help strengthen day-to-day fleet performance and coordination.\n\nSincerely,\n[MyName]",
+      "Dear Hiring Team,\n\nI am a fifth-year Computer Engineering student at ENSA Tangier, focusing on Data Science and Artificial Intelligence. I am seeking a 4-to-6-month final-year internship starting in February 2027 and would welcome the opportunity to contribute to innovative projects that use data and AI to solve real-world problems.\n\nDuring my internship at Smart Automation Technologie, I developed a RAG-based customer support chatbot and contributed to a marketplace redesign and workflow automation using n8n. At FOCUS NEXT COMPUTING, I contributed to a clinical management platform built with Spring Boot microservices and HL7 FHIR R4 standards, with particular attention to data security.\n\nMy personal projects have strengthened my skills in AI and data analysis. TrafficSignNet involved image classification using convolutional neural networks (CNNs), while Predictive Maintenance BI focused on IoT data processing and visualization with Power BI. I also developed NextStep, an intelligent platform integrating AI agents to support job searching and application tracking.\n\nBeyond my technical work, I earned third place at the IT Wave & SOLI Hackathon and reached the final of the IDS Hackathon, experiences that strengthened my problem-solving skills and collaborative mindset.\n\nI am eager to apply my skills, continue learning, and contribute to your team's projects.\n\nYou can also explore my projects and profile:\n• Portfolio: https://said-nichan-three.vercel.app\n• GitHub: https://github.com/said101112\n• LinkedIn: https://linkedin.com/in/nichan-said-940810313\n\nI would welcome the opportunity to discuss my background and motivation in an interview.\n\nThank you for your time and consideration.\n\nKind regards,\n[MyName]",
   },
   {
     id: "followup-7days",
@@ -110,6 +103,14 @@ async function resolveUserId(): Promise<string | null> {
   }
 }
 
+const LEGACY_OBSOLETE_IDS = new Set([
+  "pfe-ensa-tanger",
+  "pfe-ensa-concise",
+  "standard",
+  "concise",
+  "creative",
+]);
+
 function getLocalTemplatesOnly(): MessageTemplate[] {
   if (typeof window === "undefined") {
     return cloneDefaultTemplates();
@@ -122,21 +123,38 @@ function getLocalTemplatesOnly(): MessageTemplate[] {
     }
 
     const parsed = JSON.parse(saved) as unknown[];
-    const templates = parsed
+    let templates = parsed
       .map((item) => normalizeTemplate(item))
-      .filter((item): item is MessageTemplate => item !== null);
+      .filter((item): item is MessageTemplate => item !== null)
+      .filter((item) => !LEGACY_OBSOLETE_IDS.has(item.id));
 
     if (templates.length === 0) {
       return cloneDefaultTemplates();
     }
 
-    // Ensure default follow-up templates are available
+    // Ensure the 4 PFE templates and follow-ups are present
     for (const def of DEFAULT_TEMPLATES) {
-      if (!templates.some((t) => t.id === def.id)) {
+      const idx = templates.findIndex((t) => t.id === def.id);
+      if (idx === -1) {
         templates.push({ ...def });
+      } else {
+        // Keep updated default content for default templates
+        templates[idx] = { ...def };
       }
     }
 
+    // Sort to keep default templates first
+    const defaultIds = DEFAULT_TEMPLATES.map((d) => d.id);
+    templates.sort((a, b) => {
+      const aIdx = defaultIds.indexOf(a.id);
+      const bIdx = defaultIds.indexOf(b.id);
+      if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+      if (aIdx !== -1) return -1;
+      if (bIdx !== -1) return 1;
+      return 0;
+    });
+
+    localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(templates));
     return templates;
   } catch {
     return cloneDefaultTemplates();
@@ -176,16 +194,30 @@ export async function syncTemplatesFromSupabase(): Promise<MessageTemplate[]> {
         return getLocalTemplatesOnly();
       }
 
-      const remoteTemplates: MessageTemplate[] = (remoteRows || []).map((row: any) => ({
-        id: String(row.id),
-        name: String(row.name),
-        subject: String(row.subject),
-        message: String(row.message),
-      }));
+      // Filter legacy obsolete IDs from remote
+      const obsoleteRemoteIds = (remoteRows || [])
+        .map((r: any) => String(r.id))
+        .filter((id: string) => LEGACY_OBSOLETE_IDS.has(id));
+
+      if (obsoleteRemoteIds.length > 0) {
+        void supabase
+          .from("user_templates")
+          .delete()
+          .in("id", obsoleteRemoteIds)
+          .eq("user_id", userId);
+      }
+
+      const remoteTemplates: MessageTemplate[] = (remoteRows || [])
+        .filter((row: any) => !LEGACY_OBSOLETE_IDS.has(String(row.id)))
+        .map((row: any) => ({
+          id: String(row.id),
+          name: String(row.name),
+          subject: String(row.subject),
+          message: String(row.message),
+        }));
 
       const localTemplates = getLocalTemplatesOnly();
       const remoteMap = new Map(remoteTemplates.map((t) => [t.id, t]));
-      const localMap = new Map(localTemplates.map((t) => [t.id, t]));
 
       const merged: MessageTemplate[] = [...remoteTemplates];
 
@@ -210,12 +242,37 @@ export async function syncTemplatesFromSupabase(): Promise<MessageTemplate[]> {
         }
       }
 
-      // 2. Ensure defaults are always present
+      // 2. Ensure defaults are always present and up to date
       for (const def of DEFAULT_TEMPLATES) {
-        if (!merged.some((t) => t.id === def.id)) {
+        const idx = merged.findIndex((t) => t.id === def.id);
+        if (idx === -1) {
           merged.push({ ...def });
+        } else {
+          merged[idx] = { ...def };
         }
       }
+
+      // Upsert default templates in Supabase so mobile and other sessions see them
+      const defaultUpserts = DEFAULT_TEMPLATES.map((t) => ({
+        id: t.id,
+        user_id: userId,
+        name: t.name,
+        subject: t.subject,
+        message: t.message,
+        updated_at: new Date().toISOString(),
+      }));
+      void supabase.from("user_templates").upsert(defaultUpserts);
+
+      // Sort with DEFAULT_TEMPLATES at the top
+      const defaultIds = DEFAULT_TEMPLATES.map((d) => d.id);
+      merged.sort((a, b) => {
+        const aIdx = defaultIds.indexOf(a.id);
+        const bIdx = defaultIds.indexOf(b.id);
+        if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+        if (aIdx !== -1) return -1;
+        if (bIdx !== -1) return 1;
+        return 0;
+      });
 
       // 3. Save merged list locally and notify listeners
       localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(merged));

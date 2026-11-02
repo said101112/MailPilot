@@ -771,15 +771,35 @@ export default function ApplyPage() {
                         <button
                           key={template.id}
                           className={cn(
-                            "flex w-full items-center rounded-[8px] px-3 py-2.5 text-[13.5px] font-medium transition-colors text-left",
+                            "flex w-full items-center justify-between gap-2 rounded-[8px] px-3 py-2 text-left transition-colors",
                             template.id === selectedTemplateId
-                              ? "bg-[var(--editorial-primary-soft)] text-[var(--editorial-primary)]"
+                              ? "bg-[var(--editorial-primary-soft)] text-[var(--editorial-primary)] font-semibold"
                               : "text-[var(--editorial-text)] hover:bg-[var(--editorial-background-soft)]"
                           )}
                           onClick={() => handleSelectTemplate(template.id)}
                           type="button"
                         >
-                          <span className="truncate">{template.name}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="truncate text-[13px]">{template.name}</span>
+                              {template.id.includes("_fr") && (
+                                <span className="rounded bg-blue-100/70 px-1.5 py-0.2 text-[10px] font-bold text-blue-800">
+                                  FR
+                                </span>
+                              )}
+                              {template.id.includes("_en") && (
+                                <span className="rounded bg-indigo-100/70 px-1.5 py-0.2 text-[10px] font-bold text-indigo-800">
+                                  EN
+                                </span>
+                              )}
+                            </div>
+                            <p className="truncate text-[11px] text-gray-400 mt-0.5">
+                              {template.subject}
+                            </p>
+                          </div>
+                          {template.id === selectedTemplateId && (
+                            <span className="text-[11px] font-bold shrink-0">✓</span>
+                          )}
                         </button>
                       ))}
                     </div>

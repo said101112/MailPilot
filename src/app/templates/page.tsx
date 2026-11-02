@@ -236,9 +236,36 @@ export default function TemplatesPage() {
             {paginatedTemplates.map((template) => (
               <div key={template.id} className="editorial-card p-5 flex flex-col">
                 <div className="flex-1 min-w-0 mb-4">
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <h3 className="font-bold text-[var(--editorial-text)] truncate text-[1.05rem]">{template.name}</h3>
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <h3 className="font-bold text-[var(--editorial-text)] truncate text-[1.02rem]">{template.name}</h3>
                     <span className="editorial-chip editorial-chip-success shrink-0">SAVED</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
+                    {template.id.includes("_fr") && (
+                      <span className="rounded bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 border border-blue-200">
+                        🇫🇷 Français
+                      </span>
+                    )}
+                    {template.id.includes("_en") && (
+                      <span className="rounded bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 border border-indigo-200">
+                        🇬🇧 English
+                      </span>
+                    )}
+                    {template.id.includes("dev") && (
+                      <span className="rounded bg-purple-50 px-2 py-0.5 text-[11px] font-semibold text-purple-700 border border-purple-200">
+                        💻 Dév & Full Stack
+                      </span>
+                    )}
+                    {template.id.includes("data_ai") && (
+                      <span className="rounded bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 border border-emerald-200">
+                        🤖 Data & IA
+                      </span>
+                    )}
+                    {template.id.startsWith("followup") && (
+                      <span className="rounded bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 border border-amber-200">
+                        📬 Relance
+                      </span>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <p className="text-[13px] font-semibold text-[var(--editorial-text)] truncate">
