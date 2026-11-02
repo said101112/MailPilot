@@ -3,6 +3,7 @@ import {
   Building2,
   CalendarClock,
   FileText,
+  FlaskConical,
   History as HistoryIcon,
   Home,
   MessageSquarePlus,
@@ -50,6 +51,12 @@ export const workspaceNavigationSections: Array<{
         href: "/cvs",
         description: "Gérer vos profils de CV (Data, Fullstack, PFE...).",
         icon: FileText,
+      },
+      {
+        name: "Test Draft (Sandbox)",
+        href: "/test-draft",
+        description: "Tester la création de brouillons sans incrémenter le compteur.",
+        icon: FlaskConical,
       },
       {
         name: "History",
