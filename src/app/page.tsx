@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowUpRight,
@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import InteractiveDashboardCharts from "@/components/dashboard/InteractiveDashboardCharts";
+import DailyGoalChallengeCard from "@/components/dashboard/DailyGoalChallengeCard";
 import CompanyLogo from "@/components/tracker/CompanyLogo";
 import UpdatePasswordModal from "@/components/profile/UpdatePasswordModal";
 import { KNOWN_COMPANIES } from "@/lib/tracker/companyDirectory";
@@ -74,82 +75,89 @@ export default function Home() {
   const [processingCount, setProcessingCount] = useState(0);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
-  useEffect(() => {
-    async function fetchUserData() {
-      const { data } = await supabase.auth.getUser();
-      if (data?.user?.email) {
-        setUserEmail(data.user.email);
-      }
+  const fetchUserData = useCallback(async () => {
+    const { data } = await supabase.auth.getUser();
+    if (data?.user?.email) {
+      setUserEmail(data.user.email);
     }
-
-    async function fetchDashboardData() {
-      const [recentResponse, statusResponse, allAppsResponse, companiesResponse] =
-        await Promise.all([
-          supabase
-            .from("applications")
-            .select("id, company, position, email, status, created_at", {
-              count: "exact",
-            })
-            .order("created_at", { ascending: false })
-            .limit(8),
-          supabase.from("applications").select("status"),
-          supabase
-            .from("applications")
-            .select("id, company, position, email, status, created_at")
-            .order("created_at", { ascending: false })
-            .limit(300),
-          supabase
-            .from("companies")
-            .select("id", { count: "exact", head: true }),
-        ]);
-
-      if (!recentResponse.error) {
-        setApplicationCount(recentResponse.count ?? 0);
-        if (recentResponse.data && recentResponse.data.length > 0) {
-          setRecentActivity(recentResponse.data);
-        }
-      }
-
-      if (!companiesResponse.error && companiesResponse.count) {
-        setCompanyCount(Math.max(companiesResponse.count, KNOWN_COMPANIES.length));
-      }
-
-      if (!allAppsResponse.error && allAppsResponse.data) {
-        setAllApplications(allAppsResponse.data);
-      }
-
-      if (
-        !statusResponse.error &&
-        statusResponse.data &&
-        statusResponse.data.length > 0
-      ) {
-        const successful = statusResponse.data.filter(
-          (item) => item.status === "success",
-        ).length;
-        setSuccessRate(
-          Number(((successful / statusResponse.data.length) * 100).toFixed(1)),
-        );
-
-        const pending = statusResponse.data.filter(
-          (item) => item.status === "pending",
-        ).length;
-        const processing = statusResponse.data.filter(
-          (item) => item.status === "processing" || item.status === "sending",
-        ).length;
-        const errorCount = statusResponse.data.filter(
-          (item) => item.status === "error" || item.status === "failed",
-        ).length;
-
-        setQueueCount(pending + processing + errorCount);
-        setProcessingCount(processing);
-      }
-    }
-
-    void fetchUserData();
-    void fetchDashboardData();
   }, []);
 
+  const fetchDashboardData = useCallback(async () => {
+    const [recentResponse, statusResponse, allAppsResponse, companiesResponse] =
+      await Promise.all([
+        supabase
+          .from("applications")
+          .select("id, company, position, email, status, created_at", {
+            count: "exact",
+          })
+          .order("created_at", { ascending: false })
+          .limit(8),
+        supabase.from("applications").select("status"),
+        supabase
+          .from("applications")
+          .select("id, company, position, email, status, created_at")
+          .order("created_at", { ascending: false })
+          .limit(300),
+        supabase
+          .from("companies")
+          .select("id", { count: "exact", head: true }),
+      ]);
+
+    if (!recentResponse.error) {
+      setApplicationCount(recentResponse.count ?? 0);
+      if (recentResponse.data && recentResponse.data.length > 0) {
+        setRecentActivity(recentResponse.data);
+      }
+    }
+
+    if (!companiesResponse.error && companiesResponse.count) {
+      setCompanyCount(Math.max(companiesResponse.count, KNOWN_COMPANIES.length));
+    }
+
+    if (!allAppsResponse.error && allAppsResponse.data) {
+      setAllApplications(allAppsResponse.data);
+    }
+
+    if (
+      !statusResponse.error &&
+      statusResponse.data &&
+      statusResponse.data.length > 0
+    ) {
+      const successful = statusResponse.data.filter(
+        (item) => item.status === "success",
+      ).length;
+      setSuccessRate(
+        Number(((successful / statusResponse.data.length) * 100).toFixed(1)),
+      );
+
+      const pending = statusResponse.data.filter(
+        (item) => item.status === "pending",
+      ).length;
+      const processing = statusResponse.data.filter(
+        (item) => item.status === "processing" || item.status === "sending",
+      ).length;
+      const errorCount = statusResponse.data.filter(
+        (item) => item.status === "error" || item.status === "failed",
+      ).length;
+
+      setQueueCount(pending + processing + errorCount);
+      setProcessingCount(processing);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchUserData();
+    void fetchDashboardData();
+  }, [fetchUserData, fetchDashboardData]);
+
   const greeting = useMemo(() => getGreeting(), []);
+
+  const applicationsTodayCount = useMemo(() => {
+    const today = new Date().toISOString().split("T")[0];
+    return allApplications.filter(
+      (app) => app.created_at && app.created_at.startsWith(today)
+    ).length;
+  }, [allApplications]);
 
   return (
     <div className="mx-auto w-full max-w-[1280px] px-6 py-7 sm:px-8">
@@ -193,6 +201,12 @@ export default function Home() {
           </Link>
         </div>
       </div>
+
+      {/* 1.5. Daily Goal & Streak Challenge Banner */}
+      <DailyGoalChallengeCard
+        applicationsTodayCount={applicationsTodayCount}
+        onActivityLogged={fetchDashboardData}
+      />
 
       {/* 2. Unified Metric Strip */}
       <div className="mb-8 rounded-xl border border-gray-200 bg-white shadow-xs overflow-hidden">
