@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy, HelpCircle, Lightbulb, MessageSquare, PhoneCall, Sparkles, User, UserCheck } from "lucide-react";
+import { Check, Copy, HelpCircle, Lightbulb, MessageSquare, PhoneCall, Sparkles, Star, Trash2, User, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { DialogueTurn, ExpressionItem } from "@/lib/tracker/expressions";
@@ -10,10 +10,17 @@ interface DialogueViewerProps {
   item: ExpressionItem;
   onEdit?: (item: ExpressionItem) => void;
   onDelete?: (id: string) => void;
+  onToggleFavorite?: (id: string) => void;
   isCompact?: boolean;
 }
 
-export default function DialogueViewer({ item, onEdit, onDelete, isCompact = false }: DialogueViewerProps) {
+export default function DialogueViewer({
+  item,
+  onEdit,
+  onDelete,
+  onToggleFavorite,
+  isCompact = false,
+}: DialogueViewerProps) {
   const [copiedTurnId, setCopiedTurnId] = useState<string | null>(null);
 
   const copyText = (text: string, id: string, label: string) => {
@@ -74,8 +81,35 @@ export default function DialogueViewer({ item, onEdit, onDelete, isCompact = fal
             title="Copier tout le scénario"
           >
             <Copy className="h-3 w-3" />
-            <span className="hidden sm:inline">Copier tout</span>
+            <span className="hidden sm:inline">Copier</span>
           </button>
+
+          {onToggleFavorite && (
+            <button
+              type="button"
+              onClick={() => onToggleFavorite(item.id)}
+              className={cn(
+                "rounded-lg border p-1 text-xs transition cursor-pointer",
+                item.isFavorite
+                  ? "border-amber-200 bg-amber-50 text-amber-500"
+                  : "border-gray-200 bg-white text-gray-400 hover:text-amber-500 hover:bg-gray-50"
+              )}
+              title={item.isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+            >
+              <Star className={cn("h-3.5 w-3.5", item.isFavorite && "fill-amber-400 text-amber-500")} />
+            </button>
+          )}
+
+          {onDelete && (
+            <button
+              type="button"
+              onClick={() => onDelete(item.id)}
+              className="rounded-lg border border-gray-200 bg-white p-1 text-xs text-gray-400 hover:text-red-500 hover:bg-red-50 hover:border-red-200 transition cursor-pointer"
+              title="Supprimer cette fiche"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       </div>
 

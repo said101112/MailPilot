@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Clock, Copy, Mic, Pause, Play, RotateCcw, Sparkles } from "lucide-react";
+import { Clock, Copy, Mic, Pause, Play, RotateCcw, Sparkles, Star, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { ExpressionItem } from "@/lib/tracker/expressions";
@@ -10,9 +10,10 @@ interface ParagraphViewerProps {
   item: ExpressionItem;
   onEdit?: (item: ExpressionItem) => void;
   onDelete?: (id: string) => void;
+  onToggleFavorite?: (id: string) => void;
 }
 
-export default function ParagraphViewer({ item }: ParagraphViewerProps) {
+export default function ParagraphViewer({ item, onEdit, onDelete, onToggleFavorite }: ParagraphViewerProps) {
   const content = item.paragraphContent || "";
 
   // Estimation of reading / speech time (avg ~140 words per minute)
@@ -122,6 +123,33 @@ export default function ParagraphViewer({ item }: ParagraphViewerProps) {
             <Copy className="h-3 w-3" />
             <span className="hidden sm:inline">Copier</span>
           </button>
+
+          {onToggleFavorite && (
+            <button
+              type="button"
+              onClick={() => onToggleFavorite(item.id)}
+              className={cn(
+                "rounded-lg border p-1 text-xs transition cursor-pointer",
+                item.isFavorite
+                  ? "border-amber-200 bg-amber-50 text-amber-500"
+                  : "border-gray-200 bg-white text-gray-400 hover:text-amber-500 hover:bg-gray-50"
+              )}
+              title={item.isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+            >
+              <Star className={cn("h-3.5 w-3.5", item.isFavorite && "fill-amber-400 text-amber-500")} />
+            </button>
+          )}
+
+          {onDelete && (
+            <button
+              type="button"
+              onClick={() => onDelete(item.id)}
+              className="rounded-lg border border-gray-200 bg-white p-1 text-xs text-gray-400 hover:text-red-500 hover:bg-red-50 hover:border-red-200 transition cursor-pointer"
+              title="Supprimer cette fiche"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
