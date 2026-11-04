@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy, HelpCircle, Lightbulb, MessageSquare, PhoneCall, Sparkles, Star, Trash2, User, UserCheck } from "lucide-react";
+import { Check, CheckCircle2, Copy, HelpCircle, Lightbulb, MessageSquare, PhoneCall, Sparkles, Star, Trash2, User, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { DialogueTurn, ExpressionItem } from "@/lib/tracker/expressions";
@@ -119,6 +119,17 @@ export default function DialogueViewer({
           <p className="py-4 text-center text-xs text-gray-400 italic">Aucune réplique dans ce scénario.</p>
         ) : (
           turns.map((turn, idx) => {
+            if (turn.speaker === "note") {
+              return (
+                <div key={turn.id || idx} className="flex justify-center my-2.5">
+                  <div className="inline-flex items-center gap-1.5 rounded-full bg-blue-50/90 border border-blue-200/80 px-3.5 py-1 text-xs font-semibold text-blue-900 shadow-2xs">
+                    <HelpCircle className="h-3.5 w-3.5 text-blue-600" />
+                    <span>{turn.speakerLabel || turn.text}</span>
+                  </div>
+                </div>
+              );
+            }
+
             const isRh = turn.speaker === "rh";
             const speakerName = turn.speakerLabel || (isRh ? "Recruteur / RH" : "Toi (Candidat)");
             const isCandidate = turn.speaker === "candidate";
@@ -147,7 +158,7 @@ export default function DialogueViewer({
                   {/* Message Bubble */}
                   <div
                     className={cn(
-                      "relative group max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-2.5 text-xs sm:text-sm leading-relaxed shadow-2xs",
+                      "relative group max-w-[88%] sm:max-w-[78%] rounded-2xl px-4 py-2.5 text-xs sm:text-sm leading-relaxed shadow-2xs",
                       isRh
                         ? "bg-gray-100 text-gray-800 rounded-tl-xs border border-gray-200/70"
                         : "bg-[#fff7f4] text-gray-900 rounded-tr-xs border border-orange-200/90 font-medium"
@@ -164,21 +175,55 @@ export default function DialogueViewer({
                       </span>
 
                       {/* Quick copy button */}
-                      <button
-                        type="button"
-                        onClick={() => copyText(turn.text, turn.id, "Réplique")}
-                        className="opacity-60 hover:opacity-100 transition p-0.5 rounded text-gray-400 hover:text-gray-700"
-                        title="Copier cette réplique"
-                      >
-                        {copiedTurnId === turn.id ? (
-                          <Check className="h-3.5 w-3.5 text-emerald-600" />
-                        ) : (
-                          <Copy className="h-3.5 w-3.5" />
-                        )}
-                      </button>
+                      {turn.text && (
+                        <button
+                          type="button"
+                          onClick={() => copyText(turn.text, turn.id, "Réplique")}
+                          className="opacity-60 hover:opacity-100 transition p-0.5 rounded text-gray-400 hover:text-gray-700"
+                          title="Copier cette réplique"
+                        >
+                          {copiedTurnId === turn.id ? (
+                            <Check className="h-3.5 w-3.5 text-emerald-600" />
+                          ) : (
+                            <Copy className="h-3.5 w-3.5" />
+                          )}
+                        </button>
+                      )}
                     </div>
 
-                    <p className="whitespace-pre-wrap">{turn.text}</p>
+                    {turn.text && <p className="whitespace-pre-wrap">{turn.text}</p>}
+
+                    {/* Multiple answer options (bullet points) */}
+                    {turn.options && turn.options.length > 0 && (
+                      <div className={cn("space-y-1.5", turn.text && "mt-2.5 pt-2 border-t border-orange-200/60")}>
+                        <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-orange-800">
+                          <CheckCircle2 className="h-3 w-3 text-[#ff5722]" />
+                          <span>Variantes au choix :</span>
+                        </div>
+                        <div className="space-y-1">
+                          {turn.options.map((optionText, optIdx) => (
+                            <div
+                              key={optIdx}
+                              className="flex items-center justify-between gap-2 rounded-xl bg-white/95 border border-orange-200/80 px-2.5 py-1.5 text-xs text-gray-800 hover:border-orange-300 transition shadow-2xs group/opt"
+                            >
+                              <span className="font-medium text-gray-900">« {optionText} »</span>
+                              <button
+                                type="button"
+                                onClick={() => copyText(optionText, `${turn.id}-opt-${optIdx}`, "Variante")}
+                                className="opacity-70 group-hover/opt:opacity-100 p-0.5 text-gray-400 hover:text-orange-600 transition"
+                                title="Copier cette variante"
+                              >
+                                {copiedTurnId === `${turn.id}-opt-${optIdx}` ? (
+                                  <Check className="h-3 w-3 text-emerald-600" />
+                                ) : (
+                                  <Copy className="h-3 w-3" />
+                                )}
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -189,7 +234,7 @@ export default function DialogueViewer({
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <div className="flex items-center gap-1.5 font-bold text-amber-800 text-[11px]">
                           <Lightbulb className="h-3.5 w-3.5 text-amber-600" />
-                          <span>Ou plus naturellement :</span>
+                          <span>Ou plus simplement / naturellement :</span>
                         </div>
                         <button
                           type="button"
