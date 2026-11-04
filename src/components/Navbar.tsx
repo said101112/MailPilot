@@ -18,6 +18,7 @@ import {
   Menu,
   MessageSquarePlus,
   Network,
+  PhoneCall,
   Send,
   Sparkles,
   Upload,
@@ -108,6 +109,11 @@ const hunterNavSections = [
         name: "Aide-Mémoire (Prep)",
         href: "/tracker/prep",
         icon: Sparkles,
+      },
+      {
+        name: "Playbooks & Scénarios RH",
+        href: "/tracker/playbooks",
+        icon: PhoneCall,
       },
       {
         name: "Relances",

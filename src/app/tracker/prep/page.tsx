@@ -35,6 +35,7 @@ import {
   MessageSquare,
   Mic,
   Pause,
+  PhoneCall,
   Play,
   Plus,
   RefreshCw,
@@ -545,6 +546,13 @@ export default function InterviewPrepPage() {
           </div>
 
           <div className="flex items-center gap-2.5">
+            <Link
+              href="/tracker/playbooks"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-bold text-[#ff5722] hover:bg-orange-100 transition shadow-2xs"
+            >
+              <PhoneCall className="h-3.5 w-3.5" />
+              <span>Scénarios & Playbooks RH</span>
+            </Link>
             <button
               type="button"
               onClick={() => {
