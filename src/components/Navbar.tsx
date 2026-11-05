@@ -7,6 +7,7 @@ import {
   Briefcase,
   Building2,
   CalendarClock,
+  CheckSquare,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -94,6 +95,11 @@ const hunterNavSections = [
         name: "Entreprises",
         href: "/tracker/companies",
         icon: Building2,
+      },
+      {
+        name: "Checklist Entreprises",
+        href: "/tracker/checklist",
+        icon: CheckSquare,
       },
       {
         name: "Contacts",
