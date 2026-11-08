@@ -693,9 +693,9 @@ export default function ApplyPage() {
     !emailCheck.valid;
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-2.5 sm:py-3.5 flex flex-col justify-start">
-      {/* Sleek Compact Header Line */}
-      <div className="flex items-center justify-between gap-3 pb-2 mb-3 border-b border-gray-200 shrink-0">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex flex-col justify-start">
+      {/* Sleek Header Line */}
+      <div className="flex items-center justify-between gap-3 pb-2.5 mb-3.5 border-b border-gray-200 shrink-0">
         <div className="flex items-center gap-2.5 min-w-0">
           <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-700">
             1-à-1
@@ -705,7 +705,7 @@ export default function ApplyPage() {
           </h1>
           <span className="text-gray-300 hidden md:inline">·</span>
           <p className="text-xs text-gray-500 hidden md:inline truncate">
-            Email personnalisé avec CV et lettre
+            Email personnalisé avec CV et lettre de motivation
           </p>
         </div>
 
@@ -714,7 +714,7 @@ export default function ApplyPage() {
             type="button"
             onClick={handleTestConnections}
             disabled={integrationLoading}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-medium shadow-2xs transition cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-medium shadow-2xs transition cursor-pointer disabled:opacity-50"
           >
             <ShieldCheck className={cn("h-3.5 w-3.5", smtpHealthy ? "text-emerald-600" : "text-blue-600")} />
             <span>Tester connexion</span>
@@ -725,7 +725,7 @@ export default function ApplyPage() {
 
           <Link
             href="/cv-library"
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-medium shadow-2xs transition"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-medium shadow-2xs transition"
           >
             <FileText className="h-3.5 w-3.5 text-gray-400" />
             <span>CVs ({cvLibrary.length})</span>
@@ -733,11 +733,11 @@ export default function ApplyPage() {
         </div>
       </div>
 
-      {/* Main Grid: Form (7 cols) + Dual-Tab Pane (5 cols) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-stretch">
+      {/* Main Grid: 50% Form + 50% Dual-Tab Pane */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
         
-        {/* LEFT COLUMN: THE COMPACT FORM */}
-        <div className="lg:col-span-7 bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-xs flex flex-col justify-between space-y-3">
+        {/* LEFT COLUMN: THE FORM (50% WIDTH) */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 shadow-xs flex flex-col justify-between space-y-4">
           
           {/* 1. Canal d'envoi (Segmented Control) */}
           <div className="grid grid-cols-2 gap-1.5 rounded-xl bg-gray-100/80 p-1 shrink-0">
@@ -745,7 +745,7 @@ export default function ApplyPage() {
               type="button"
               onClick={() => setDispatchChannel("direct")}
               className={cn(
-                "flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition cursor-pointer",
+                "flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition cursor-pointer",
                 dispatchChannel === "direct"
                   ? "bg-white text-blue-700 shadow-2xs border border-blue-200 font-bold"
                   : "text-gray-600 hover:text-gray-900"
@@ -759,7 +759,7 @@ export default function ApplyPage() {
               type="button"
               onClick={() => setDispatchChannel("draft")}
               className={cn(
-                "flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition cursor-pointer",
+                "flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition cursor-pointer",
                 dispatchChannel === "draft"
                   ? "bg-white text-[#ff5722] shadow-2xs border border-orange-200 font-bold"
                   : "text-gray-600 hover:text-gray-900"
@@ -771,23 +771,23 @@ export default function ApplyPage() {
           </div>
 
           {/* 2. Destinataire (Recruiter Email) */}
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold text-gray-700">
-                Email du recruteur <span className="text-red-500">*</span>
+                Email du recruteur ou entreprise <span className="text-red-500">*</span>
               </label>
               {inferredCompany && inferredCompany.name && (
-                <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.2 rounded-full">
+                <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
                   🏢 {inferredCompany.name}
                 </span>
               )}
             </div>
 
             <div className="relative">
-              <Mail className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+              <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <input
                 className={cn(
-                  "w-full rounded-xl border bg-gray-50/50 h-9 pl-9 pr-9 text-xs text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none transition",
+                  "w-full rounded-xl border bg-gray-50/50 h-10 pl-9 pr-9 text-xs text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none transition",
                   emailCheck.valid
                     ? "border-emerald-300 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
                     : email && emailCheck.code !== "empty"
@@ -813,13 +813,13 @@ export default function ApplyPage() {
                 value={email}
               />
               {email && (
-                <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
                   {emailChecking ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin text-gray-400" />
+                    <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
                   ) : emailCheck.valid ? (
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                   ) : (
-                    <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+                    <AlertCircle className="h-4 w-4 text-amber-500" />
                   )}
                 </div>
               )}
@@ -835,22 +835,22 @@ export default function ApplyPage() {
 
             {/* Duplicate Match Warning */}
             {duplicateMatch && (
-              <div className="rounded-xl border border-amber-300 bg-amber-50/90 p-2 text-xs text-amber-900 animate-in fade-in duration-200">
+              <div className="rounded-xl border border-amber-300 bg-amber-50/90 p-2.5 text-xs text-amber-900 animate-in fade-in duration-200">
                 <div className="flex items-start gap-2">
-                  <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />
+                  <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1">
-                      <p className="font-semibold text-amber-950 text-[11px]">
+                      <p className="font-semibold text-amber-950 text-[11.5px]">
                         Déjà postulé chez {duplicateMatch.company} ({duplicateMatch.position})
                       </p>
-                      <span className="rounded bg-amber-200 px-1 py-0.2 text-[9px] font-bold text-amber-900">
+                      <span className="rounded bg-amber-200 px-1.5 py-0.2 text-[9.5px] font-bold text-amber-900">
                         {duplicateMatch.daysAgo}j
                       </span>
                     </div>
                     <div className="mt-1 flex items-center gap-2">
                       <Link
                         href="/tracker/follow-ups"
-                        className="font-semibold text-amber-950 hover:underline text-[10.5px]"
+                        className="font-semibold text-amber-950 hover:underline text-[11px]"
                       >
                         Voir dans les relances &rarr;
                       </Link>
@@ -858,7 +858,7 @@ export default function ApplyPage() {
                       <button
                         type="button"
                         onClick={() => setDuplicateMatch(null)}
-                        className="text-[10.5px] text-amber-700 hover:text-amber-950 underline cursor-pointer"
+                        className="text-[11px] text-amber-700 hover:text-amber-950 underline cursor-pointer"
                       >
                         Ignorer
                       </button>
@@ -870,7 +870,7 @@ export default function ApplyPage() {
           </div>
 
           {/* 3. Modèle de candidature & Personnalisation */}
-          <div className="space-y-1 relative">
+          <div className="space-y-1.5 relative">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold text-gray-700">
                 Modèle de candidature
@@ -882,7 +882,7 @@ export default function ApplyPage() {
                     type="button"
                     onClick={() => handleSelectTrack("dev")}
                     className={cn(
-                      "rounded-md px-2 py-0.2 text-[10.5px] font-medium transition cursor-pointer",
+                      "rounded-md px-2 py-0.5 text-[11px] font-medium transition cursor-pointer",
                       !isDataTrack
                         ? "bg-white text-blue-700 shadow-2xs font-bold"
                         : "text-gray-500 hover:text-gray-800"
@@ -894,7 +894,7 @@ export default function ApplyPage() {
                     type="button"
                     onClick={() => handleSelectTrack("data")}
                     className={cn(
-                      "rounded-md px-2 py-0.2 text-[10.5px] font-medium transition cursor-pointer",
+                      "rounded-md px-2 py-0.5 text-[11px] font-medium transition cursor-pointer",
                       isDataTrack
                         ? "bg-white text-emerald-700 shadow-2xs font-bold"
                         : "text-gray-500 hover:text-gray-800"
@@ -910,7 +910,7 @@ export default function ApplyPage() {
                     type="button"
                     onClick={() => handleSelectLang("fr")}
                     className={cn(
-                      "rounded-md px-1.5 py-0.2 text-[10px] font-bold transition cursor-pointer",
+                      "rounded-md px-1.5 py-0.5 text-[10.5px] font-bold transition cursor-pointer",
                       !isEnglishLang
                         ? "bg-blue-600 text-white shadow-2xs"
                         : "text-gray-500 hover:text-gray-800"
@@ -922,7 +922,7 @@ export default function ApplyPage() {
                     type="button"
                     onClick={() => handleSelectLang("en")}
                     className={cn(
-                      "rounded-md px-1.5 py-0.2 text-[10px] font-bold transition cursor-pointer",
+                      "rounded-md px-1.5 py-0.5 text-[10.5px] font-bold transition cursor-pointer",
                       isEnglishLang
                         ? "bg-indigo-600 text-white shadow-2xs"
                         : "text-gray-500 hover:text-gray-800"
@@ -936,12 +936,12 @@ export default function ApplyPage() {
 
             {/* Template selector button */}
             <button
-              className="w-full rounded-xl border border-gray-200 bg-gray-50/50 hover:bg-white px-3 h-9 text-left text-xs text-gray-800 flex items-center justify-between transition shadow-2xs cursor-pointer"
+              className="w-full rounded-xl border border-gray-200 bg-gray-50/50 hover:bg-white px-3.5 h-10 text-left text-xs text-gray-800 flex items-center justify-between transition shadow-2xs cursor-pointer"
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               type="button"
             >
               <span className="truncate font-medium">{activeTemplate.name}</span>
-              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+              <ChevronDown className="h-4 w-4 shrink-0 text-gray-400" />
             </button>
 
             {isDropdownOpen && (
@@ -979,9 +979,9 @@ export default function ApplyPage() {
                 <button
                   type="button"
                   onClick={handleOpenCustomModal}
-                  className="inline-flex items-center gap-1 text-[11.5px] text-gray-500 hover:text-blue-600 transition cursor-pointer"
+                  className="inline-flex items-center gap-1.5 text-[11.5px] text-gray-500 hover:text-blue-600 transition cursor-pointer"
                 >
-                  <Edit3 className="h-3 w-3 text-gray-400" />
+                  <Edit3 className="h-3.5 w-3.5 text-gray-400" />
                   <span className="hover:underline">Personnaliser le contenu pour ce poste</span>
                 </button>
               ) : (
@@ -1015,14 +1015,14 @@ export default function ApplyPage() {
           </div>
 
           {/* 4. Pièces jointes (CV & Lettre) */}
-          <div className="rounded-xl border border-gray-100 bg-gray-50/70 p-2.5 space-y-2">
+          <div className="rounded-xl border border-gray-100 bg-gray-50/70 p-3 space-y-2.5">
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs text-gray-700 font-medium flex items-center gap-1.5">
                 <FileText className="h-3.5 w-3.5 text-blue-600" />
                 CV joint :
               </span>
               <select
-                className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-800 outline-none focus:border-blue-500 max-w-[240px] truncate"
+                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-800 outline-none focus:border-blue-500 max-w-[260px] truncate"
                 value={selectedCvId || ""}
                 onChange={(e) => {
                   const newId = e.target.value;
@@ -1044,7 +1044,7 @@ export default function ApplyPage() {
               </select>
             </div>
 
-            <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-gray-200/50">
+            <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-200/50">
               <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-gray-700 font-medium">
                 <input
                   type="checkbox"
@@ -1066,13 +1066,13 @@ export default function ApplyPage() {
           </div>
 
           {/* 5. Bouton d'action principal + Fallback 1-clic */}
-          <div className="pt-1 space-y-1.5">
+          <div className="pt-1.5 space-y-2">
             <button
               type="button"
               onClick={handleSend}
               disabled={sendDisabled}
               className={cn(
-                "w-full h-10 sm:h-11 text-xs sm:text-sm font-bold rounded-xl text-white transition shadow-sm cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none",
+                "w-full h-11 sm:h-12 text-xs sm:text-sm font-bold rounded-xl text-white transition shadow-sm cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none",
                 dispatchChannel === "direct"
                   ? "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
                   : "bg-[#ff5722] hover:bg-[#e64a19] active:bg-[#d84315]"
@@ -1117,19 +1117,19 @@ export default function ApplyPage() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: DUAL-TAB PANE (Live Preview / Dispatch Logs) */}
-        <div className="lg:col-span-5 bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs flex flex-col justify-start">
+        {/* RIGHT COLUMN: DUAL-TAB PANE (50% WIDTH) */}
+        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs flex flex-col justify-between">
           
           {/* Tab Bar */}
-          <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50/70 p-1.5 shrink-0">
-            <div className="flex items-center gap-1">
+          <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50/70 p-2 shrink-0">
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setRightTab("preview")}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer",
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer",
                   rightTab === "preview"
-                    ? "bg-white text-gray-900 shadow-xs border border-gray-200"
+                    ? "bg-white text-gray-900 shadow-xs border border-gray-200 font-bold"
                     : "text-gray-500 hover:text-gray-800"
                 )}
               >
@@ -1141,9 +1141,9 @@ export default function ApplyPage() {
                 type="button"
                 onClick={() => setRightTab("logs")}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer",
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer",
                   rightTab === "logs"
-                    ? "bg-white text-gray-900 shadow-xs border border-gray-200"
+                    ? "bg-white text-gray-900 shadow-xs border border-gray-200 font-bold"
                     : "text-gray-500 hover:text-gray-800"
                 )}
               >
@@ -1163,14 +1163,14 @@ export default function ApplyPage() {
           </div>
 
           {/* Content Area */}
-          <div className="p-3.5 flex flex-col overflow-hidden">
+          <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between overflow-hidden">
             
             {/* TAB 1: LIVE EMAIL PREVIEW */}
             {rightTab === "preview" && (
-              <div className="flex flex-col space-y-3">
+              <div className="flex-1 flex flex-col space-y-3.5 justify-between">
                 {/* Simulated Envelope Header */}
-                <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-2.5 space-y-1.5 text-xs shrink-0">
-                  <div className="flex items-center justify-between text-gray-500 text-[10.5px] border-b border-gray-200/60 pb-1">
+                <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-3 space-y-2 text-xs shrink-0">
+                  <div className="flex items-center justify-between text-gray-500 text-[10.5px] border-b border-gray-200/60 pb-1.5">
                     <div className="flex items-center gap-1.5">
                       <span className="h-2 w-2 rounded-full bg-red-400" />
                       <span className="h-2 w-2 rounded-full bg-yellow-400" />
@@ -1180,13 +1180,13 @@ export default function ApplyPage() {
                     <span>SMTP / SSL</span>
                   </div>
 
-                  <div className="space-y-0.5 text-gray-700 text-[11.5px]">
+                  <div className="space-y-1 text-gray-700 text-xs">
                     <p className="truncate">
                       <strong className="text-gray-900">De :</strong> {candidateName} &lt;vous@gmail.com&gt;
                     </p>
                     <p className="truncate">
                       <strong className="text-gray-900">À :</strong>{" "}
-                      <span className={cn(email ? "text-blue-700 font-mono font-medium" : "text-gray-400 italic")}>
+                      <span className={cn(email ? "text-blue-700 font-mono font-semibold" : "text-gray-400 italic")}>
                         {email || "recruteur@entreprise.com"}
                       </span>
                     </p>
@@ -1197,13 +1197,13 @@ export default function ApplyPage() {
                   </div>
 
                   {/* Attached Files Badges */}
-                  <div className="pt-1.5 border-t border-gray-200/60 flex flex-wrap gap-1">
-                    <span className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-1.5 py-0.2 font-mono text-[10.5px] text-blue-800">
+                  <div className="pt-2 border-t border-gray-200/60 flex flex-wrap gap-1.5">
+                    <span className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 font-mono text-[11px] text-blue-800">
                       <FileCheck className="h-3 w-3 text-blue-600" />
                       {cvFileName}
                     </span>
                     {includeCoverLetter && (
-                      <span className="inline-flex items-center gap-1 rounded-md border border-purple-200 bg-purple-50 px-1.5 py-0.2 font-mono text-[10.5px] text-purple-800">
+                      <span className="inline-flex items-center gap-1 rounded-md border border-purple-200 bg-purple-50 px-2 py-0.5 font-mono text-[11px] text-purple-800">
                         <FileText className="h-3 w-3 text-purple-600" />
                         Lettre_{companyDisplayName.replace(/\s+/g, "_")}.pdf
                       </span>
@@ -1212,7 +1212,7 @@ export default function ApplyPage() {
                 </div>
 
                 {/* Email Body Preview */}
-                <div className="rounded-xl border border-gray-100 bg-white p-3 overflow-y-auto max-h-[220px] sm:max-h-[260px]">
+                <div className="rounded-xl border border-gray-100 bg-white p-3.5 overflow-y-auto min-h-[220px] max-h-[300px] sm:max-h-[340px] flex-1">
                   <div className="text-xs text-gray-800 leading-relaxed whitespace-pre-wrap font-sans">
                     {liveMessage}
                   </div>
@@ -1222,10 +1222,10 @@ export default function ApplyPage() {
 
             {/* TAB 2: LIVE DISPATCH LOGS */}
             {rightTab === "logs" && (
-              <div className="flex flex-col space-y-2.5">
+              <div className="flex-1 flex flex-col space-y-3 justify-between">
                 {/* Success Result Card */}
                 {lastResult && (
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-2.5 text-xs animate-in fade-in duration-200 space-y-1.5 shrink-0">
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 text-xs animate-in fade-in duration-200 space-y-1.5 shrink-0">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5 text-emerald-950 font-bold text-xs">
                         <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
@@ -1271,10 +1271,10 @@ export default function ApplyPage() {
                 )}
 
                 {/* Logs Feed Container */}
-                <div className="rounded-xl border border-gray-100 bg-gray-50/70 p-2.5 overflow-y-auto max-h-[280px] space-y-1.5 font-mono text-[11px]">
+                <div className="rounded-xl border border-gray-100 bg-gray-50/70 p-3 overflow-y-auto min-h-[220px] max-h-[320px] sm:max-h-[360px] flex-1 space-y-1.5 font-mono text-[11px]">
                   {logs.length === 0 ? (
-                    <div className="py-6 flex flex-col items-center justify-center text-center text-gray-400 space-y-1.5">
-                      <Clock className="h-6 w-6 text-gray-300 stroke-1" />
+                    <div className="h-full py-8 flex flex-col items-center justify-center text-center text-gray-400 space-y-2">
+                      <Clock className="h-7 w-7 text-gray-300 stroke-1" />
                       <p className="text-xs font-sans text-gray-500 font-medium">
                         En attente d&apos;envoi
                       </p>
