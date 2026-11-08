@@ -26,6 +26,7 @@ import { PROFILE_DEFAULT_NAME } from "@/lib/brand";
 import {
   getIntegrationStatus,
   sendApplication,
+  sendDirectApplication,
   validateEmailBeforeSend,
   type EmailPreflightResult,
   type IntegrationStatusResponse,
@@ -82,6 +83,7 @@ export default function ApplyPage() {
   const [tempSubject, setTempSubject] = useState(DEFAULT_TEMPLATES[0].subject);
   const [tempMessage, setTempMessage] = useState(DEFAULT_TEMPLATES[0].message);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [dispatchChannel, setDispatchChannel] = useState<"draft" | "direct">("direct");
 
   // Duplicate detection state
   const [duplicateMatch, setDuplicateMatch] = useState<DuplicateMatch | null>(null);
@@ -236,13 +238,19 @@ export default function ApplyPage() {
     integrationStatus?.n8n.reachable === false ||
     integrationStatus?.n8n.healthy === false;
 
+  const smtpBlocked =
+    integrationStatus?.smtp?.configured === false ||
+    integrationStatus?.smtp?.healthy === false;
+
+  const channelBlocked = dispatchChannel === "draft" ? n8nBlocked : smtpBlocked;
+
   const sendDisabled =
     loading ||
     integrationLoading ||
     emailChecking ||
     !email ||
     !emailCheck.valid ||
-    Boolean(n8nBlocked);
+    Boolean(channelBlocked);
 
   const checkDuplicates = async (emailVal: string) => {
     const cleanEmail = emailVal.trim().toLowerCase();
@@ -458,8 +466,15 @@ export default function ApplyPage() {
         throw new Error(emailResult.message);
       }
 
-      if (n8nBlocked) {
+      if (dispatchChannel === "draft" && n8nBlocked) {
         throw new Error(integrationStatus?.n8n.message || "n8n is not ready.");
+      }
+
+      if (dispatchChannel === "direct" && smtpBlocked) {
+        throw new Error(
+          integrationStatus?.smtp?.message ||
+            "Gmail SMTP n'est pas configuré. Veuillez vérifier vos variables d'environnement."
+        );
       }
 
       const {
@@ -534,22 +549,41 @@ export default function ApplyPage() {
       const processedSubject = replace(finalSubject);
       const processedMessage = replace(finalMessage);
 
-      await sendApplication({
-        company: companyDisplayName,
-        position: "Stage PFE / Emploi",
-        email: email,
-        candidateName: formattedName,
-        subject: processedSubject,
-        message: processedMessage.replace(/\n/g, "<br>"),
-        cv_base64: finalCvBase64,
-        cv_filename: finalCvFileName,
-        cv_data: finalCvBase64,
-        cv_name: finalCvFileName,
-        cover_letter_base64: finalCoverLetterBase64,
-        cover_letter_filename: finalCoverLetterFileName,
-        notes: "",
-        jobUrl: "",
-      });
+      if (dispatchChannel === "direct") {
+        await sendDirectApplication({
+          company: companyDisplayName,
+          position: "Stage PFE / Emploi",
+          email: email,
+          candidateName: formattedName,
+          subject: processedSubject,
+          message: processedMessage,
+          cv_base64: finalCvBase64,
+          cv_filename: finalCvFileName,
+          cv_data: finalCvBase64,
+          cv_name: finalCvFileName,
+          cover_letter_base64: finalCoverLetterBase64,
+          cover_letter_filename: finalCoverLetterFileName,
+          notes: "",
+          jobUrl: "",
+        });
+      } else {
+        await sendApplication({
+          company: companyDisplayName,
+          position: "Stage PFE / Emploi",
+          email: email,
+          candidateName: formattedName,
+          subject: processedSubject,
+          message: processedMessage.replace(/\n/g, "<br>"),
+          cv_base64: finalCvBase64,
+          cv_filename: finalCvFileName,
+          cv_data: finalCvBase64,
+          cv_name: finalCvFileName,
+          cover_letter_base64: finalCoverLetterBase64,
+          cover_letter_filename: finalCoverLetterFileName,
+          notes: "",
+          jobUrl: "",
+        });
+      }
 
       const { error } = await supabase.from("applications").insert([
         {
@@ -577,7 +611,11 @@ export default function ApplyPage() {
         console.warn("Tracker sync failed:", syncErr);
       }
 
-      toast.success("Draft created in Gmail! Check your Gmail drafts.");
+      if (dispatchChannel === "direct") {
+        toast.success("Email envoyé directement avec succès ! (Délivré en boîte principale)");
+      } else {
+        toast.success("Brouillon créé dans Gmail ! Consultez vos brouillons.");
+      }
       setEmail("");
       setEmailCheck(validateEmailFormat(""));
       setIsCustomized(false);
@@ -671,16 +709,68 @@ export default function ApplyPage() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          {/* Quick Draft Card */}
+          {/* Quick Draft / Direct Dispatch Card */}
           <div className="rounded-lg border border-gray-200 bg-white p-6">
-            <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#fff3ef] text-[#ff5722]">
-                <Send className="h-4 w-4" />
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div
+                  className={cn(
+                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-md transition-colors",
+                    dispatchChannel === "direct"
+                      ? "bg-blue-50 text-blue-600"
+                      : "bg-[#fff3ef] text-[#ff5722]"
+                  )}
+                >
+                  {dispatchChannel === "direct" ? (
+                    <Send className="h-4 w-4" />
+                  ) : (
+                    <FileText className="h-4 w-4" />
+                  )}
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold text-gray-900">
+                    {dispatchChannel === "direct"
+                      ? "Canal 2 : Envoi Direct Immédiat"
+                      : "Canal 1 : Création de Brouillon"}
+                  </h2>
+                  <p className="text-xs text-gray-500">
+                    {dispatchChannel === "direct"
+                      ? "Délivre l'email via smtp.gmail.com (DKIM/SPF certifiés Google, zéro spam)"
+                      : "Prépare l'email dans vos Brouillons Gmail pour relecture manuelle"}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-sm font-semibold text-gray-900">Create Gmail Draft</h2>
-                <p className="text-xs text-gray-500">Generate a reviewable draft in Gmail with CV</p>
-              </div>
+            </div>
+
+            {/* Dual Channel Switcher */}
+            <div className="mb-5 rounded-xl border border-gray-200 bg-gray-50/80 p-1 flex gap-1.5">
+              <button
+                type="button"
+                onClick={() => setDispatchChannel("direct")}
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition cursor-pointer",
+                  dispatchChannel === "direct"
+                    ? "bg-white text-blue-700 shadow-2xs border border-blue-200 font-bold"
+                    : "text-gray-500 hover:text-gray-900"
+                )}
+              >
+                <Send className="h-3.5 w-3.5 text-blue-600" />
+                <span>Canal Direct (Inbox)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setDispatchChannel("draft")}
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition cursor-pointer",
+                  dispatchChannel === "draft"
+                    ? "bg-white text-[#ff5722] shadow-2xs border border-[#ff5722]/30 font-bold"
+                    : "text-gray-500 hover:text-gray-900"
+                )}
+              >
+                <FileText className="h-3.5 w-3.5 text-[#ff5722]" />
+                <span>Brouillon Gmail (n8n)</span>
+              </button>
             </div>
 
             <div className="flex-1 space-y-5">
@@ -945,17 +1035,30 @@ export default function ApplyPage() {
 
             <div className="mt-8 space-y-2.5">
               <button
-                className="editorial-button-primary h-12 w-full text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer"
+                className={cn(
+                  "h-12 w-full text-sm font-semibold flex items-center justify-center gap-2 rounded-xl text-white transition shadow-sm cursor-pointer disabled:opacity-50 disabled:pointer-events-none",
+                  dispatchChannel === "direct"
+                    ? "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
+                    : "bg-[#ff5722] hover:bg-[#e64a19] active:bg-[#d84315]"
+                )}
                 disabled={sendDisabled}
                 onClick={handleSend}
                 type="button"
               >
                 {loading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
+                ) : dispatchChannel === "direct" ? (
+                  <Send className="h-4 w-4" />
                 ) : (
                   <Sparkles className="h-4 w-4" />
                 )}
-                {n8nBlocked ? "n8n Blocked" : "Create Draft in Gmail"}
+                {dispatchChannel === "direct"
+                  ? smtpBlocked
+                    ? "Gmail SMTP non configuré (.env)"
+                    : "Envoyer Directement (Inbox)"
+                  : n8nBlocked
+                  ? "n8n non disponible"
+                  : "Créer le Brouillon dans Gmail"}
               </button>
 
               <button

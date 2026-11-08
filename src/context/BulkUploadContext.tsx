@@ -11,6 +11,7 @@ import React, {
 import { toast } from "sonner";
 import {
   sendApplication,
+  sendDirectApplication,
   validateEmailBeforeSend,
   type EmailPreflightResult,
 } from "@/lib/api";
@@ -93,6 +94,8 @@ interface BulkUploadContextType {
   isProcessing: boolean;
   progress: { current: number; total: number };
   setProgress: React.Dispatch<React.SetStateAction<{ current: number; total: number }>>;
+  bulkChannel: "draft" | "direct";
+  setBulkChannel: (channel: "draft" | "direct") => void;
   startBatchProcess: (activeTemplate: MessageTemplate, options?: { includeCoverLetter?: boolean }) => Promise<void>;
   cancelBatchProcess: () => void;
   clearBatch: () => void;
@@ -111,6 +114,7 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
   const [includeCoverLetter, setIncludeCoverLetter] = useState(false);
   const [defaultPosition, setDefaultPosition] = useState("Stage PFE / Emploi");
   const [defaultContactName, setDefaultContactName] = useState("Hiring Manager");
+  const [bulkChannel, setBulkChannel] = useState<"draft" | "direct">("direct");
   const [inputMode, setInputMode] = useState<"file" | "paste">("file");
   const [pastedText, setPastedText] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -414,17 +418,31 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
             }
           }
 
-          await sendApplication({
-            ...row,
-            message: processedMessage,
-            subject: processedSubject,
-            cv_base64: finalCvBase64,
-            cv_filename: finalCvFileName,
-            cv_data: finalCvBase64,
-            cv_name: finalCvFileName,
-            cover_letter_base64: finalCoverLetterBase64,
-            cover_letter_filename: finalCoverLetterFileName,
-          });
+          if (bulkChannel === "direct") {
+            await sendDirectApplication({
+              ...row,
+              message: processedMessage,
+              subject: processedSubject,
+              cv_base64: finalCvBase64,
+              cv_filename: finalCvFileName,
+              cv_data: finalCvBase64,
+              cv_name: finalCvFileName,
+              cover_letter_base64: finalCoverLetterBase64,
+              cover_letter_filename: finalCoverLetterFileName,
+            });
+          } else {
+            await sendApplication({
+              ...row,
+              message: processedMessage,
+              subject: processedSubject,
+              cv_base64: finalCvBase64,
+              cv_filename: finalCvFileName,
+              cv_data: finalCvBase64,
+              cv_name: finalCvFileName,
+              cover_letter_base64: finalCoverLetterBase64,
+              cover_letter_filename: finalCoverLetterFileName,
+            });
+          }
 
           if (user) {
             const compToSave = row.company || inferCompanyFromEmail(row.email)?.name || null;
@@ -563,6 +581,8 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
         isProcessing,
         progress,
         setProgress,
+        bulkChannel,
+        setBulkChannel,
         startBatchProcess,
         cancelBatchProcess,
         clearBatch,

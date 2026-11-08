@@ -199,6 +199,8 @@ export default function UploadPage() {
     isProcessing,
     progress,
     setProgress,
+    bulkChannel,
+    setBulkChannel,
     startBatchProcess: contextStartBatchProcess,
     cancelBatchProcess,
     clearBatch,
@@ -445,6 +447,12 @@ export default function UploadPage() {
     integrationStatus?.n8n.reachable === false ||
     integrationStatus?.n8n.healthy === false;
 
+  const smtpBlocked =
+    integrationStatus?.smtp?.configured === false ||
+    integrationStatus?.smtp?.healthy === false;
+
+  const channelBlocked = bulkChannel === "draft" ? n8nBlocked : smtpBlocked;
+
   const processCsvFile = (file: File) => {
     const lowerFileName = file.name.toLowerCase();
 
@@ -550,8 +558,16 @@ export default function UploadPage() {
       return;
     }
 
-    if (n8nBlocked) {
+    if (bulkChannel === "draft" && n8nBlocked) {
       toast.error(integrationStatus?.n8n.message || "n8n is not ready.");
+      return;
+    }
+
+    if (bulkChannel === "direct" && smtpBlocked) {
+      toast.error(
+        integrationStatus?.smtp?.message ||
+          "Gmail SMTP n'est pas configuré. Veuillez vérifier GMAIL_USER et GMAIL_APP_PASSWORD."
+      );
       return;
     }
 
@@ -1179,26 +1195,67 @@ export default function UploadPage() {
                   {isAllSelected ? "Deselect All" : "Select All"}
                 </button>
 
+                {/* Bulk Channel Switcher */}
+                <div className="flex items-center rounded-lg border border-gray-200 bg-gray-50/80 p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setBulkChannel("direct")}
+                    className={cn(
+                      "px-2.5 py-1 text-xs font-semibold rounded-md transition cursor-pointer flex items-center gap-1",
+                      bulkChannel === "direct"
+                        ? "bg-white text-blue-700 shadow-2xs border border-blue-200 font-bold"
+                        : "text-gray-500 hover:text-gray-800"
+                    )}
+                  >
+                    <Send className="h-3 w-3 text-blue-600" />
+                    <span>Direct (Inbox)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBulkChannel("draft")}
+                    className={cn(
+                      "px-2.5 py-1 text-xs font-semibold rounded-md transition cursor-pointer flex items-center gap-1",
+                      bulkChannel === "draft"
+                        ? "bg-white text-[#ff5722] shadow-2xs border border-[#ff5722]/30 font-bold"
+                        : "text-gray-500 hover:text-gray-800"
+                    )}
+                  >
+                    <FileText className="h-3 w-3 text-[#ff5722]" />
+                    <span>Brouillons (n8n)</span>
+                  </button>
+                </div>
+
                 <button
-                  className="editorial-button-primary h-8 px-4 text-xs font-semibold"
+                  className={cn(
+                    "h-8 px-4 text-xs font-semibold rounded-md text-white transition flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50 disabled:pointer-events-none",
+                    bulkChannel === "direct"
+                      ? "bg-blue-600 hover:bg-blue-700"
+                      : "bg-[#ff5722] hover:bg-[#e64a19]"
+                  )}
                   disabled={
                     data.length === 0 ||
                     selectedRows.size === 0 ||
                     isProcessing ||
                     integrationLoading ||
-                    n8nBlocked
+                    channelBlocked
                   }
                   onClick={handleStartBatchProcess}
                   type="button"
                 >
                   {isProcessing ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : bulkChannel === "direct" ? (
+                    <Send className="h-3.5 w-3.5" />
                   ) : (
                     <Play className="h-3.5 w-3.5" />
                   )}
                   {isProcessing
-                    ? `Creating Drafts (${progress.current}/${progress.total})`
-                    : `Create Drafts (${selectedCount})`}
+                    ? bulkChannel === "direct"
+                      ? `Envoi direct (${progress.current}/${progress.total})`
+                      : `Création Brouillons (${progress.current}/${progress.total})`
+                    : bulkChannel === "direct"
+                    ? `Envoyer Direct (${selectedCount})`
+                    : `Créer Brouillons (${selectedCount})`}
                 </button>
 
                 {isProcessing && (

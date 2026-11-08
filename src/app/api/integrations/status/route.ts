@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { verifySmtpConnection } from "@/lib/nodemailer";
 
 export const runtime = "nodejs";
 
@@ -114,11 +115,15 @@ export async function GET() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim(),
   );
 
-  const n8n = await getN8nStatus();
+  const [n8n, smtp] = await Promise.all([
+    getN8nStatus(),
+    verifySmtpConnection(),
+  ]);
 
   return NextResponse.json({
     checkedAt: new Date().toISOString(),
     n8n,
+    smtp,
     supabase: {
       configured: supabaseConfigured,
       message: supabaseConfigured

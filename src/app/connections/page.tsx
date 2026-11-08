@@ -6,11 +6,15 @@ import {
   ArrowRight,
   CheckCircle2,
   Database,
+  Key,
+  Mail,
   MailCheck,
   Network,
   RefreshCw,
   Route,
+  Send,
   Settings2,
+  ShieldCheck,
   TriangleAlert,
   Webhook,
 } from "lucide-react";
@@ -41,6 +45,8 @@ export default function ConnectionsPage() {
     integrationStatus?.n8n.configured &&
     integrationStatus.n8n.reachable !== false &&
     integrationStatus.n8n.healthy !== false;
+  const smtpConfigured = integrationStatus?.smtp?.configured === true;
+  const smtpHealthy = integrationStatus?.smtp?.healthy === true;
   const supabaseHealthy = integrationStatus?.supabase.configured === true;
 
   return (
@@ -83,9 +89,9 @@ export default function ConnectionsPage() {
 
         {/* Integration Cards Grid */}
         <div>
-          <h2 className="mb-3 text-xs font-semibold text-gray-900">Connected Apps</h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {/* n8n Card */}
+          <h2 className="mb-3 text-xs font-semibold text-gray-900">Connected Apps & Channels</h2>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {/* Canal 1 : n8n Card */}
             <div className="flex flex-col justify-between rounded-lg border border-gray-200 bg-white p-5">
               <div>
                 <div className="mb-4 flex items-start justify-between">
@@ -105,21 +111,71 @@ export default function ConnectionsPage() {
                     ) : (
                       <TriangleAlert className="h-3 w-3" />
                     )}
-                    {n8nHealthy ? "Operational" : "Error"}
+                    {n8nHealthy ? "Canal 1 : Opérationnel" : "Non Détecté"}
                   </span>
                 </div>
-                <h3 className="text-sm font-semibold text-gray-900">n8n Workflow Engine</h3>
+                <h3 className="text-sm font-semibold text-gray-900">Canal 1 : n8n (Drafts)</h3>
                 <p className="mt-1.5 text-xs leading-relaxed text-gray-500">
                   {integrationLoading
-                    ? "Checking reachability..."
+                    ? "Vérification..."
                     : integrationStatus?.n8n.message ||
-                      "Core automation engine handling routing and email dispatch."}
+                      "Génère les brouillons directement dans votre boîte Gmail pour relecture."}
                 </p>
               </div>
               <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-3">
-                <span className="text-[11px] text-gray-400">Webhook Linked</span>
-                <span className="text-xs font-medium text-[#ff5722] hover:underline cursor-pointer">
-                  Manage Config
+                <span className="text-[11px] text-gray-400">Webhook n8n</span>
+                <span className="text-xs font-medium text-[#ff5722]">
+                  Draft Mode
+                </span>
+              </div>
+            </div>
+
+            {/* Canal 2 : Gmail Direct SMTP Card */}
+            <div className="flex flex-col justify-between rounded-lg border border-gray-200 bg-white p-5">
+              <div>
+                <div className="mb-4 flex items-start justify-between">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-md bg-blue-50 text-blue-600">
+                    <Send className="h-5 w-5" />
+                  </div>
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
+                      smtpHealthy
+                        ? "bg-emerald-50 text-emerald-700"
+                        : smtpConfigured
+                        ? "bg-amber-50 text-amber-700"
+                        : "bg-gray-100 text-gray-600",
+                    )}
+                  >
+                    {smtpHealthy ? (
+                      <CheckCircle2 className="h-3 w-3" />
+                    ) : (
+                      <TriangleAlert className="h-3 w-3" />
+                    )}
+                    {smtpHealthy
+                      ? "Canal 2 : Connecté"
+                      : smtpConfigured
+                      ? "Erreur Auth"
+                      : "Non Configuré"}
+                  </span>
+                </div>
+                <h3 className="text-sm font-semibold text-gray-900">Canal 2 : Gmail Direct (Inbox)</h3>
+                <p className="mt-1.5 text-xs leading-relaxed text-gray-500">
+                  {integrationLoading
+                    ? "Vérification SMTP..."
+                    : integrationStatus?.smtp?.message ||
+                      "Envoi direct via smtp.gmail.com:465 avec DKIM et SPF officiels Google (zéro spam)."}
+                </p>
+                {integrationStatus?.smtp?.user && (
+                  <p className="mt-1 font-mono text-[11px] text-blue-700">
+                    Compte : {integrationStatus.smtp.user}
+                  </p>
+                )}
+              </div>
+              <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-3">
+                <span className="text-[11px] text-gray-400">App Password</span>
+                <span className="text-xs font-medium text-blue-600">
+                  Direct Send
                 </span>
               </div>
             </div>

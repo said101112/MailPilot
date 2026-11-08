@@ -33,6 +33,12 @@ export interface IntegrationStatusResponse {
     checkedAt: string;
     url?: string;
   };
+  smtp?: {
+    configured: boolean;
+    user: string | null;
+    healthy: boolean | null;
+    message: string;
+  };
   supabase: {
     configured: boolean;
     message: string;
@@ -251,4 +257,64 @@ export async function sendApplication(
   }
 
   throw lastError ?? new Error("The request failed after all retries.");
+}
+
+export async function sendDirectApplication(
+  data: ApplicationData,
+  retries = 1,
+): Promise<N8nResponse> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      const response = await fetch("/api/send-direct", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...data,
+          timestamp: new Date().toISOString(),
+          retryCount: attempt,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = (await response.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+        const errorMsg =
+          errorData?.error || `HTTP ${response.status}: Failed to send direct email`;
+        throw new Error(errorMsg);
+      }
+
+      const payload = (await response.json()) as {
+        success?: boolean;
+        error?: string;
+        messageId?: string;
+      };
+
+      if (payload.success === false) {
+        throw new Error(payload.error || "Direct send error reported by backend");
+      }
+
+      return {
+        success: true,
+        messageId: payload.messageId,
+        channel: "direct_smtp",
+      };
+    } catch (error: unknown) {
+      lastError =
+        error instanceof Error ? error : new Error("Unknown direct send failure");
+
+      if (attempt < retries) {
+        console.warn(
+          `[MailPilot Direct] Retry ${attempt + 1}/${retries} for ${data.email}: ${lastError.message}`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+      }
+    }
+  }
+
+  throw lastError ?? new Error("Direct send failed after all retries.");
 }

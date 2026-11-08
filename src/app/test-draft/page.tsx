@@ -13,7 +13,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
-import { sendApplication } from "@/lib/api";
+import { sendApplication, sendDirectApplication } from "@/lib/api";
 import { generateCoverLetterPdf } from "@/lib/coverLetterPdf";
 import { CoverLetterModal } from "@/components/CoverLetterModal";
 import {
@@ -48,6 +48,7 @@ export default function TestDraftPage() {
   const [cvLibrary, setCvLibrary] = useState<CvProfile[]>([]);
   const [selectedCvId, setSelectedCvId] = useState<string>("");
   const [includeCoverLetter, setIncludeCoverLetter] = useState<boolean>(true);
+  const [testChannel, setTestChannel] = useState<"draft" | "direct">("direct");
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -216,27 +217,44 @@ export default function TestDraftPage() {
       const processedSubject = `[TEST SANDBOX] ${replace(activeTemplate.subject)}`;
       const processedMessage = replace(activeTemplate.message).replace(/\n/g, "<br>");
 
-      addLog("Envoi de la requête au Webhook n8n (création du brouillon Gmail)...", "info");
+      if (testChannel === "direct") {
+        addLog("Envoi direct via Gmail SMTP (smtp.gmail.com:465)...", "info");
+        await sendDirectApplication({
+          email: recipientEmail,
+          company: companyName,
+          position: positionTitle,
+          name: contactName,
+          candidateName,
+          subject: processedSubject,
+          message: processedMessage,
+          cv_base64: finalCvBase64,
+          cv_filename: finalCvFileName,
+          cv_data: finalCvBase64,
+          cv_name: finalCvFileName,
+          cover_letter_base64: finalCoverLetterBase64,
+          cover_letter_filename: finalCoverLetterFileName,
+        });
+        addLog("Email délivré avec succès directement via Google SMTP (sans passer par spam) !", "success");
+      } else {
+        addLog("Envoi de la requête au Webhook n8n (création du brouillon Gmail)...", "info");
+        await sendApplication({
+          email: recipientEmail,
+          company: companyName,
+          position: positionTitle,
+          name: contactName,
+          candidateName,
+          subject: processedSubject,
+          message: processedMessage,
+          cv_base64: finalCvBase64,
+          cv_filename: finalCvFileName,
+          cv_data: finalCvBase64,
+          cv_name: finalCvFileName,
+          cover_letter_base64: finalCoverLetterBase64,
+          cover_letter_filename: finalCoverLetterFileName,
+        });
+        addLog("Réponse reçue du Webhook n8n avec succès (HTTP 200).", "success");
+      }
 
-      // 4. Send via sendApplication API -> goes to n8n webhook
-      // IMPORTANT: Does NOT insert into Supabase applications / job_applications!
-      await sendApplication({
-        email: recipientEmail,
-        company: companyName,
-        position: positionTitle,
-        name: contactName,
-        candidateName,
-        subject: processedSubject,
-        message: processedMessage,
-        cv_base64: finalCvBase64,
-        cv_filename: finalCvFileName,
-        cv_data: finalCvBase64,
-        cv_name: finalCvFileName,
-        cover_letter_base64: finalCoverLetterBase64,
-        cover_letter_filename: finalCoverLetterFileName,
-      });
-
-      addLog("Réponse reçue du Webhook avec succès (HTTP 200).", "success");
       addLog(
         "Garantie Sandbox validée : 0 candidature ajoutée au Tracker. Compteurs préservés.",
         "success"
@@ -252,7 +270,11 @@ export default function TestDraftPage() {
         email: recipientEmail,
       });
 
-      toast.success("Brouillon test créé avec succès dans Gmail !");
+      if (testChannel === "direct") {
+        toast.success("Email test envoyé directement dans votre boîte principale !");
+      } else {
+        toast.success("Brouillon test créé avec succès dans vos Brouillons Gmail !");
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erreur inconnue lors du test.";
       addLog(`Échec : ${msg}`, "error");
@@ -516,23 +538,67 @@ export default function TestDraftPage() {
                 </p>
               </div>
 
+              {/* Channel Selector */}
+              <div className="pt-2 border-t border-gray-100">
+                <label className="editorial-label text-xs font-medium text-gray-700 mb-1.5 block">
+                  Canal d&apos;expédition du test
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTestChannel("direct")}
+                    className={cn(
+                      "flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg border text-xs font-medium transition cursor-pointer text-left",
+                      testChannel === "direct"
+                        ? "border-blue-600 bg-blue-50/50 text-blue-900 font-bold ring-1 ring-blue-600"
+                        : "border-gray-200 bg-white hover:bg-gray-50 text-gray-600"
+                    )}
+                  >
+                    <Send className="h-3.5 w-3.5 text-blue-600" />
+                    <span>⚡ Envoi Direct (Inbox)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTestChannel("draft")}
+                    className={cn(
+                      "flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg border text-xs font-medium transition cursor-pointer text-left",
+                      testChannel === "draft"
+                        ? "border-[#ff5722] bg-orange-50/50 text-orange-950 font-bold ring-1 ring-[#ff5722]"
+                        : "border-gray-200 bg-white hover:bg-gray-50 text-gray-600"
+                    )}
+                  >
+                    <FileText className="h-3.5 w-3.5 text-[#ff5722]" />
+                    <span>📝 Brouillon (n8n)</span>
+                  </button>
+                </div>
+              </div>
+
               {/* Submit Test Button */}
-              <div className="pt-3">
+              <div className="pt-2">
                 <button
                   type="button"
                   onClick={handleTestDraft}
                   disabled={isLoading}
-                  className="editorial-button-primary w-full h-10 text-xs font-semibold shadow-xs"
+                  className={cn(
+                    "w-full h-11 text-xs font-semibold rounded-xl text-white transition shadow-sm cursor-pointer flex items-center justify-center gap-2",
+                    testChannel === "direct"
+                      ? "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
+                      : "bg-[#ff5722] hover:bg-[#e64a19] active:bg-[#d84315]"
+                  )}
                 >
                   {isLoading ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Création du brouillon test en cours...</span>
+                      <span>{testChannel === "direct" ? "Envoi direct en cours..." : "Création du brouillon en cours..."}</span>
                     </>
                   ) : (
                     <>
                       <Send className="h-4 w-4" />
-                      <span>Créer le brouillon test dans Gmail (Sandbox)</span>
+                      <span>
+                        {testChannel === "direct"
+                          ? "Tester l'Envoi Direct dans ma boîte Gmail (Sans Spam)"
+                          : "Tester la Création du Brouillon Gmail (n8n)"}
+                      </span>
                     </>
                   )}
                 </button>
