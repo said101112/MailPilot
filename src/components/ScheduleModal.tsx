@@ -104,8 +104,6 @@ export default function ScheduleModal(props: ScheduleModalProps) {
   const [intervalSeconds, setIntervalSeconds] = useState<number>(60); // for bulk
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  if (!isOpen) return null;
-
   const targetDate = useMemo(() => {
     if (selectedPreset === "tomorrow_am") return presets.tomorrowMorning;
     if (selectedPreset === "tomorrow_pm") return presets.tomorrowAfternoon;
@@ -113,7 +111,10 @@ export default function ScheduleModal(props: ScheduleModalProps) {
     return new Date(customDateTime);
   }, [selectedPreset, customDateTime, presets]);
 
-  const isValidDate = targetDate.getTime() > Date.now();
+  if (!isOpen) return null;
+
+  const hasValidDate = !isNaN(targetDate.getTime());
+  const isValidDate = hasValidDate && targetDate.getTime() > Date.now();
 
   const handleConfirm = () => {
     if (!isValidDate) {
@@ -151,7 +152,8 @@ export default function ScheduleModal(props: ScheduleModalProps) {
         if (props.onScheduled) props.onScheduled(item);
       } else {
         // Bulk mode: space each email by intervalSeconds
-        const itemsToSchedule = props.batchData.rows.map((row, idx) => {
+        const rows = props.batchData?.rows ?? [];
+        const itemsToSchedule = rows.map((row, idx) => {
           const emailTime = new Date(targetDate.getTime() + idx * intervalSeconds * 1000);
           return {
             recipient_email: row.email,
@@ -190,8 +192,8 @@ export default function ScheduleModal(props: ScheduleModalProps) {
     }
   };
 
-  const count = mode === "bulk" ? props.batchData.rows.length : 1;
-  const lastDate = mode === "bulk" && count > 1
+  const count = mode === "bulk" ? (props.batchData?.rows?.length ?? 0) : 1;
+  const lastDate = mode === "bulk" && count > 1 && hasValidDate
     ? new Date(targetDate.getTime() + (count - 1) * intervalSeconds * 1000)
     : targetDate;
 
@@ -368,26 +370,34 @@ export default function ScheduleModal(props: ScheduleModalProps) {
             <div className="space-y-0.5 leading-relaxed">
               <p className="font-semibold text-blue-900">
                 {mode === "single" ? (
-                  <>
-                    Envoi prévu le{" "}
-                    <strong>
-                      {targetDate.toLocaleDateString("fr-FR", {
-                        weekday: "long",
-                        day: "numeric",
-                        month: "long",
-                      })}
-                    </strong>{" "}
-                    à{" "}
-                    <strong>
-                      {targetDate.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
-                    </strong>
-                  </>
+                  hasValidDate ? (
+                    <>
+                      Envoi prévu le{" "}
+                      <strong>
+                        {targetDate.toLocaleDateString("fr-FR", {
+                          weekday: "long",
+                          day: "numeric",
+                          month: "long",
+                        })}
+                      </strong>{" "}
+                      à{" "}
+                      <strong>
+                        {targetDate.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                      </strong>
+                    </>
+                  ) : (
+                    <>Veuillez sélectionner un horaire valide.</>
+                  )
                 ) : (
-                  <>
-                    {count} candidatures programmées du{" "}
-                    <strong>{targetDate.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</strong> au{" "}
-                    <strong>{lastDate.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</strong> ({targetDate.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}).
-                  </>
+                  hasValidDate ? (
+                    <>
+                      {count} candidatures programmées du{" "}
+                      <strong>{targetDate.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</strong> au{" "}
+                      <strong>{lastDate.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</strong> ({targetDate.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}).
+                    </>
+                  ) : (
+                    <>Veuillez sélectionner un horaire valide.</>
+                  )
                 )}
               </p>
               <p className="text-[11px] text-blue-700">

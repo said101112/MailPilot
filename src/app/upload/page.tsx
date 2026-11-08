@@ -1636,18 +1636,22 @@ export default function UploadPage() {
       />
 
       {/* Schedule Modal (Bulk Batch) */}
-      <ScheduleModal
-        mode="bulk"
-        isOpen={isScheduleModalOpen}
-        onClose={() => setIsScheduleModalOpen(false)}
-        batchData={scheduledBatchData}
-      />
+      {isScheduleModalOpen && (
+        <ScheduleModal
+          mode="bulk"
+          isOpen={isScheduleModalOpen}
+          onClose={() => setIsScheduleModalOpen(false)}
+          batchData={scheduledBatchData}
+        />
+      )}
 
       {/* Scheduled Queue Viewer Modal */}
-      <ScheduledQueueModal
-        isOpen={isQueueModalOpen}
-        onClose={() => setIsQueueModalOpen(false)}
-      />
+      {isQueueModalOpen && (
+        <ScheduledQueueModal
+          isOpen={isQueueModalOpen}
+          onClose={() => setIsQueueModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

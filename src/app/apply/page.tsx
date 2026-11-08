@@ -1499,36 +1499,40 @@ export default function ApplyPage() {
       />
 
       {/* Schedule Modal (Single Application) */}
-      <ScheduleModal
-        mode="single"
-        isOpen={isScheduleModalOpen}
-        onClose={() => setIsScheduleModalOpen(false)}
-        onScheduled={(item) => {
-          addLog(
-            `Candidature programmée pour ${item.recipient_email} (${item.company_name}) le ${new Date(item.scheduled_at).toLocaleString("fr-FR")}`,
-            "info"
-          );
-        }}
-        emailData={{
-          recipient_email: email,
-          company_name: companyDisplayName,
-          position: "Stage PFE / Emploi",
-          candidate_name: candidateName,
-          subject: liveSubject,
-          message: liveMessage,
-          cv_filename: cvFileName,
-          cv_base64: matchedCv?.base64 || readStoredCv().base64,
-          cover_letter_filename: scheduledCoverLetter.fileName,
-          cover_letter_base64: scheduledCoverLetter.base64,
-          channel: dispatchChannel,
-        }}
-      />
+      {isScheduleModalOpen && (
+        <ScheduleModal
+          mode="single"
+          isOpen={isScheduleModalOpen}
+          onClose={() => setIsScheduleModalOpen(false)}
+          onScheduled={(item) => {
+            addLog(
+              `Candidature programmée pour ${item.recipient_email} (${item.company_name}) le ${new Date(item.scheduled_at).toLocaleString("fr-FR")}`,
+              "info"
+            );
+          }}
+          emailData={{
+            recipient_email: email,
+            company_name: companyDisplayName,
+            position: "Stage PFE / Emploi",
+            candidate_name: candidateName,
+            subject: liveSubject,
+            message: liveMessage,
+            cv_filename: cvFileName,
+            cv_base64: matchedCv?.base64 || readStoredCv().base64,
+            cover_letter_filename: scheduledCoverLetter.fileName,
+            cover_letter_base64: scheduledCoverLetter.base64,
+            channel: dispatchChannel,
+          }}
+        />
+      )}
 
       {/* Scheduled Queue Viewer Modal */}
-      <ScheduledQueueModal
-        isOpen={isQueueModalOpen}
-        onClose={() => setIsQueueModalOpen(false)}
-      />
+      {isQueueModalOpen && (
+        <ScheduledQueueModal
+          isOpen={isQueueModalOpen}
+          onClose={() => setIsQueueModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
