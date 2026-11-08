@@ -22,7 +22,6 @@ import {
   ShieldCheck,
   Sparkles,
   Terminal,
-  TriangleAlert,
   X,
 } from "lucide-react";
 import {
@@ -532,7 +531,7 @@ export default function ApplyPage() {
       if (!emailResult.valid) {
         throw new Error(emailResult.message);
       }
-      addLog("Vérification syntaxique et MX du domaine réussie ✓", "success");
+      addLog("Vérification syntaxique et domaine MX réussie ✓", "success");
 
       if (dispatchChannel === "draft" && n8nBlocked) {
         setIsPreflightModalOpen(true);
@@ -542,7 +541,7 @@ export default function ApplyPage() {
       if (dispatchChannel === "direct" && smtpBlocked) {
         setIsPreflightModalOpen(true);
         throw new Error(
-          "Votre compte email n'est pas encore connecté. Cliquez sur 'Vérifier la connexion' pour configurer vos accès."
+          "Votre compte email n'est pas encore connecté. Cliquez sur 'Tester la connexion' pour configurer vos accès."
         );
       }
 
@@ -561,7 +560,7 @@ export default function ApplyPage() {
       if (!finalCvBase64) {
         throw new Error("Aucun CV n'est disponible. Veuillez téléverser un CV dans la Bibliothèque CVs.");
       }
-      addLog(`CV sélectionné : ${finalCvFileName}`, "info");
+      addLog(`CV joint sélectionné : ${finalCvFileName}`, "info");
 
       // Optional Cover Letter
       let finalCoverLetterBase64: string | undefined = undefined;
@@ -606,7 +605,7 @@ export default function ApplyPage() {
           notes: "",
           jobUrl: "",
         });
-        addLog("Candidature envoyée avec succès dans la boîte principale du recruteur !", "success");
+        addLog("Candidature délivrée avec succès dans la boîte principale du recruteur !", "success");
       } else {
         addLog("Transmission des pièces jointes au service de brouillons Gmail...", "info");
         await sendApplication({
@@ -649,7 +648,7 @@ export default function ApplyPage() {
           email: email,
           status: "success",
         });
-        addLog("Candidature et entreprise synchronisées dans le Suivi ✓", "success");
+        addLog("Candidature synchronisée dans le Suivi ✓", "success");
       } catch (syncErr) {
         console.warn("Tracker sync failed:", syncErr);
       }
@@ -694,657 +693,627 @@ export default function ApplyPage() {
     !emailCheck.valid;
 
   return (
-    <div className="page-shell">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6">
-        {/* Header Section */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-gray-200">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700">
-                1-à-1
-              </span>
-              <h1 className="text-xl font-bold tracking-tight text-gray-950 sm:text-2xl">
-                Candidature Spontanée
-              </h1>
-            </div>
-            <p className="mt-1 text-xs text-gray-500">
-              Envoyez un email ultra-personnalisé avec vos documents joints directement ou via vos brouillons Gmail.
-            </p>
-          </div>
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-2.5 sm:py-3.5 flex flex-col justify-start">
+      {/* Sleek Compact Header Line */}
+      <div className="flex items-center justify-between gap-3 pb-2 mb-3 border-b border-gray-200 shrink-0">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-700">
+            1-à-1
+          </span>
+          <h1 className="text-base sm:text-lg font-bold tracking-tight text-gray-950 truncate">
+            Candidature Spontanée
+          </h1>
+          <span className="text-gray-300 hidden md:inline">·</span>
+          <p className="text-xs text-gray-500 hidden md:inline truncate">
+            Email personnalisé avec CV et lettre
+          </p>
+        </div>
 
-          <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={handleTestConnections}
+            disabled={integrationLoading}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-medium shadow-2xs transition cursor-pointer disabled:opacity-50"
+          >
+            <ShieldCheck className={cn("h-3.5 w-3.5", smtpHealthy ? "text-emerald-600" : "text-blue-600")} />
+            <span>Tester connexion</span>
+            {smtpHealthy && (
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            )}
+          </button>
+
+          <Link
+            href="/cv-library"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-medium shadow-2xs transition"
+          >
+            <FileText className="h-3.5 w-3.5 text-gray-400" />
+            <span>CVs ({cvLibrary.length})</span>
+          </Link>
+        </div>
+      </div>
+
+      {/* Main Grid: Form (7 cols) + Dual-Tab Pane (5 cols) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-stretch">
+        
+        {/* LEFT COLUMN: THE COMPACT FORM */}
+        <div className="lg:col-span-7 bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-xs flex flex-col justify-between space-y-3">
+          
+          {/* 1. Canal d'envoi (Segmented Control) */}
+          <div className="grid grid-cols-2 gap-1.5 rounded-xl bg-gray-100/80 p-1 shrink-0">
             <button
               type="button"
-              onClick={handleTestConnections}
-              disabled={integrationLoading}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-medium shadow-2xs transition cursor-pointer disabled:opacity-50"
+              onClick={() => setDispatchChannel("direct")}
+              className={cn(
+                "flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition cursor-pointer",
+                dispatchChannel === "direct"
+                  ? "bg-white text-blue-700 shadow-2xs border border-blue-200 font-bold"
+                  : "text-gray-600 hover:text-gray-900"
+              )}
             >
-              <ShieldCheck className={cn("h-4 w-4", smtpHealthy ? "text-emerald-600" : "text-blue-600")} />
-              <span>Tester la connexion</span>
-              {smtpHealthy && (
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <Send className="h-3.5 w-3.5 text-blue-600" />
+              <span>⚡ Envoi Direct (Inbox)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setDispatchChannel("draft")}
+              className={cn(
+                "flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition cursor-pointer",
+                dispatchChannel === "draft"
+                  ? "bg-white text-[#ff5722] shadow-2xs border border-orange-200 font-bold"
+                  : "text-gray-600 hover:text-gray-900"
+              )}
+            >
+              <FileText className="h-3.5 w-3.5 text-[#ff5722]" />
+              <span>📝 Brouillon Gmail (Relire)</span>
+            </button>
+          </div>
+
+          {/* 2. Destinataire (Recruiter Email) */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-gray-700">
+                Email du recruteur <span className="text-red-500">*</span>
+              </label>
+              {inferredCompany && inferredCompany.name && (
+                <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.2 rounded-full">
+                  🏢 {inferredCompany.name}
+                </span>
+              )}
+            </div>
+
+            <div className="relative">
+              <Mail className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+              <input
+                className={cn(
+                  "w-full rounded-xl border bg-gray-50/50 h-9 pl-9 pr-9 text-xs text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none transition",
+                  emailCheck.valid
+                    ? "border-emerald-300 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                    : email && emailCheck.code !== "empty"
+                      ? "border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                      : "border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                )}
+                onChange={(event) => {
+                  const nextEmail = event.target.value;
+                  setEmail(nextEmail);
+                  setEmailCheck(validateEmailFormat(nextEmail));
+                  if (nextEmail.includes("@") && nextEmail.includes(".")) {
+                    void checkDuplicates(nextEmail);
+                  } else {
+                    setDuplicateMatch(null);
+                  }
+                }}
+                onBlur={() => {
+                  void runEmailPreflight();
+                  void checkDuplicates(email);
+                }}
+                placeholder="ex: recrutement@airbus.com ou talent@startup.fr"
+                type="email"
+                value={email}
+              />
+              {email && (
+                <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                  {emailChecking ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-gray-400" />
+                  ) : emailCheck.valid ? (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                  ) : (
+                    <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Validation warning if invalid */}
+            {email && !emailCheck.valid && (
+              <p className="text-[11px] text-red-600 flex items-center gap-1 mt-0.5">
+                <AlertCircle className="h-3 w-3 shrink-0" />
+                <span>{emailCheck.message}</span>
+              </p>
+            )}
+
+            {/* Duplicate Match Warning */}
+            {duplicateMatch && (
+              <div className="rounded-xl border border-amber-300 bg-amber-50/90 p-2 text-xs text-amber-900 animate-in fade-in duration-200">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-1">
+                      <p className="font-semibold text-amber-950 text-[11px]">
+                        Déjà postulé chez {duplicateMatch.company} ({duplicateMatch.position})
+                      </p>
+                      <span className="rounded bg-amber-200 px-1 py-0.2 text-[9px] font-bold text-amber-900">
+                        {duplicateMatch.daysAgo}j
+                      </span>
+                    </div>
+                    <div className="mt-1 flex items-center gap-2">
+                      <Link
+                        href="/tracker/follow-ups"
+                        className="font-semibold text-amber-950 hover:underline text-[10.5px]"
+                      >
+                        Voir dans les relances &rarr;
+                      </Link>
+                      <span className="text-amber-400">·</span>
+                      <button
+                        type="button"
+                        onClick={() => setDuplicateMatch(null)}
+                        className="text-[10.5px] text-amber-700 hover:text-amber-950 underline cursor-pointer"
+                      >
+                        Ignorer
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 3. Modèle de candidature & Personnalisation */}
+          <div className="space-y-1 relative">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-gray-700">
+                Modèle de candidature
+              </label>
+              <div className="flex items-center gap-1.5">
+                {/* Track pills */}
+                <div className="flex items-center rounded-lg border border-gray-200 bg-gray-50 p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => handleSelectTrack("dev")}
+                    className={cn(
+                      "rounded-md px-2 py-0.2 text-[10.5px] font-medium transition cursor-pointer",
+                      !isDataTrack
+                        ? "bg-white text-blue-700 shadow-2xs font-bold"
+                        : "text-gray-500 hover:text-gray-800"
+                    )}
+                  >
+                    💻 Dév
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectTrack("data")}
+                    className={cn(
+                      "rounded-md px-2 py-0.2 text-[10.5px] font-medium transition cursor-pointer",
+                      isDataTrack
+                        ? "bg-white text-emerald-700 shadow-2xs font-bold"
+                        : "text-gray-500 hover:text-gray-800"
+                    )}
+                  >
+                    🤖 Data
+                  </button>
+                </div>
+
+                {/* Language pills */}
+                <div className="flex items-center rounded-lg border border-gray-200 bg-gray-50 p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => handleSelectLang("fr")}
+                    className={cn(
+                      "rounded-md px-1.5 py-0.2 text-[10px] font-bold transition cursor-pointer",
+                      !isEnglishLang
+                        ? "bg-blue-600 text-white shadow-2xs"
+                        : "text-gray-500 hover:text-gray-800"
+                    )}
+                  >
+                    FR
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectLang("en")}
+                    className={cn(
+                      "rounded-md px-1.5 py-0.2 text-[10px] font-bold transition cursor-pointer",
+                      isEnglishLang
+                        ? "bg-indigo-600 text-white shadow-2xs"
+                        : "text-gray-500 hover:text-gray-800"
+                    )}
+                  >
+                    EN
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Template selector button */}
+            <button
+              className="w-full rounded-xl border border-gray-200 bg-gray-50/50 hover:bg-white px-3 h-9 text-left text-xs text-gray-800 flex items-center justify-between transition shadow-2xs cursor-pointer"
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              type="button"
+            >
+              <span className="truncate font-medium">{activeTemplate.name}</span>
+              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+            </button>
+
+            {isDropdownOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)} />
+                <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl max-h-56 overflow-y-auto">
+                  {templates.map((tpl) => (
+                    <button
+                      key={tpl.id}
+                      type="button"
+                      onClick={() => handleSelectTemplate(tpl.id)}
+                      className={cn(
+                        "w-full text-left rounded-lg px-2.5 py-1.5 text-xs transition flex items-center justify-between",
+                        tpl.id === selectedTemplateId
+                          ? "bg-blue-50 text-blue-700 font-semibold"
+                          : "text-gray-700 hover:bg-gray-50"
+                      )}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium truncate text-xs">{tpl.name}</p>
+                        <p className="text-[10px] text-gray-400 truncate">{tpl.subject}</p>
+                      </div>
+                      {tpl.id === selectedTemplateId && (
+                        <span className="text-blue-600 font-bold ml-2">✓</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Customization Link */}
+            <div className="pt-0.5">
+              {!isCustomized ? (
+                <button
+                  type="button"
+                  onClick={handleOpenCustomModal}
+                  className="inline-flex items-center gap-1 text-[11.5px] text-gray-500 hover:text-blue-600 transition cursor-pointer"
+                >
+                  <Edit3 className="h-3 w-3 text-gray-400" />
+                  <span className="hover:underline">Personnaliser le contenu pour ce poste</span>
+                </button>
+              ) : (
+                <div className="flex items-center justify-between rounded-lg border border-orange-200 bg-orange-50/80 px-2.5 py-1 text-xs">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-[#ff5722] text-white text-[9px] font-bold">
+                      ✓
+                    </span>
+                    <span className="font-semibold text-orange-950 truncate text-[11px]">Email sur-mesure</span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 text-[11px]">
+                    <button
+                      type="button"
+                      onClick={handleOpenCustomModal}
+                      className="font-medium text-[#ff5722] hover:underline cursor-pointer"
+                    >
+                      Modifier
+                    </button>
+                    <span className="text-gray-300">·</span>
+                    <button
+                      type="button"
+                      onClick={handleCancelCustomization}
+                      className="text-gray-500 hover:text-gray-800 cursor-pointer"
+                    >
+                      Réinitialiser
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 4. Pièces jointes (CV & Lettre) */}
+          <div className="rounded-xl border border-gray-100 bg-gray-50/70 p-2.5 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-gray-700 font-medium flex items-center gap-1.5">
+                <FileText className="h-3.5 w-3.5 text-blue-600" />
+                CV joint :
+              </span>
+              <select
+                className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-800 outline-none focus:border-blue-500 max-w-[240px] truncate"
+                value={selectedCvId || ""}
+                onChange={(e) => {
+                  const newId = e.target.value;
+                  setSelectedCvId(newId);
+                  writeActiveCvId(newId);
+                  const chosen = cvLibrary.find((c) => c.id === newId);
+                  if (chosen) toast.info(`CV sélectionné : ${chosen.label}`);
+                }}
+              >
+                {cvLibrary.length === 0 ? (
+                  <option value="">Aucun CV importé</option>
+                ) : (
+                  cvLibrary.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      📄 {c.label} ({c.fileName})
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+
+            <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-gray-200/50">
+              <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-gray-700 font-medium">
+                <input
+                  type="checkbox"
+                  checked={includeCoverLetter}
+                  onChange={(e) => {
+                    setIncludeCoverLetter(e.target.checked);
+                    if (e.target.checked) {
+                      toast.info("Lettre de motivation générée automatiquement en PDF !");
+                    }
+                  }}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5 cursor-pointer"
+                />
+                <span>Joindre Lettre de Motivation (PDF)</span>
+              </label>
+              <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded-full border border-emerald-200">
+                Auto
+              </span>
+            </div>
+          </div>
+
+          {/* 5. Bouton d'action principal + Fallback 1-clic */}
+          <div className="pt-1 space-y-1.5">
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={sendDisabled}
+              className={cn(
+                "w-full h-10 sm:h-11 text-xs sm:text-sm font-bold rounded-xl text-white transition shadow-sm cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none",
+                dispatchChannel === "direct"
+                  ? "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
+                  : "bg-[#ff5722] hover:bg-[#e64a19] active:bg-[#d84315]"
+              )}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>
+                    {dispatchChannel === "direct"
+                      ? "Envoi en cours via Gmail SMTP..."
+                      : "Création du brouillon en cours..."}
+                  </span>
+                </>
+              ) : (
+                <>
+                  {dispatchChannel === "direct" ? (
+                    <Send className="h-4 w-4" />
+                  ) : (
+                    <Sparkles className="h-4 w-4" />
+                  )}
+                  <span>
+                    {dispatchChannel === "direct"
+                      ? "Envoyer la candidature (Envoi Direct)"
+                      : "Créer le brouillon dans Gmail"}
+                  </span>
+                </>
               )}
             </button>
 
-            <Link
-              href="/cv-library"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-medium shadow-2xs transition"
-            >
-              <FileText className="h-4 w-4 text-gray-400" />
-              <span>Bibliothèque CVs ({cvLibrary.length})</span>
-            </Link>
-          </div>
-        </div>
-
-        {/* Main Grid: Form (7 cols) + Dual-Tab Pane (5 cols) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          
-          {/* LEFT COLUMN: THE FORM */}
-          <div className="lg:col-span-7 bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-6">
-            
-            {/* 1. Canal d'envoi (Segmented Toggle) */}
-            <div>
-              <label className="text-xs font-semibold text-gray-700 block mb-2">
-                Canal d&apos;envoi
-              </label>
-              <div className="grid grid-cols-2 gap-2 rounded-xl bg-gray-100/80 p-1">
-                <button
-                  type="button"
-                  onClick={() => setDispatchChannel("direct")}
-                  className={cn(
-                    "flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-xs font-semibold transition cursor-pointer",
-                    dispatchChannel === "direct"
-                      ? "bg-white text-blue-700 shadow-xs border border-blue-200 font-bold"
-                      : "text-gray-600 hover:text-gray-900"
-                  )}
-                >
-                  <Send className="h-3.5 w-3.5 text-blue-600" />
-                  <span>⚡ Envoi Direct (Inbox)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setDispatchChannel("draft")}
-                  className={cn(
-                    "flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-xs font-semibold transition cursor-pointer",
-                    dispatchChannel === "draft"
-                      ? "bg-white text-[#ff5722] shadow-xs border border-orange-200 font-bold"
-                      : "text-gray-600 hover:text-gray-900"
-                  )}
-                >
-                  <FileText className="h-3.5 w-3.5 text-[#ff5722]" />
-                  <span>📝 Brouillon Gmail (Relire)</span>
-                </button>
-              </div>
-              <p className="mt-1.5 text-[11px] text-gray-400">
-                {dispatchChannel === "direct"
-                  ? "Délivre directement votre candidature dans la boîte de réception principale du recruteur."
-                  : "Prépare l'email dans vos brouillons Gmail pour que vous puissiez l'examiner avant envoi."}
-              </p>
-            </div>
-
-            {/* 2. Destinataire (Recruiter Email) */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-gray-700">
-                  Email du recruteur ou de l&apos;entreprise <span className="text-red-500">*</span>
-                </label>
-                {inferredCompany && inferredCompany.name && (
-                  <span className="text-[11px] font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
-                    🏢 {inferredCompany.name}
-                  </span>
-                )}
-              </div>
-
-              <div className="relative">
-                <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                <input
-                  className={cn(
-                    "w-full rounded-xl border bg-gray-50/50 py-2.5 pl-10 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none transition",
-                    emailCheck.valid
-                      ? "border-emerald-300 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                      : email && emailCheck.code !== "empty"
-                        ? "border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-500"
-                        : "border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  )}
-                  onChange={(event) => {
-                    const nextEmail = event.target.value;
-                    setEmail(nextEmail);
-                    setEmailCheck(validateEmailFormat(nextEmail));
-                    if (nextEmail.includes("@") && nextEmail.includes(".")) {
-                      void checkDuplicates(nextEmail);
-                    } else {
-                      setDuplicateMatch(null);
-                    }
-                  }}
-                  onBlur={() => {
-                    void runEmailPreflight();
-                    void checkDuplicates(email);
-                  }}
-                  placeholder="ex: recrutement@airbus.com ou talent@startup.fr"
-                  type="email"
-                  value={email}
-                />
-                {email && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    {emailChecking ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-                    ) : emailCheck.valid ? (
-                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                    ) : (
-                      <AlertCircle className="h-4 w-4 text-amber-500" />
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Discreet validation hint only when user starts typing */}
-              {email && !emailCheck.valid && (
-                <p className="text-[11px] text-red-600 flex items-center gap-1 mt-1">
-                  <AlertCircle className="h-3 w-3 shrink-0" />
-                  <span>{emailCheck.message}</span>
-                </p>
-              )}
-
-              {/* Duplicate Match Warning Callout */}
-              {duplicateMatch && (
-                <div className="rounded-xl border border-amber-300 bg-amber-50/90 p-3 text-xs text-amber-900 animate-in fade-in duration-200 mt-2">
-                  <div className="flex items-start gap-2.5">
-                    <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="font-semibold text-amber-950">
-                          Candidature déjà existante pour ce contact !
-                        </p>
-                        <span className="rounded bg-amber-200/80 px-1.5 py-0.5 text-[10px] font-bold text-amber-900">
-                          Il y a {duplicateMatch.daysAgo}j
-                        </span>
-                      </div>
-                      <p className="mt-1 text-amber-800 leading-relaxed text-[11.5px]">
-                        Postulé le <strong>{duplicateMatch.date}</strong> chez{" "}
-                        <strong>{duplicateMatch.company}</strong> ({duplicateMatch.position}).
-                      </p>
-                      <div className="mt-2 flex items-center gap-3">
-                        <Link
-                          href="/tracker/follow-ups"
-                          className="inline-flex items-center gap-1 font-semibold text-amber-950 hover:underline text-[11px]"
-                        >
-                          Voir dans les relances &rarr;
-                        </Link>
-                        <span className="text-amber-400">·</span>
-                        <button
-                          type="button"
-                          onClick={() => setDuplicateMatch(null)}
-                          className="text-[11px] text-amber-700 hover:text-amber-950 underline cursor-pointer"
-                        >
-                          Ignorer cette alerte
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* 3. Modèle de candidature & Personnalisation */}
-            <div className="space-y-2 relative">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-gray-700">
-                  Modèle d&apos;email & Objet
-                </label>
-                <div className="flex items-center gap-1.5">
-                  {/* Track pills */}
-                  <div className="flex items-center rounded-lg border border-gray-200 bg-gray-50 p-0.5">
-                    <button
-                      type="button"
-                      onClick={() => handleSelectTrack("dev")}
-                      className={cn(
-                        "rounded-md px-2 py-0.5 text-[11px] font-medium transition cursor-pointer",
-                        !isDataTrack
-                          ? "bg-white text-blue-700 shadow-2xs font-bold"
-                          : "text-gray-500 hover:text-gray-800"
-                      )}
-                    >
-                      💻 Dév
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleSelectTrack("data")}
-                      className={cn(
-                        "rounded-md px-2 py-0.5 text-[11px] font-medium transition cursor-pointer",
-                        isDataTrack
-                          ? "bg-white text-emerald-700 shadow-2xs font-bold"
-                          : "text-gray-500 hover:text-gray-800"
-                      )}
-                    >
-                      🤖 Data
-                    </button>
-                  </div>
-
-                  {/* Language pills */}
-                  <div className="flex items-center rounded-lg border border-gray-200 bg-gray-50 p-0.5">
-                    <button
-                      type="button"
-                      onClick={() => handleSelectLang("fr")}
-                      className={cn(
-                        "rounded-md px-1.5 py-0.5 text-[10.5px] font-bold transition cursor-pointer",
-                        !isEnglishLang
-                          ? "bg-blue-600 text-white shadow-2xs"
-                          : "text-gray-500 hover:text-gray-800"
-                      )}
-                    >
-                      FR
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleSelectLang("en")}
-                      className={cn(
-                        "rounded-md px-1.5 py-0.5 text-[10.5px] font-bold transition cursor-pointer",
-                        isEnglishLang
-                          ? "bg-indigo-600 text-white shadow-2xs"
-                          : "text-gray-500 hover:text-gray-800"
-                      )}
-                    >
-                      EN
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Template selector button */}
-              <button
-                className="w-full rounded-xl border border-gray-200 bg-gray-50/50 hover:bg-white px-3.5 py-2.5 text-left text-sm text-gray-800 flex items-center justify-between transition shadow-2xs cursor-pointer"
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                type="button"
-              >
-                <span className="truncate font-medium">{activeTemplate.name}</span>
-                <ChevronDown className="h-4 w-4 shrink-0 text-gray-400" />
-              </button>
-
-              {isDropdownOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)} />
-                  <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl max-h-60 overflow-y-auto">
-                    {templates.map((tpl) => (
-                      <button
-                        key={tpl.id}
-                        type="button"
-                        onClick={() => handleSelectTemplate(tpl.id)}
-                        className={cn(
-                          "w-full text-left rounded-lg px-3 py-2 text-xs transition flex items-center justify-between",
-                          tpl.id === selectedTemplateId
-                            ? "bg-blue-50 text-blue-700 font-semibold"
-                            : "text-gray-700 hover:bg-gray-50"
-                        )}
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium truncate">{tpl.name}</p>
-                          <p className="text-[11px] text-gray-400 truncate mt-0.5">{tpl.subject}</p>
-                        </div>
-                        {tpl.id === selectedTemplateId && (
-                          <span className="text-blue-600 font-bold ml-2">✓</span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {/* Customization status */}
-              <div className="pt-1">
-                {!isCustomized ? (
-                  <button
-                    type="button"
-                    onClick={handleOpenCustomModal}
-                    className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-blue-600 transition cursor-pointer"
-                  >
-                    <Edit3 className="h-3.5 w-3.5 text-gray-400" />
-                    <span className="hover:underline">Personnaliser le contenu de l&apos;email pour ce poste</span>
-                  </button>
-                ) : (
-                  <div className="flex items-center justify-between rounded-xl border border-orange-200 bg-orange-50/80 px-3 py-2 text-xs">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#ff5722] text-white text-[10px] font-bold">
-                        ✓
-                      </span>
-                      <span className="font-semibold text-orange-950 truncate">Email adapté sur-mesure</span>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        onClick={handleOpenCustomModal}
-                        className="font-medium text-[#ff5722] hover:underline cursor-pointer"
-                      >
-                        Modifier
-                      </button>
-                      <span className="text-gray-300">·</span>
-                      <button
-                        type="button"
-                        onClick={handleCancelCustomization}
-                        className="text-gray-500 hover:text-gray-800 cursor-pointer"
-                      >
-                        Réinitialiser
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* 4. Pièces jointes (CV & Lettre de motivation) */}
-            <div className="rounded-xl border border-gray-100 bg-gray-50/70 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-gray-800 flex items-center gap-1.5">
-                  <FileText className="h-4 w-4 text-blue-600" />
-                  Pièces Jointes
-                </span>
-                <span className="text-[11px] text-gray-400">PDF certifiés</span>
-              </div>
-
-              {/* CV selector */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-gray-200/60">
-                <span className="text-xs text-gray-600 font-medium">CV à joindre :</span>
-                <select
-                  className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-800 outline-none focus:border-blue-500"
-                  value={selectedCvId || ""}
-                  onChange={(e) => {
-                    const newId = e.target.value;
-                    setSelectedCvId(newId);
-                    writeActiveCvId(newId);
-                    const chosen = cvLibrary.find((c) => c.id === newId);
-                    if (chosen) toast.info(`CV sélectionné : ${chosen.label}`);
-                  }}
-                >
-                  {cvLibrary.length === 0 ? (
-                    <option value="">Aucun CV importé</option>
-                  ) : (
-                    cvLibrary.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        📄 {c.label} ({c.fileName})
-                      </option>
-                    ))
-                  )}
-                </select>
-              </div>
-
-              {/* Cover Letter toggle */}
-              <label className="flex items-center justify-between gap-2 cursor-pointer pt-2 border-t border-gray-200/60 select-none">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={includeCoverLetter}
-                    onChange={(e) => {
-                      setIncludeCoverLetter(e.target.checked);
-                      if (e.target.checked) {
-                        toast.info("Lettre de motivation générée automatiquement en PDF !");
-                      }
-                    }}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4 cursor-pointer"
-                  />
-                  <span className="text-xs font-medium text-gray-700">
-                    Joindre une Lettre de Motivation (PDF)
-                  </span>
-                </div>
-                <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                  Générée auto
-                </span>
-              </label>
-            </div>
-
-            {/* 5. Boutons d'Action (Main Submit + Fallback) */}
-            <div className="pt-2 space-y-2.5">
-              <button
-                type="button"
-                onClick={handleSend}
-                disabled={sendDisabled}
-                className={cn(
-                  "w-full h-12 text-sm font-semibold rounded-xl text-white transition shadow-sm cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none",
-                  dispatchChannel === "direct"
-                    ? "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
-                    : "bg-[#ff5722] hover:bg-[#e64a19] active:bg-[#d84315]"
-                )}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>
-                      {dispatchChannel === "direct"
-                        ? "Envoi en cours via Gmail SMTP..."
-                        : "Création du brouillon en cours..."}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    {dispatchChannel === "direct" ? (
-                      <Send className="h-4 w-4" />
-                    ) : (
-                      <Sparkles className="h-4 w-4" />
-                    )}
-                    <span>
-                      {dispatchChannel === "direct"
-                        ? "Envoyer la candidature (Envoi Direct)"
-                        : "Créer le brouillon dans Gmail"}
-                    </span>
-                  </>
-                )}
-              </button>
-
+            <div className="flex items-center justify-center">
               <button
                 type="button"
                 onClick={handleOpenGmailWeb}
                 disabled={!email || !emailCheck.valid}
-                className="w-full h-10 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-xs font-medium text-gray-700 hover:text-gray-900 transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:pointer-events-none shadow-2xs"
+                className="text-[11px] text-gray-400 hover:text-gray-700 transition inline-flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
               >
-                <ExternalLink className="h-3.5 w-3.5 text-gray-500" />
-                <span>Ouvrir dans Gmail Web (Alternative 1-Clic)</span>
+                <ExternalLink className="h-3 w-3" />
+                <span>Alternative : ouvrir directement dans Gmail Web</span>
               </button>
             </div>
           </div>
+        </div>
 
-          {/* RIGHT COLUMN: DUAL-TAB PANE (Live Preview / Dispatch Logs) */}
-          <div className="lg:col-span-5 bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs flex flex-col min-h-[580px]">
-            
-            {/* Tab Bar */}
-            <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50/70 p-1.5">
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => setRightTab("preview")}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer",
-                    rightTab === "preview"
-                      ? "bg-white text-gray-900 shadow-xs border border-gray-200"
-                      : "text-gray-500 hover:text-gray-800"
-                  )}
-                >
-                  <Eye className="h-3.5 w-3.5 text-blue-600" />
-                  <span>Aperçu en Direct</span>
-                </button>
+        {/* RIGHT COLUMN: DUAL-TAB PANE (Live Preview / Dispatch Logs) */}
+        <div className="lg:col-span-5 bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs flex flex-col justify-start">
+          
+          {/* Tab Bar */}
+          <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50/70 p-1.5 shrink-0">
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setRightTab("preview")}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer",
+                  rightTab === "preview"
+                    ? "bg-white text-gray-900 shadow-xs border border-gray-200"
+                    : "text-gray-500 hover:text-gray-800"
+                )}
+              >
+                <Eye className="h-3.5 w-3.5 text-blue-600" />
+                <span>Aperçu en Direct</span>
+              </button>
 
-                <button
-                  type="button"
-                  onClick={() => setRightTab("logs")}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer",
-                    rightTab === "logs"
-                      ? "bg-white text-gray-900 shadow-xs border border-gray-200"
-                      : "text-gray-500 hover:text-gray-800"
-                  )}
-                >
-                  <Terminal className="h-3.5 w-3.5 text-purple-600" />
-                  <span>Journal d&apos;Envoi</span>
-                  {logs.length > 0 && (
-                    <span className="rounded-full bg-purple-100 px-1.5 py-0.2 text-[10px] font-bold text-purple-700">
-                      {logs.length}
-                    </span>
-                  )}
-                </button>
-              </div>
-
-              <span className="text-[11px] font-medium text-gray-400 pr-2">
-                {rightTab === "preview" ? "Temps réel" : "Logs d'exécution"}
-              </span>
+              <button
+                type="button"
+                onClick={() => setRightTab("logs")}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer",
+                  rightTab === "logs"
+                    ? "bg-white text-gray-900 shadow-xs border border-gray-200"
+                    : "text-gray-500 hover:text-gray-800"
+                )}
+              >
+                <Terminal className="h-3.5 w-3.5 text-purple-600" />
+                <span>Journal d&apos;Envoi</span>
+                {logs.length > 0 && (
+                  <span className="rounded-full bg-purple-100 px-1.5 py-0.2 text-[10px] font-bold text-purple-700">
+                    {logs.length}
+                  </span>
+                )}
+              </button>
             </div>
 
-            {/* Content Area */}
-            <div className="flex-1 p-5 flex flex-col overflow-hidden">
-              
-              {/* TAB 1: LIVE EMAIL PREVIEW */}
-              {rightTab === "preview" && (
-                <div className="flex-1 flex flex-col space-y-4">
-                  {/* Simulated Email Envelope Header */}
-                  <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-3.5 space-y-2 text-xs">
-                    <div className="flex items-center justify-between text-gray-500 text-[11px] border-b border-gray-200/60 pb-1.5">
-                      <div className="flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-red-400" />
-                        <span className="h-2 w-2 rounded-full bg-yellow-400" />
-                        <span className="h-2 w-2 rounded-full bg-green-400" />
-                        <span className="font-semibold text-gray-700 ml-1">Boîte de réception simulée</span>
-                      </div>
-                      <span>SMTP / SSL</span>
-                    </div>
+            <span className="text-[11px] font-medium text-gray-400 pr-2">
+              {rightTab === "preview" ? "Temps réel" : "Logs"}
+            </span>
+          </div>
 
-                    <div className="space-y-1 text-gray-700">
-                      <p className="truncate">
-                        <strong className="text-gray-900">De :</strong> {candidateName} &lt;vous@gmail.com&gt;
-                      </p>
-                      <p className="truncate">
-                        <strong className="text-gray-900">À :</strong>{" "}
-                        <span className={cn(email ? "text-blue-700 font-mono" : "text-gray-400 italic")}>
-                          {email || "recruteur@entreprise.com"}
-                        </span>
-                      </p>
-                      <p className="truncate">
-                        <strong className="text-gray-900">Objet :</strong>{" "}
-                        <span className="font-semibold text-gray-900">{liveSubject}</span>
-                      </p>
+          {/* Content Area */}
+          <div className="p-3.5 flex flex-col overflow-hidden">
+            
+            {/* TAB 1: LIVE EMAIL PREVIEW */}
+            {rightTab === "preview" && (
+              <div className="flex flex-col space-y-3">
+                {/* Simulated Envelope Header */}
+                <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-2.5 space-y-1.5 text-xs shrink-0">
+                  <div className="flex items-center justify-between text-gray-500 text-[10.5px] border-b border-gray-200/60 pb-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-red-400" />
+                      <span className="h-2 w-2 rounded-full bg-yellow-400" />
+                      <span className="h-2 w-2 rounded-full bg-green-400" />
+                      <span className="font-semibold text-gray-700 ml-1">Boîte de réception simulée</span>
                     </div>
+                    <span>SMTP / SSL</span>
+                  </div>
 
-                    {/* Attached Files Badges */}
-                    <div className="pt-2 border-t border-gray-200/60">
-                      <span className="text-[10.5px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">
-                        Pièces jointes :
+                  <div className="space-y-0.5 text-gray-700 text-[11.5px]">
+                    <p className="truncate">
+                      <strong className="text-gray-900">De :</strong> {candidateName} &lt;vous@gmail.com&gt;
+                    </p>
+                    <p className="truncate">
+                      <strong className="text-gray-900">À :</strong>{" "}
+                      <span className={cn(email ? "text-blue-700 font-mono font-medium" : "text-gray-400 italic")}>
+                        {email || "recruteur@entreprise.com"}
                       </span>
-                      <div className="flex flex-wrap gap-1.5">
-                        <span className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 font-mono text-[11px] text-blue-800">
-                          <FileCheck className="h-3 w-3 text-blue-600" />
-                          {cvFileName}
-                        </span>
-                        {includeCoverLetter && (
-                          <span className="inline-flex items-center gap-1 rounded-md border border-purple-200 bg-purple-50 px-2 py-0.5 font-mono text-[11px] text-purple-800">
-                            <FileText className="h-3 w-3 text-purple-600" />
-                            Lettre_Motivation_{companyDisplayName.replace(/\s+/g, "_")}.pdf
-                          </span>
-                        )}
-                      </div>
-                    </div>
+                    </p>
+                    <p className="truncate">
+                      <strong className="text-gray-900">Objet :</strong>{" "}
+                      <span className="font-semibold text-gray-900">{liveSubject}</span>
+                    </p>
                   </div>
 
-                  {/* Email Body Preview */}
-                  <div className="flex-1 rounded-xl border border-gray-100 bg-white p-4 overflow-y-auto max-h-[340px]">
-                    <div className="text-xs text-gray-800 leading-relaxed whitespace-pre-wrap font-sans">
-                      {liveMessage}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 2: LIVE DISPATCH LOGS */}
-              {rightTab === "logs" && (
-                <div className="flex-1 flex flex-col space-y-4">
-                  {/* Success Result Card */}
-                  {lastResult && (
-                    <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 text-xs animate-in fade-in duration-200 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-emerald-950 font-bold">
-                          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                          <span>
-                            {lastResult.channel === "direct"
-                              ? "Candidature Délivrée avec Succès !"
-                              : "Brouillon Créé avec Succès !"}
-                          </span>
-                        </div>
-                        <span className="text-[10px] font-mono text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">
-                          {lastResult.time}
-                        </span>
-                      </div>
-
-                      <div className="space-y-1 text-emerald-800 text-[11.5px]">
-                        <p>
-                          <strong>Destinataire :</strong> {lastResult.email} ({lastResult.company})
-                        </p>
-                        <p>
-                          <strong>Pièces jointes ({lastResult.attachments.length}) :</strong>{" "}
-                          {lastResult.attachments.join(", ")}
-                        </p>
-                      </div>
-
-                      <div className="pt-2 border-t border-emerald-200/80 flex items-center justify-between">
-                        <span className="text-[11px] text-emerald-700">
-                          Statut Suivi : <strong>Enregistré ✓</strong>
-                        </span>
-                        <a
-                          href={
-                            lastResult.channel === "direct"
-                              ? "https://mail.google.com/mail/u/0/#sent"
-                              : "https://mail.google.com/mail/u/0/#drafts"
-                          }
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 font-semibold text-emerald-900 hover:underline text-[11px]"
-                        >
-                          <span>Voir dans Gmail</span>
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Logs Feed Container */}
-                  <div className="flex-1 rounded-xl border border-gray-100 bg-gray-50/70 p-3.5 overflow-y-auto max-h-[380px] space-y-2 font-mono text-[11.5px]">
-                    {logs.length === 0 ? (
-                      <div className="h-full flex flex-col items-center justify-center text-center p-6 text-gray-400 space-y-2">
-                        <Clock className="h-8 w-8 text-gray-300 stroke-1" />
-                        <p className="text-xs font-sans text-gray-500 font-medium">
-                          En attente d&apos;envoi
-                        </p>
-                        <p className="text-[11px] font-sans text-gray-400 max-w-xs">
-                          Dès que vous cliquerez sur &quot;Envoyer la candidature&quot;, les étapes détaillées (validation, pièces jointes, SMTP) s&apos;afficheront ici en temps réel.
-                        </p>
-                      </div>
-                    ) : (
-                      logs.map((log, idx) => (
-                        <div
-                          key={idx}
-                          className={cn(
-                            "flex items-start gap-2 p-2 rounded-lg leading-relaxed animate-in fade-in duration-150",
-                            log.type === "success"
-                              ? "bg-emerald-50/90 text-emerald-900 border border-emerald-200"
-                              : log.type === "error"
-                                ? "bg-red-50 text-red-900 border border-red-200"
-                                : "bg-white text-gray-800 border border-gray-100"
-                          )}
-                        >
-                          <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">
-                            {log.timestamp}
-                          </span>
-                          <span className="shrink-0 mt-0.5">
-                            {log.type === "success" ? (
-                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                            ) : log.type === "error" ? (
-                              <AlertCircle className="h-3.5 w-3.5 text-red-600" />
-                            ) : (
-                              <span className="h-2 w-2 rounded-full bg-blue-500 inline-block" />
-                            )}
-                          </span>
-                          <span className="flex-1 break-words">{log.message}</span>
-                        </div>
-                      ))
+                  {/* Attached Files Badges */}
+                  <div className="pt-1.5 border-t border-gray-200/60 flex flex-wrap gap-1">
+                    <span className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-1.5 py-0.2 font-mono text-[10.5px] text-blue-800">
+                      <FileCheck className="h-3 w-3 text-blue-600" />
+                      {cvFileName}
+                    </span>
+                    {includeCoverLetter && (
+                      <span className="inline-flex items-center gap-1 rounded-md border border-purple-200 bg-purple-50 px-1.5 py-0.2 font-mono text-[10.5px] text-purple-800">
+                        <FileText className="h-3 w-3 text-purple-600" />
+                        Lettre_{companyDisplayName.replace(/\s+/g, "_")}.pdf
+                      </span>
                     )}
                   </div>
                 </div>
-              )}
-            </div>
+
+                {/* Email Body Preview */}
+                <div className="rounded-xl border border-gray-100 bg-white p-3 overflow-y-auto max-h-[220px] sm:max-h-[260px]">
+                  <div className="text-xs text-gray-800 leading-relaxed whitespace-pre-wrap font-sans">
+                    {liveMessage}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 2: LIVE DISPATCH LOGS */}
+            {rightTab === "logs" && (
+              <div className="flex flex-col space-y-2.5">
+                {/* Success Result Card */}
+                {lastResult && (
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-2.5 text-xs animate-in fade-in duration-200 space-y-1.5 shrink-0">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-emerald-950 font-bold text-xs">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                        <span>
+                          {lastResult.channel === "direct"
+                            ? "Candidature Envoyée !"
+                            : "Brouillon Créé !"}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded">
+                        {lastResult.time}
+                      </span>
+                    </div>
+
+                    <div className="space-y-0.5 text-emerald-800 text-[11px]">
+                      <p className="truncate">
+                        <strong>Destinataire :</strong> {lastResult.email} ({lastResult.company})
+                      </p>
+                      <p className="truncate">
+                        <strong>Pièces :</strong> {lastResult.attachments.join(", ")}
+                      </p>
+                    </div>
+
+                    <div className="pt-1.5 border-t border-emerald-200/80 flex items-center justify-between text-[11px]">
+                      <span className="text-emerald-700 font-medium">
+                        Tracker : <strong>Synchronisé ✓</strong>
+                      </span>
+                      <a
+                        href={
+                          lastResult.channel === "direct"
+                            ? "https://mail.google.com/mail/u/0/#sent"
+                            : "https://mail.google.com/mail/u/0/#drafts"
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 font-semibold text-emerald-900 hover:underline"
+                      >
+                        <span>Voir dans Gmail</span>
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {/* Logs Feed Container */}
+                <div className="rounded-xl border border-gray-100 bg-gray-50/70 p-2.5 overflow-y-auto max-h-[280px] space-y-1.5 font-mono text-[11px]">
+                  {logs.length === 0 ? (
+                    <div className="py-6 flex flex-col items-center justify-center text-center text-gray-400 space-y-1.5">
+                      <Clock className="h-6 w-6 text-gray-300 stroke-1" />
+                      <p className="text-xs font-sans text-gray-500 font-medium">
+                        En attente d&apos;envoi
+                      </p>
+                      <p className="text-[10.5px] font-sans text-gray-400 max-w-xs">
+                        Les étapes d&apos;envoi détaillées (validation DNS, pièces jointes, SMTP) s&apos;afficheront ici lors du clic sur Envoyer.
+                      </p>
+                    </div>
+                  ) : (
+                    logs.map((log, idx) => (
+                      <div
+                        key={idx}
+                        className={cn(
+                          "flex items-start gap-1.5 p-1.5 rounded leading-relaxed animate-in fade-in duration-150",
+                          log.type === "success"
+                            ? "bg-emerald-50/90 text-emerald-900 border border-emerald-200"
+                            : log.type === "error"
+                              ? "bg-red-50 text-red-900 border border-red-200"
+                              : "bg-white text-gray-800 border border-gray-100"
+                        )}
+                      >
+                        <span className="text-[9.5px] text-gray-400 shrink-0 mt-0.5">
+                          {log.timestamp}
+                        </span>
+                        <span className="shrink-0 mt-0.5">
+                          {log.type === "success" ? (
+                            <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                          ) : log.type === "error" ? (
+                            <AlertCircle className="h-3 w-3 text-red-600" />
+                          ) : (
+                            <span className="h-1.5 w-1.5 rounded-full bg-blue-500 inline-block" />
+                          )}
+                        </span>
+                        <span className="flex-1 break-words">{log.message}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
