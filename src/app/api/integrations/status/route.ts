@@ -120,20 +120,27 @@ export async function GET() {
     verifySmtpConnection(),
   ]);
 
-  return NextResponse.json({
-    checkedAt: new Date().toISOString(),
-    n8n,
-    smtp,
-    supabase: {
-      configured: supabaseConfigured,
-      message: supabaseConfigured
-        ? "Supabase environment variables are configured."
-        : "Supabase environment variables are missing.",
+  return NextResponse.json(
+    {
+      checkedAt: new Date().toISOString(),
+      n8n,
+      smtp,
+      supabase: {
+        configured: supabaseConfigured,
+        message: supabaseConfigured
+          ? "Supabase environment variables are configured."
+          : "Supabase environment variables are missing.",
+      },
+      emailValidation: {
+        mode: "format-plus-dns",
+        message:
+          "The app validates email format on the client and verifies domain mail routing before send.",
+      },
     },
-    emailValidation: {
-      mode: "format-plus-dns",
-      message:
-        "The app validates email format on the client and verifies domain mail routing before send.",
+    {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+      },
     },
-  });
+  );
 }

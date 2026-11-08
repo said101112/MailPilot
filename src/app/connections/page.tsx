@@ -111,10 +111,10 @@ export default function ConnectionsPage() {
                     ) : (
                       <TriangleAlert className="h-3 w-3" />
                     )}
-                    {n8nHealthy ? "Canal 1 : Opérationnel" : "Non Détecté"}
+                    {n8nHealthy ? "Opérationnel" : "Non Détecté"}
                   </span>
                 </div>
-                <h3 className="text-sm font-semibold text-gray-900">Canal 1 : n8n (Drafts)</h3>
+                <h3 className="text-sm font-semibold text-gray-900">Brouillons Gmail</h3>
                 <p className="mt-1.5 text-xs leading-relaxed text-gray-500">
                   {integrationLoading
                     ? "Vérification..."
@@ -123,9 +123,9 @@ export default function ConnectionsPage() {
                 </p>
               </div>
               <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-3">
-                <span className="text-[11px] text-gray-400">Webhook n8n</span>
+                <span className="text-[11px] text-gray-400">Mode Brouillon</span>
                 <span className="text-xs font-medium text-[#ff5722]">
-                  Draft Mode
+                  Actif
                 </span>
               </div>
             </div>
@@ -153,18 +153,19 @@ export default function ConnectionsPage() {
                       <TriangleAlert className="h-3 w-3" />
                     )}
                     {smtpHealthy
-                      ? "Canal 2 : Connecté"
+                      ? "Connecté"
                       : smtpConfigured
-                      ? "Erreur Auth"
-                      : "Non Configuré"}
+                      ? "Erreur de connexion"
+                      : "Non Connecté"}
                   </span>
                 </div>
-                <h3 className="text-sm font-semibold text-gray-900">Canal 2 : Gmail Direct (Inbox)</h3>
+                <h3 className="text-sm font-semibold text-gray-900">Envoi Direct (Boîte Principale)</h3>
                 <p className="mt-1.5 text-xs leading-relaxed text-gray-500">
                   {integrationLoading
-                    ? "Vérification SMTP..."
-                    : integrationStatus?.smtp?.message ||
-                      "Envoi direct via smtp.gmail.com:465 avec DKIM et SPF officiels Google (zéro spam)."}
+                    ? "Vérification..."
+                    : smtpHealthy
+                    ? "Votre compte est connecté et prêt à envoyer directement aux recruteurs sans passer par les spams."
+                    : "Connectez votre compte pour envoyer directement les candidatures."}
                 </p>
                 {integrationStatus?.smtp?.user && (
                   <p className="mt-1 font-mono text-[11px] text-blue-700">
@@ -173,9 +174,9 @@ export default function ConnectionsPage() {
                 )}
               </div>
               <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-3">
-                <span className="text-[11px] text-gray-400">App Password</span>
+                <span className="text-[11px] text-gray-400">Envoi Direct</span>
                 <span className="text-xs font-medium text-blue-600">
-                  Direct Send
+                  {smtpHealthy ? "Prêt" : "À connecter"}
                 </span>
               </div>
             </div>

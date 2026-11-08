@@ -555,7 +555,7 @@ export default function TestDraftPage() {
                     )}
                   >
                     <Send className="h-3.5 w-3.5 text-blue-600" />
-                    <span>⚡ Envoi Direct (Inbox)</span>
+                    <span>⚡ Envoi Direct</span>
                   </button>
                   <button
                     type="button"
@@ -568,7 +568,7 @@ export default function TestDraftPage() {
                     )}
                   >
                     <FileText className="h-3.5 w-3.5 text-[#ff5722]" />
-                    <span>📝 Brouillon (n8n)</span>
+                    <span>📝 Brouillon Gmail</span>
                   </button>
                 </div>
               </div>
@@ -596,8 +596,8 @@ export default function TestDraftPage() {
                       <Send className="h-4 w-4" />
                       <span>
                         {testChannel === "direct"
-                          ? "Tester l'Envoi Direct dans ma boîte Gmail (Sans Spam)"
-                          : "Tester la Création du Brouillon Gmail (n8n)"}
+                          ? "Tester l'Envoi Direct"
+                          : "Tester la Création du Brouillon"}
                       </span>
                     </>
                   )}

@@ -16,6 +16,7 @@ import {
   Mail,
   RotateCcw,
   Send,
+  ShieldCheck,
   Sparkles,
   TriangleAlert,
   WandSparkles,
@@ -54,6 +55,7 @@ import {
   WORKSPACE_CV_EVENT,
 } from "@/lib/workspace";
 import { generateCoverLetterPdf } from "@/lib/coverLetterPdf";
+import PreflightCheckModal from "@/components/PreflightCheckModal";
 
 interface DuplicateMatch {
   company: string;
@@ -84,6 +86,7 @@ export default function ApplyPage() {
   const [tempMessage, setTempMessage] = useState(DEFAULT_TEMPLATES[0].message);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [dispatchChannel, setDispatchChannel] = useState<"draft" | "direct">("direct");
+  const [isPreflightModalOpen, setIsPreflightModalOpen] = useState(false);
 
   // Duplicate detection state
   const [duplicateMatch, setDuplicateMatch] = useState<DuplicateMatch | null>(null);
@@ -241,6 +244,7 @@ export default function ApplyPage() {
   const smtpBlocked =
     integrationStatus?.smtp?.configured === false ||
     integrationStatus?.smtp?.healthy === false;
+  const smtpHealthy = integrationStatus?.smtp?.healthy === true;
 
   const channelBlocked = dispatchChannel === "draft" ? n8nBlocked : smtpBlocked;
 
@@ -249,8 +253,7 @@ export default function ApplyPage() {
     integrationLoading ||
     emailChecking ||
     !email ||
-    !emailCheck.valid ||
-    Boolean(channelBlocked);
+    !emailCheck.valid;
 
   const checkDuplicates = async (emailVal: string) => {
     const cleanEmail = emailVal.trim().toLowerCase();
@@ -453,6 +456,31 @@ export default function ApplyPage() {
     }
   };
 
+  const handleTestConnections = async () => {
+    setIntegrationLoading(true);
+    try {
+      const res = await getIntegrationStatus();
+      setIntegrationStatus(res);
+      setIsPreflightModalOpen(true);
+      const smtpOk = res.smtp?.healthy === true;
+      const n8nOk = res.n8n?.healthy === true;
+
+      if (smtpOk && n8nOk) {
+        toast.success("Tout est connecté ! Gmail SMTP & n8n sont 100% opérationnels.");
+      } else if (smtpOk) {
+        toast.success("Canal 2 (Gmail Direct) connecté avec succès !");
+      } else if (n8nOk) {
+        toast.info("Canal 1 (n8n Brouillons) opérationnel.");
+      } else {
+        toast.warning("Certaines connexions nécessitent votre attention.");
+      }
+    } catch {
+      toast.error("Impossible de vérifier l'état des connexions.");
+    } finally {
+      setIntegrationLoading(false);
+    }
+  };
+
   const handleSend = async () => {
     setLoading(true);
 
@@ -467,13 +495,14 @@ export default function ApplyPage() {
       }
 
       if (dispatchChannel === "draft" && n8nBlocked) {
-        throw new Error(integrationStatus?.n8n.message || "n8n is not ready.");
+        setIsPreflightModalOpen(true);
+        throw new Error("Le service de brouillons est temporairement indisponible.");
       }
 
       if (dispatchChannel === "direct" && smtpBlocked) {
+        setIsPreflightModalOpen(true);
         throw new Error(
-          integrationStatus?.smtp?.message ||
-            "Gmail SMTP n'est pas configuré. Veuillez vérifier vos variables d'environnement."
+          "Votre compte email n'est pas encore connecté. Cliquez sur 'Vérifier la connexion' pour voir les détails."
         );
       }
 
@@ -711,7 +740,7 @@ export default function ApplyPage() {
         <div className="grid gap-6 md:grid-cols-2">
           {/* Quick Draft / Direct Dispatch Card */}
           <div className="rounded-lg border border-gray-200 bg-white p-6">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div
                   className={cn(
@@ -730,16 +759,28 @@ export default function ApplyPage() {
                 <div>
                   <h2 className="text-sm font-semibold text-gray-900">
                     {dispatchChannel === "direct"
-                      ? "Canal 2 : Envoi Direct Immédiat"
-                      : "Canal 1 : Création de Brouillon"}
+                      ? "Envoi Direct"
+                      : "Création de Brouillon"}
                   </h2>
                   <p className="text-xs text-gray-500">
                     {dispatchChannel === "direct"
-                      ? "Délivre l'email via smtp.gmail.com (DKIM/SPF certifiés Google, zéro spam)"
-                      : "Prépare l'email dans vos Brouillons Gmail pour relecture manuelle"}
+                      ? "Envoi direct vers la boîte principale du recruteur (sans passer par les spams)."
+                      : "Prépare l'email dans vos brouillons Gmail pour que vous puissiez le relire."}
                   </p>
                 </div>
               </div>
+
+              {/* Live Test Connections Button */}
+              <button
+                type="button"
+                onClick={handleTestConnections}
+                disabled={integrationLoading}
+                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-800 text-xs font-semibold shadow-2xs transition cursor-pointer disabled:opacity-50"
+                title="Vérifier si votre compte email est bien connecté"
+              >
+                <ShieldCheck className={cn("h-3.5 w-3.5", smtpHealthy ? "text-emerald-600" : "text-blue-600")} />
+                <span>Vérifier la connexion</span>
+              </button>
             </div>
 
             {/* Dual Channel Switcher */}
@@ -755,7 +796,7 @@ export default function ApplyPage() {
                 )}
               >
                 <Send className="h-3.5 w-3.5 text-blue-600" />
-                <span>Canal Direct (Inbox)</span>
+                <span>⚡ Envoi Direct</span>
               </button>
 
               <button
@@ -769,7 +810,7 @@ export default function ApplyPage() {
                 )}
               >
                 <FileText className="h-3.5 w-3.5 text-[#ff5722]" />
-                <span>Brouillon Gmail (n8n)</span>
+                <span>📝 Brouillon Gmail</span>
               </button>
             </div>
 
@@ -1053,12 +1094,8 @@ export default function ApplyPage() {
                   <Sparkles className="h-4 w-4" />
                 )}
                 {dispatchChannel === "direct"
-                  ? smtpBlocked
-                    ? "Gmail SMTP non configuré (.env)"
-                    : "Envoyer Directement (Inbox)"
-                  : n8nBlocked
-                  ? "n8n non disponible"
-                  : "Créer le Brouillon dans Gmail"}
+                  ? "Envoyer la candidature"
+                  : "Créer le brouillon dans Gmail"}
               </button>
 
               <button
@@ -1227,6 +1264,14 @@ export default function ApplyPage() {
           </div>
         </div>
       )}
+
+      {/* Pre-flight Diagnostic Modal */}
+      <PreflightCheckModal
+        isOpen={isPreflightModalOpen}
+        onClose={() => setIsPreflightModalOpen(false)}
+        initialStatus={integrationStatus}
+        onStatusUpdated={(s) => setIntegrationStatus(s)}
+      />
     </div>
   );
 }

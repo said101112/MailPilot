@@ -19,6 +19,7 @@ import {
   MinusSquare,
   Play,
   Send,
+  ShieldCheck,
   Sparkles,
   Square,
   UploadCloud,
@@ -56,6 +57,7 @@ import {
 } from "@/lib/tracker/syncService";
 import { useBulkUpload, type CSVRow } from "@/context/BulkUploadContext";
 import { CoverLetterModal } from "@/components/CoverLetterModal";
+import PreflightCheckModal from "@/components/PreflightCheckModal";
 
 type ValidationState =
   | "processing"
@@ -215,6 +217,7 @@ export default function UploadPage() {
     useState<IntegrationStatusResponse | null>(null);
   const [withdrawnEmails, setWithdrawnEmails] = useState<Set<string>>(new Set());
   const [isTemplateDropdownOpen, setIsTemplateDropdownOpen] = useState(false);
+  const [isPreflightModalOpen, setIsPreflightModalOpen] = useState(false);
   const ROWS_PER_PAGE = 10;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -1195,6 +1198,17 @@ export default function UploadPage() {
                   {isAllSelected ? "Deselect All" : "Select All"}
                 </button>
 
+                {/* Test Connection Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsPreflightModalOpen(true)}
+                  className="editorial-button-secondary h-8 px-2.5 text-xs inline-flex items-center gap-1.5 shadow-2xs"
+                  title="Vérifier si votre compte email est bien connecté"
+                >
+                  <ShieldCheck className="h-3.5 w-3.5 text-blue-600" />
+                  <span>Vérifier connexion</span>
+                </button>
+
                 {/* Bulk Channel Switcher */}
                 <div className="flex items-center rounded-lg border border-gray-200 bg-gray-50/80 p-0.5">
                   <button
@@ -1208,7 +1222,7 @@ export default function UploadPage() {
                     )}
                   >
                     <Send className="h-3 w-3 text-blue-600" />
-                    <span>Direct (Inbox)</span>
+                    <span>⚡ Envoi Direct</span>
                   </button>
                   <button
                     type="button"
@@ -1221,7 +1235,7 @@ export default function UploadPage() {
                     )}
                   >
                     <FileText className="h-3 w-3 text-[#ff5722]" />
-                    <span>Brouillons (n8n)</span>
+                    <span>📝 Brouillons</span>
                   </button>
                 </div>
 
@@ -1445,6 +1459,14 @@ export default function UploadPage() {
           initialContactName={coverLetterRow.name || defaultContactName}
         />
       )}
+
+      {/* Connection Diagnostic Modal */}
+      <PreflightCheckModal
+        isOpen={isPreflightModalOpen}
+        onClose={() => setIsPreflightModalOpen(false)}
+        initialStatus={integrationStatus}
+        onStatusUpdated={(s) => setIntegrationStatus(s)}
+      />
     </div>
   );
 }
