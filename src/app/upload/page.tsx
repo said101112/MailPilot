@@ -978,43 +978,156 @@ export default function UploadPage() {
               </div>
             </div>
 
-            {/* Batch Controls Bar */}
-            <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-2 rounded-md bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-700">
-                  <FileSpreadsheet className="h-3.5 w-3.5 text-[#ff5722]" />
-                  <span className="max-w-[200px] truncate">{fileName}</span>
+            {/* Batch Controls Bar - Modern 2-Tier Layout */}
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-xs space-y-3.5">
+              {/* Row 1: Active File & Primary Dispatch Action */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-gray-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-[#ff5722]">
+                    <FileSpreadsheet className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-gray-900 text-sm max-w-[260px] truncate">
+                        {fileName}
+                      </span>
+                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-bold text-gray-700">
+                        {data.length} contacts
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={clearBatch}
+                      disabled={isProcessing}
+                      className="text-[11px] text-gray-400 hover:text-gray-700 transition underline cursor-pointer"
+                    >
+                      Changer de fichier / Effacer
+                    </button>
+                  </div>
                 </div>
 
-                {/* Modern Track & Language Selector */}
+                {/* Right: Channel Switch + Connection Test + Primary Action Button */}
+                <div className="flex flex-wrap items-center gap-2.5">
+                  {/* Channel Switch */}
+                  <div className="flex items-center rounded-xl border border-gray-200 bg-gray-50/80 p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setBulkChannel("direct")}
+                      className={cn(
+                        "px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center gap-1.5",
+                        bulkChannel === "direct"
+                          ? "bg-white text-blue-700 shadow-2xs border border-blue-200 font-bold"
+                          : "text-gray-500 hover:text-gray-800"
+                      )}
+                    >
+                      <Send className="h-3 w-3 text-blue-600" />
+                      <span>⚡ Envoi Direct</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBulkChannel("draft")}
+                      className={cn(
+                        "px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center gap-1.5",
+                        bulkChannel === "draft"
+                          ? "bg-white text-[#ff5722] shadow-2xs border border-[#ff5722]/30 font-bold"
+                          : "text-gray-500 hover:text-gray-800"
+                      )}
+                    >
+                      <FileText className="h-3 w-3 text-[#ff5722]" />
+                      <span>📝 Brouillons Gmail</span>
+                    </button>
+                  </div>
+
+                  {/* Preflight Test */}
+                  <button
+                    type="button"
+                    onClick={() => setIsPreflightModalOpen(true)}
+                    className="h-9 px-3 text-xs font-medium rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 transition inline-flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                    title="Vérifier si votre compte email est bien connecté"
+                  >
+                    <ShieldCheck className="h-3.5 w-3.5 text-blue-600" />
+                    <span className="hidden sm:inline">Connexion</span>
+                  </button>
+
+                  {/* Main Action Button */}
+                  <button
+                    className={cn(
+                      "h-10 px-5 text-xs sm:text-sm font-semibold rounded-xl text-white transition flex items-center gap-2 shadow-sm cursor-pointer disabled:opacity-50 disabled:pointer-events-none",
+                      bulkChannel === "direct"
+                        ? "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
+                        : "bg-[#ff5722] hover:bg-[#e64a19] active:bg-[#d84315]"
+                    )}
+                    disabled={
+                      data.length === 0 ||
+                      selectedRows.size === 0 ||
+                      isProcessing ||
+                      integrationLoading ||
+                      channelBlocked
+                    }
+                    onClick={handleStartBatchProcess}
+                    type="button"
+                  >
+                    {isProcessing ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : bulkChannel === "direct" ? (
+                      <Send className="h-4 w-4" />
+                    ) : (
+                      <Play className="h-4 w-4" />
+                    )}
+                    {isProcessing
+                      ? bulkChannel === "direct"
+                        ? `Envoi direct (${progress.current}/${progress.total})`
+                        : `Création Brouillons (${progress.current}/${progress.total})`
+                      : bulkChannel === "direct"
+                        ? `Lancer l'Envoi Direct (${selectedCount})`
+                        : `Créer les Brouillons (${selectedCount})`}
+                  </button>
+
+                  {isProcessing && (
+                    <button
+                      className="h-10 px-3 text-xs font-semibold rounded-xl text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition cursor-pointer"
+                      onClick={cancelBatchProcess}
+                      type="button"
+                      title="Arrêter la file d'attente"
+                    >
+                      Arrêter
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Row 2: Secondary Configuration (Model, Track, CV, Select All) */}
+              <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-gray-600 pt-0.5">
+                {/* Left: Model & Track */}
                 <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Modèle :</span>
                   {/* Track Switcher (Dév vs Data) */}
                   <div className="flex items-center rounded-lg border border-gray-200 bg-gray-50/80 p-0.5">
                     <button
                       type="button"
                       onClick={() => handleSelectTrack("dev")}
                       className={cn(
-                        "flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold transition cursor-pointer",
+                        "flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold transition cursor-pointer",
                         !isDataTrack
                           ? "bg-white text-blue-600 shadow-2xs border border-blue-200/80 font-bold"
                           : "text-gray-500 hover:text-gray-800"
                       )}
                       title="Profil Développement Logiciel, Full Stack & IA"
                     >
-                      <span>💻 Dév Full Stack</span>
+                      <span>💻 Dév</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => handleSelectTrack("data")}
                       className={cn(
-                        "flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold transition cursor-pointer",
+                        "flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold transition cursor-pointer",
                         isDataTrack
                           ? "bg-white text-emerald-600 shadow-2xs border border-emerald-200/80 font-bold"
                           : "text-gray-500 hover:text-gray-800"
                       )}
                       title="Profil Data Science & Intelligence Artificielle"
                     >
-                      <span>🤖 Data & IA</span>
+                      <span>🤖 Data</span>
                     </button>
                   </div>
 
@@ -1024,12 +1137,11 @@ export default function UploadPage() {
                       type="button"
                       onClick={() => handleSelectLang("fr")}
                       className={cn(
-                        "rounded-md px-2 py-1 text-xs font-bold transition cursor-pointer",
+                        "rounded-md px-1.5 py-0.5 text-xs font-bold transition cursor-pointer",
                         !isEnglishLang
                           ? "bg-blue-600 text-white shadow-2xs"
                           : "text-gray-500 hover:text-gray-800"
                       )}
-                      title="Version Française (FR)"
                     >
                       FR
                     </button>
@@ -1037,23 +1149,22 @@ export default function UploadPage() {
                       type="button"
                       onClick={() => handleSelectLang("en")}
                       className={cn(
-                        "rounded-md px-2 py-1 text-xs font-bold transition cursor-pointer",
+                        "rounded-md px-1.5 py-0.5 text-xs font-bold transition cursor-pointer",
                         isEnglishLang
                           ? "bg-indigo-600 text-white shadow-2xs"
                           : "text-gray-500 hover:text-gray-800"
                       )}
-                      title="English Version (EN)"
                     >
                       EN
                     </button>
                   </div>
 
-                  {/* Dropdown Menu for Full Details / Relances */}
+                  {/* Dropdown Menu for Full Details */}
                   <div className="relative">
                     <button
                       type="button"
                       onClick={() => setIsTemplateDropdownOpen(!isTemplateDropdownOpen)}
-                      className="flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 transition"
+                      className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 transition"
                     >
                       <span className="max-w-[140px] truncate text-[11px] font-semibold text-gray-800">
                         {templates.find((t) => t.id === currentTplId)?.name || "Modèle"}
@@ -1067,7 +1178,7 @@ export default function UploadPage() {
                           className="fixed inset-0 z-40"
                           onClick={() => setIsTemplateDropdownOpen(false)}
                         />
-                        <div className="absolute left-0 sm:right-0 sm:left-auto top-[calc(100%+6px)] z-50 w-72 rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl animate-in fade-in zoom-in-95 duration-100">
+                        <div className="absolute left-0 top-[calc(100%+6px)] z-50 w-72 rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl animate-in fade-in zoom-in-95 duration-100">
                           <div className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400">
                             Candidatures PFE 2027
                           </div>
@@ -1136,152 +1247,60 @@ export default function UploadPage() {
                   </div>
                 </div>
 
-                {/* Global CV Selector */}
-                <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                  <span>CV par défaut :</span>
-                  <select
-                    className="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-800 outline-none focus:border-[#ff5722]"
-                    value={selectedCvId || ""}
-                    onChange={(e) => {
-                      const nextId = e.target.value;
-                      setSelectedCvId(nextId);
-                      const chosen = cvLibrary.find((c) => c.id === nextId);
-                      toast.info(`CV par défaut pour le lot : ${chosen?.label || "Sélectionné"}`);
-                    }}
-                  >
-                    {cvLibrary.length === 0 ? (
-                      <option value="">Aucun CV importé</option>
-                    ) : (
-                      cvLibrary.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          📄 {c.label} ({c.fileName})
-                        </option>
-                      ))
-                    )}
-                  </select>
+                {/* Middle: CV Selector & Cover letter toggle */}
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                    <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">CV :</span>
+                    <select
+                      className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-800 outline-none focus:border-blue-500"
+                      value={selectedCvId || ""}
+                      onChange={(e) => {
+                        const nextId = e.target.value;
+                        setSelectedCvId(nextId);
+                        const chosen = cvLibrary.find((c) => c.id === nextId);
+                        toast.info(`CV par défaut pour le lot : ${chosen?.label || "Sélectionné"}`);
+                      }}
+                    >
+                      {cvLibrary.length === 0 ? (
+                        <option value="">Aucun CV importé</option>
+                      ) : (
+                        cvLibrary.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            📄 {c.label} ({c.fileName})
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+
+                  <label className="flex items-center gap-1.5 cursor-pointer rounded-lg border border-gray-200 bg-gray-50 hover:bg-white px-2.5 py-1 text-xs font-medium text-gray-700 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={includeCoverLetter}
+                      onChange={(e) => {
+                        setIncludeCoverLetter(e.target.checked);
+                        if (e.target.checked) {
+                          toast.info("Lettre de motivation PDF incluse lors de l'envoi");
+                        }
+                      }}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                    />
+                    <FileText className="h-3.5 w-3.5 text-blue-600" />
+                    <span>Joindre Lettre PDF</span>
+                  </label>
                 </div>
 
-                {/* Cover Letter PDF Toggle */}
-                <label className="flex items-center gap-1.5 cursor-pointer rounded-md border border-gray-200 bg-gray-50 hover:bg-white px-2.5 py-1 text-xs font-medium text-gray-700 transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={includeCoverLetter}
-                    onChange={(e) => {
-                      setIncludeCoverLetter(e.target.checked);
-                      if (e.target.checked) {
-                        toast.info("Lettre de motivation PDF incluse lors de l'envoi vers n8n");
-                      }
-                    }}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
-                  />
-                  <FileText className="h-3.5 w-3.5 text-blue-600" />
-                  <span>Joindre Lettre PDF</span>
-                </label>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  className="editorial-button-secondary h-8 px-3 text-xs"
-                  onClick={clearBatch}
-                  type="button"
-                  disabled={isProcessing}
-                >
-                  Clear & New File
-                </button>
-
-                <button
-                  className="editorial-button-secondary h-8 px-3 text-xs"
-                  disabled={data.length === 0 || isProcessing}
-                  onClick={isAllSelected ? deselectAll : handleSelectAll}
-                  type="button"
-                >
-                  {isAllSelected ? "Deselect All" : "Select All"}
-                </button>
-
-                {/* Test Connection Button */}
-                <button
-                  type="button"
-                  onClick={() => setIsPreflightModalOpen(true)}
-                  className="editorial-button-secondary h-8 px-2.5 text-xs inline-flex items-center gap-1.5 shadow-2xs"
-                  title="Vérifier si votre compte email est bien connecté"
-                >
-                  <ShieldCheck className="h-3.5 w-3.5 text-blue-600" />
-                  <span>Vérifier connexion</span>
-                </button>
-
-                {/* Bulk Channel Switcher */}
-                <div className="flex items-center rounded-lg border border-gray-200 bg-gray-50/80 p-0.5">
+                {/* Right: Table Selection Button */}
+                <div>
                   <button
+                    className="rounded-lg border border-gray-200 bg-white hover:bg-gray-50 px-3 py-1 text-xs font-medium text-gray-700 transition cursor-pointer"
+                    disabled={data.length === 0 || isProcessing}
+                    onClick={isAllSelected ? deselectAll : handleSelectAll}
                     type="button"
-                    onClick={() => setBulkChannel("direct")}
-                    className={cn(
-                      "px-2.5 py-1 text-xs font-semibold rounded-md transition cursor-pointer flex items-center gap-1",
-                      bulkChannel === "direct"
-                        ? "bg-white text-blue-700 shadow-2xs border border-blue-200 font-bold"
-                        : "text-gray-500 hover:text-gray-800"
-                    )}
                   >
-                    <Send className="h-3 w-3 text-blue-600" />
-                    <span>⚡ Envoi Direct</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setBulkChannel("draft")}
-                    className={cn(
-                      "px-2.5 py-1 text-xs font-semibold rounded-md transition cursor-pointer flex items-center gap-1",
-                      bulkChannel === "draft"
-                        ? "bg-white text-[#ff5722] shadow-2xs border border-[#ff5722]/30 font-bold"
-                        : "text-gray-500 hover:text-gray-800"
-                    )}
-                  >
-                    <FileText className="h-3 w-3 text-[#ff5722]" />
-                    <span>📝 Brouillons</span>
+                    {isAllSelected ? "Tout désélectionner" : "Tout sélectionner"}
                   </button>
                 </div>
-
-                <button
-                  className={cn(
-                    "h-8 px-4 text-xs font-semibold rounded-md text-white transition flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50 disabled:pointer-events-none",
-                    bulkChannel === "direct"
-                      ? "bg-blue-600 hover:bg-blue-700"
-                      : "bg-[#ff5722] hover:bg-[#e64a19]"
-                  )}
-                  disabled={
-                    data.length === 0 ||
-                    selectedRows.size === 0 ||
-                    isProcessing ||
-                    integrationLoading ||
-                    channelBlocked
-                  }
-                  onClick={handleStartBatchProcess}
-                  type="button"
-                >
-                  {isProcessing ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : bulkChannel === "direct" ? (
-                    <Send className="h-3.5 w-3.5" />
-                  ) : (
-                    <Play className="h-3.5 w-3.5" />
-                  )}
-                  {isProcessing
-                    ? bulkChannel === "direct"
-                      ? `Envoi direct (${progress.current}/${progress.total})`
-                      : `Création Brouillons (${progress.current}/${progress.total})`
-                    : bulkChannel === "direct"
-                    ? `Envoyer Direct (${selectedCount})`
-                    : `Créer Brouillons (${selectedCount})`}
-                </button>
-
-                {isProcessing && (
-                  <button
-                    className="editorial-button-secondary h-8 px-3 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                    onClick={cancelBatchProcess}
-                    type="button"
-                    title="Arrêter la file d'attente"
-                  >
-                    Arrêter
-                  </button>
-                )}
               </div>
             </div>
 
