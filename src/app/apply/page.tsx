@@ -56,6 +56,13 @@ import {
   syncEmailDispatchToTracker,
 } from "@/lib/tracker/syncService";
 import PreflightCheckModal from "@/components/PreflightCheckModal";
+import ScheduleModal from "@/components/ScheduleModal";
+import ScheduledQueueModal from "@/components/ScheduledQueueModal";
+import {
+  getScheduledEmails,
+  SCHEDULED_UPDATED_EVENT,
+  type ScheduledEmail,
+} from "@/lib/schedulerService";
 
 interface DuplicateInfo {
   company: string;
@@ -119,6 +126,21 @@ export default function ApplyPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [rightTab, setRightTab] = useState<"preview" | "logs">("preview");
   const [lastResult, setLastResult] = useState<LastSendResult | null>(null);
+
+  // Scheduling & Queue states
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [isQueueModalOpen, setIsQueueModalOpen] = useState(false);
+  const [scheduledCount, setScheduledCount] = useState(0);
+
+  useEffect(() => {
+    const updateCount = () => {
+      const list = getScheduledEmails();
+      setScheduledCount(list.filter((e) => e.status === "pending").length);
+    };
+    updateCount();
+    window.addEventListener(SCHEDULED_UPDATED_EVENT, updateCount);
+    return () => window.removeEventListener(SCHEDULED_UPDATED_EVENT, updateCount);
+  }, []);
 
   const addLog = (message: string, type: "info" | "success" | "error" = "info") => {
     const timestamp = new Date().toLocaleTimeString("fr-FR", {
@@ -471,6 +493,22 @@ export default function ApplyPage() {
 
   const cvFileName = matchedCv?.fileName || readStoredCv().fileName || `${candidateName.replace(/\s+/g, "_")}_Resume.pdf`;
 
+  const scheduledCoverLetter = useMemo(() => {
+    if (!includeCoverLetter) return { base64: undefined, fileName: undefined };
+    try {
+      const letterPdf = generateCoverLetterPdf({
+        company: companyDisplayName,
+        position: "Stage PFE / Emploi",
+        contactName: "Hiring Manager",
+        body: liveMessage,
+        subject: liveSubject,
+      });
+      return { base64: letterPdf.getBase64(), fileName: letterPdf.fileName };
+    } catch {
+      return { base64: undefined, fileName: undefined };
+    }
+  }, [includeCoverLetter, companyDisplayName, liveMessage, liveSubject]);
+
   const handleOpenGmailWeb = async () => {
     if (!email || !emailCheck.valid) {
       toast.error("Veuillez saisir une adresse email valide.");
@@ -720,6 +758,21 @@ export default function ApplyPage() {
             <span>Tester connexion</span>
             {smtpHealthy && (
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsQueueModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-medium shadow-2xs transition cursor-pointer"
+            title="Consulter les emails en attente et l'historique programmé"
+          >
+            <Clock className="h-3.5 w-3.5 text-blue-600" />
+            <span>Programmés</span>
+            {scheduledCount > 0 && (
+              <span className="rounded-full bg-blue-100 px-1.5 py-0.2 text-[10px] font-bold text-blue-700">
+                {scheduledCount}
+              </span>
             )}
           </button>
 
@@ -1065,43 +1118,56 @@ export default function ApplyPage() {
             </div>
           </div>
 
-          {/* 5. Bouton d'action principal + Fallback 1-clic */}
+          {/* 5. Boutons d'action : Envoi Immédiat & Programmer */}
           <div className="pt-1.5 space-y-2">
-            <button
-              type="button"
-              onClick={handleSend}
-              disabled={sendDisabled}
-              className={cn(
-                "w-full h-11 sm:h-12 text-xs sm:text-sm font-bold rounded-xl text-white transition shadow-sm cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none",
-                dispatchChannel === "direct"
-                  ? "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
-                  : "bg-[#ff5722] hover:bg-[#e64a19] active:bg-[#d84315]"
-              )}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>
-                    {dispatchChannel === "direct"
-                      ? "Envoi en cours via Gmail SMTP..."
-                      : "Création du brouillon en cours..."}
-                  </span>
-                </>
-              ) : (
-                <>
-                  {dispatchChannel === "direct" ? (
-                    <Send className="h-4 w-4" />
-                  ) : (
-                    <Sparkles className="h-4 w-4" />
-                  )}
-                  <span>
-                    {dispatchChannel === "direct"
-                      ? "Envoyer la candidature (Envoi Direct)"
-                      : "Créer le brouillon dans Gmail"}
-                  </span>
-                </>
-              )}
-            </button>
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+              <button
+                type="button"
+                onClick={handleSend}
+                disabled={sendDisabled}
+                className={cn(
+                  "sm:col-span-3 w-full h-11 sm:h-12 text-xs sm:text-sm font-bold rounded-xl text-white transition shadow-sm cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none",
+                  dispatchChannel === "direct"
+                    ? "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
+                    : "bg-[#ff5722] hover:bg-[#e64a19] active:bg-[#d84315]"
+                )}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>
+                      {dispatchChannel === "direct"
+                        ? "Envoi en cours via Gmail SMTP..."
+                        : "Création du brouillon en cours..."}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    {dispatchChannel === "direct" ? (
+                      <Send className="h-4 w-4" />
+                    ) : (
+                      <Sparkles className="h-4 w-4" />
+                    )}
+                    <span>
+                      {dispatchChannel === "direct"
+                        ? "Envoyer la candidature (Envoi Direct)"
+                        : "Créer le brouillon dans Gmail"}
+                    </span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsScheduleModalOpen(true)}
+                disabled={sendDisabled}
+                title="Planifier l'envoi direct à une date et heure précise (ex: Demain 08h30)"
+                className="sm:col-span-1 w-full h-11 sm:h-12 text-xs font-semibold rounded-xl border border-blue-200 bg-blue-50/80 hover:bg-blue-100 text-blue-700 active:bg-blue-200 transition shadow-2xs cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:pointer-events-none"
+              >
+                <Clock className="h-4 w-4 text-blue-600" />
+                <span>Programmer</span>
+              </button>
+            </div>
 
             <div className="flex items-center justify-center">
               <button
@@ -1430,6 +1496,38 @@ export default function ApplyPage() {
         onClose={() => setIsPreflightModalOpen(false)}
         initialStatus={integrationStatus}
         onStatusUpdated={(s) => setIntegrationStatus(s)}
+      />
+
+      {/* Schedule Modal (Single Application) */}
+      <ScheduleModal
+        mode="single"
+        isOpen={isScheduleModalOpen}
+        onClose={() => setIsScheduleModalOpen(false)}
+        onScheduled={(item) => {
+          addLog(
+            `Candidature programmée pour ${item.recipient_email} (${item.company_name}) le ${new Date(item.scheduled_at).toLocaleString("fr-FR")}`,
+            "info"
+          );
+        }}
+        emailData={{
+          recipient_email: email,
+          company_name: companyDisplayName,
+          position: "Stage PFE / Emploi",
+          candidate_name: candidateName,
+          subject: liveSubject,
+          message: liveMessage,
+          cv_filename: cvFileName,
+          cv_base64: matchedCv?.base64 || readStoredCv().base64,
+          cover_letter_filename: scheduledCoverLetter.fileName,
+          cover_letter_base64: scheduledCoverLetter.base64,
+          channel: dispatchChannel,
+        }}
+      />
+
+      {/* Scheduled Queue Viewer Modal */}
+      <ScheduledQueueModal
+        isOpen={isQueueModalOpen}
+        onClose={() => setIsQueueModalOpen(false)}
       />
     </div>
   );

@@ -5,6 +5,7 @@ import AppHeader from "@/components/AppHeader";
 import Navbar from "@/components/Navbar";
 import { APP_DESCRIPTION, APP_NAME } from "@/lib/brand";
 import { BulkUploadProvider } from "@/context/BulkUploadContext";
+import ScheduledQueueRunner from "@/components/ScheduledQueueRunner";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -35,6 +36,7 @@ export default function RootLayout({
               </main>
             </div>
           </div>
+          <ScheduledQueueRunner />
           <Toaster position="bottom-right" richColors />
         </BulkUploadProvider>
       </body>

@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardPaste,
+  Clock,
   Download,
   FileSpreadsheet,
   FileText,
@@ -58,6 +59,14 @@ import {
 import { useBulkUpload, type CSVRow } from "@/context/BulkUploadContext";
 import { CoverLetterModal } from "@/components/CoverLetterModal";
 import PreflightCheckModal from "@/components/PreflightCheckModal";
+import ScheduleModal from "@/components/ScheduleModal";
+import ScheduledQueueModal from "@/components/ScheduledQueueModal";
+import {
+  getScheduledEmails,
+  SCHEDULED_UPDATED_EVENT,
+  type ScheduledEmail,
+} from "@/lib/schedulerService";
+import { generateCoverLetterPdf } from "@/lib/coverLetterPdf";
 
 type ValidationState =
   | "processing"
@@ -218,6 +227,19 @@ export default function UploadPage() {
   const [withdrawnEmails, setWithdrawnEmails] = useState<Set<string>>(new Set());
   const [isTemplateDropdownOpen, setIsTemplateDropdownOpen] = useState(false);
   const [isPreflightModalOpen, setIsPreflightModalOpen] = useState(false);
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [isQueueModalOpen, setIsQueueModalOpen] = useState(false);
+  const [scheduledCount, setScheduledCount] = useState(0);
+
+  useEffect(() => {
+    const updateCount = () => {
+      const list = getScheduledEmails();
+      setScheduledCount(list.filter((e) => e.status === "pending").length);
+    };
+    updateCount();
+    window.addEventListener(SCHEDULED_UPDATED_EVENT, updateCount);
+    return () => window.removeEventListener(SCHEDULED_UPDATED_EVENT, updateCount);
+  }, []);
   const ROWS_PER_PAGE = 10;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -443,6 +465,100 @@ export default function UploadPage() {
     selectableIndexes.length > 0 && selectedRows.size === selectableIndexes.length;
   const isSomeSelected = selectedRows.size > 0 && !isAllSelected;
   const activeTemplate = templates.find(t => t.id === selectedTemplateId) ?? templates[0] ?? DEFAULT_TEMPLATES[0];
+
+  const scheduledBatchData = useMemo(() => {
+    const candidateName = readCandidateName() || "Candidat";
+    const activeCv = cvLibrary.find((c) => c.id === selectedCvId) || cvLibrary[0] || null;
+    const legacyCv = readStoredCv();
+    const fallbackCvBase64 = activeCv?.base64 || legacyCv.base64;
+    const fallbackCvFileName =
+      activeCv?.fileName || legacyCv.fileName || `${candidateName.replace(/\s+/g, "_")}_Resume.pdf`;
+
+    const selectedList = data.filter((_, index) => selectedRows.has(index));
+
+    const rows = selectedList.map((row) => {
+      const company = row.company || guessCompanyFromEmail(row.email) || "Entreprise";
+      const position = row.position || defaultPosition || "Stage PFE / Emploi";
+      const parsedContact = parseContactFromEmail(row.email);
+      const contactName =
+        typeof row.name === "string" && row.name.trim()
+          ? row.name.trim()
+          : (parsedContact?.fullName || defaultContactName || "");
+
+      const replace = (text: string) => {
+        let processedText = text;
+        Object.keys(row).forEach((key) => {
+          const val = row[key as keyof CSVRow];
+          if (typeof val === "string") {
+            const regex = new RegExp(`\\[${key}\\]`, "gi");
+            processedText = processedText.replace(regex, val);
+          }
+        });
+        return processedText
+          .replace(/\[Company\]/gi, company)
+          .replace(/\[Position\]/gi, position)
+          .replace(/\[HR Name\]/gi, contactName || "Hiring Manager")
+          .replace(/\[Name\]/gi, contactName || "Hiring Manager")
+          .replace(/\[MyName\]/gi, candidateName);
+      };
+
+      const subject = replace(activeTemplate.subject);
+      const message = replace(activeTemplate.message);
+
+      const rowCv = row.cvId ? cvLibrary.find((c) => c.id === row.cvId) : null;
+      const cvBase64 = rowCv?.base64 || fallbackCvBase64;
+      const cvFilename = rowCv?.fileName || fallbackCvFileName;
+
+      let coverLetterBase64: string | undefined = undefined;
+      let coverLetterFilename: string | undefined = undefined;
+
+      if (includeCoverLetter) {
+        try {
+          const letterPdf = generateCoverLetterPdf({
+            company,
+            position,
+            contactName: contactName || "Hiring Manager",
+            body: message,
+            subject,
+          });
+          coverLetterBase64 = letterPdf.getBase64();
+          coverLetterFilename = letterPdf.fileName;
+        } catch {
+          // ignore error
+        }
+      }
+
+      return {
+        email: row.email,
+        company,
+        position,
+        name: contactName,
+        subject,
+        message,
+        cv_filename: cvFilename,
+        cv_base64: cvBase64,
+        cover_letter_filename: coverLetterFilename,
+        cover_letter_base64: coverLetterBase64,
+      };
+    });
+
+    return {
+      batch_name: fileName ? `Lot: ${fileName}` : `Envoi groupé (${rows.length})`,
+      channel: bulkChannel,
+      rows,
+    };
+  }, [
+    data,
+    selectedRows,
+    cvLibrary,
+    selectedCvId,
+    activeTemplate,
+    defaultPosition,
+    defaultContactName,
+    includeCoverLetter,
+    fileName,
+    bulkChannel,
+  ]);
   const totalPages = Math.ceil(data.length / ROWS_PER_PAGE);
   const paginatedData = data.slice((currentPage - 1) * ROWS_PER_PAGE, currentPage * ROWS_PER_PAGE);
   const n8nBlocked =
@@ -646,6 +762,20 @@ export default function UploadPage() {
             >
               <Send className="h-3.5 w-3.5" />
               <span>Importer relances (+7j)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsQueueModalOpen(true)}
+              className="editorial-button-secondary h-8 px-3 text-xs flex items-center gap-1.5 shadow-2xs font-medium cursor-pointer"
+              title="Consulter les emails en file d'attente programmés"
+            >
+              <Clock className="h-3.5 w-3.5 text-blue-600" />
+              <span>File d&apos;attente</span>
+              {scheduledCount > 0 && (
+                <span className="rounded-full bg-blue-100 px-1.5 py-0.2 text-[10px] font-bold text-blue-700">
+                  {scheduledCount}
+                </span>
+              )}
             </button>
             <a
               className="editorial-button-secondary h-8 px-3 text-xs"
@@ -1083,6 +1213,24 @@ export default function UploadPage() {
                         : `Créer les Brouillons (${selectedCount})`}
                   </button>
 
+                  {/* Schedule Bulk Button */}
+                  <button
+                    type="button"
+                    onClick={() => setIsScheduleModalOpen(true)}
+                    disabled={
+                      data.length === 0 ||
+                      selectedRows.size === 0 ||
+                      isProcessing ||
+                      integrationLoading ||
+                      channelBlocked
+                    }
+                    title="Programmer l'envoi de ce lot à une date/heure précise avec espacement anti-spam"
+                    className="h-10 px-4 text-xs sm:text-sm font-semibold rounded-xl border border-blue-200 bg-blue-50/80 hover:bg-blue-100 active:bg-blue-200 text-blue-700 transition flex items-center gap-2 shadow-2xs cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                  >
+                    <Clock className="h-4 w-4 text-blue-600" />
+                    <span>Programmer ({selectedCount})</span>
+                  </button>
+
                   {isProcessing && (
                     <button
                       className="h-10 px-3 text-xs font-semibold rounded-xl text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition cursor-pointer"
@@ -1485,6 +1633,20 @@ export default function UploadPage() {
         onClose={() => setIsPreflightModalOpen(false)}
         initialStatus={integrationStatus}
         onStatusUpdated={(s) => setIntegrationStatus(s)}
+      />
+
+      {/* Schedule Modal (Bulk Batch) */}
+      <ScheduleModal
+        mode="bulk"
+        isOpen={isScheduleModalOpen}
+        onClose={() => setIsScheduleModalOpen(false)}
+        batchData={scheduledBatchData}
+      />
+
+      {/* Scheduled Queue Viewer Modal */}
+      <ScheduledQueueModal
+        isOpen={isQueueModalOpen}
+        onClose={() => setIsQueueModalOpen(false)}
       />
     </div>
   );
