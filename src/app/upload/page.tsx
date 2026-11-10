@@ -749,45 +749,45 @@ export default function UploadPage() {
               Bulk Upload Manager
             </h1>
             <p className="mt-1 text-xs text-gray-500">
-              Import CSV contact lists, validate data, and generate Gmail drafts in bulk.
+              Import CSV contact lists, validate data, and send or schedule emails in bulk.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center gap-2 w-full sm:w-auto">
             <button
               type="button"
               onClick={handleLoadSevenDaysAwaiting}
-              className="editorial-button-primary h-8 px-3 text-xs flex items-center gap-1.5 shadow-2xs font-semibold"
+              className="editorial-button-primary h-9 sm:h-8 px-2.5 sm:px-3 text-xs flex items-center justify-center gap-1.5 shadow-2xs font-semibold"
               title="Importer les candidatures envoyées depuis plus d'une semaine sans réponse pour lancer une relance"
             >
-              <Send className="h-3.5 w-3.5" />
-              <span>Importer relances (+7j)</span>
+              <Send className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">Relances (+7j)</span>
             </button>
             <button
               type="button"
               onClick={() => setIsQueueModalOpen(true)}
-              className="editorial-button-secondary h-8 px-3 text-xs flex items-center gap-1.5 shadow-2xs font-medium cursor-pointer"
+              className="editorial-button-secondary h-9 sm:h-8 px-2.5 sm:px-3 text-xs flex items-center justify-center gap-1.5 shadow-2xs font-medium cursor-pointer"
               title="Consulter les emails en file d'attente programmés"
             >
-              <Clock className="h-3.5 w-3.5 text-blue-600" />
-              <span>File d&apos;attente</span>
+              <Clock className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+              <span className="truncate">File d&apos;attente</span>
               {scheduledCount > 0 && (
-                <span className="rounded-full bg-blue-100 px-1.5 py-0.2 text-[10px] font-bold text-blue-700">
+                <span className="rounded-full bg-blue-100 px-1.5 py-0.2 text-[10px] font-bold text-blue-700 shrink-0">
                   {scheduledCount}
                 </span>
               )}
             </button>
             <a
-              className="editorial-button-secondary h-8 px-3 text-xs"
+              className="editorial-button-secondary h-9 sm:h-8 px-2.5 sm:px-3 text-xs flex items-center justify-center gap-1.5"
               download
               href="/routepilot-template.csv"
             >
-              <Download className="h-3.5 w-3.5" />
-              Download Template CSV
+              <Download className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">Modèle CSV</span>
             </a>
-            <Link className="editorial-button-secondary h-8 px-3 text-xs" href="/templates">
-              <FileText className="h-3.5 w-3.5" />
-              Templates
+            <Link className="editorial-button-secondary h-9 sm:h-8 px-2.5 sm:px-3 text-xs flex items-center justify-center gap-1.5" href="/templates">
+              <FileText className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">Templates</span>
             </Link>
           </div>
         </div>
@@ -805,38 +805,38 @@ export default function UploadPage() {
 
         {/* STATE 1: NO FILE LOADED (Organized 2-Column Upload View) */}
         {data.length === 0 ? (
-          <div className="grid gap-6 lg:grid-cols-12">
+          <div className="grid gap-4 sm:gap-6 lg:grid-cols-12 min-w-0">
             {/* Left Column: Dual Mode Upload / Paste (7 cols) */}
-            <div className="lg:col-span-7">
+            <div className="lg:col-span-7 min-w-0">
               {/* Tab Selector */}
-              <div className="mb-3 flex items-center gap-2">
+              <div className="mb-3 grid grid-cols-2 sm:flex sm:items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setInputMode("file")}
                   className={cn(
-                    "flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition cursor-pointer",
+                    "flex items-center justify-center sm:justify-start gap-2 rounded-lg px-3 sm:px-3.5 py-2 text-xs font-semibold transition cursor-pointer",
                     inputMode === "file"
                       ? "bg-[#fff3ef] text-[#ff5722] border border-[#ff5722]/30 shadow-xs"
                       : "bg-white text-gray-600 hover:text-gray-900 border border-gray-200 hover:bg-gray-50",
                   )}
                 >
-                  <UploadCloud className="h-4 w-4" />
-                  Fichier CSV
+                  <UploadCloud className="h-4 w-4 shrink-0" />
+                  <span className="truncate">Fichier CSV</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setInputMode("paste")}
                   className={cn(
-                    "flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition cursor-pointer",
+                    "flex items-center justify-center sm:justify-start gap-2 rounded-lg px-3 sm:px-3.5 py-2 text-xs font-semibold transition cursor-pointer",
                     inputMode === "paste"
                       ? "bg-[#fff3ef] text-[#ff5722] border border-[#ff5722]/30 shadow-xs"
                       : "bg-white text-gray-600 hover:text-gray-900 border border-gray-200 hover:bg-gray-50",
                   )}
                 >
-                  <Sparkles className="h-4 w-4" />
-                  Copier-Coller / LinkedIn
+                  <Sparkles className="h-4 w-4 shrink-0" />
+                  <span className="truncate">Coller / LinkedIn</span>
                   {detectedEmails.length > 0 && (
-                    <span className="rounded-full bg-[#ff5722] text-white px-2 py-0.5 text-[10px] font-bold">
+                    <span className="rounded-full bg-[#ff5722] text-white px-2 py-0.5 text-[10px] font-bold shrink-0">
                       {detectedEmails.length}
                     </span>
                   )}
@@ -847,7 +847,7 @@ export default function UploadPage() {
               {inputMode === "file" ? (
                 <div
                   className={cn(
-                    "flex min-h-[420px] flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 text-center transition-all cursor-pointer",
+                    "flex min-h-[250px] sm:min-h-[420px] flex-col items-center justify-center rounded-lg border-2 border-dashed p-5 sm:p-8 text-center transition-all cursor-pointer",
                     isDragging
                       ? "border-[#ff5722] bg-[#fff3ef]/40"
                       : "border-gray-300 bg-gray-50/50 hover:border-gray-400 hover:bg-white",
@@ -903,18 +903,18 @@ export default function UploadPage() {
                 </div>
               ) : (
                 /* View B: Smart Paste / LinkedIn Email Extraction */
-                <div className="flex min-h-[420px] flex-col rounded-lg border border-gray-200 bg-white p-5 shadow-xs space-y-4">
+                <div className="flex min-h-[280px] sm:min-h-[420px] flex-col rounded-lg border border-gray-200 bg-white p-3.5 sm:p-5 shadow-xs space-y-3.5 sm:space-y-4">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-gray-100 pb-3">
                     <div className="flex items-center gap-2.5">
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#fff3ef] text-[#ff5722]">
                         <ClipboardPaste className="h-4 w-4" />
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <h2 className="text-sm font-semibold text-gray-900">
                           Collez votre texte ou post LinkedIn
                         </h2>
                         <p className="text-xs text-gray-500">
-                          Extraction automatique des emails, déduplication et inférence d'entreprises.
+                          Extraction automatique des emails et noms d&apos;entreprises.
                         </p>
                       </div>
                     </div>
@@ -928,10 +928,10 @@ export default function UploadPage() {
 
                   <div>
                     <label className="editorial-label mb-1.5 block">
-                      Collez le texte brut (post LinkedIn, liste d'emails, texte avec adresses) :
+                      Collez le texte brut (post LinkedIn, liste d&apos;emails...) :
                     </label>
                     <textarea
-                      className="w-full min-h-[160px] rounded-lg border border-gray-300 p-3 text-xs font-mono placeholder:font-sans placeholder-gray-400 focus:border-[#ff5722] focus:outline-none focus:ring-1 focus:ring-[#ff5722] leading-relaxed resize-y"
+                      className="w-full min-h-[130px] sm:min-h-[160px] rounded-lg border border-gray-300 p-3 text-xs font-mono placeholder:font-sans placeholder-gray-400 focus:border-[#ff5722] focus:outline-none focus:ring-1 focus:ring-[#ff5722] leading-relaxed resize-y"
                       placeholder={`Collez ici une liste d'emails ou un post LinkedIn partagé...\n\nExemples pris en compte :\n• rh@soprasteria.com, recrutement@wavestone.com\n• Post LinkedIn : "Voici les recruteurs qui embauchent ce mois-ci : envoyez vos CVs à stage@renault.com ou contact@thalesgroup.com !"\n• Liste d'emails séparés par des virgules ou retours à la ligne.`}
                       value={pastedText}
                       onChange={(e) => setPastedText(e.target.value)}
@@ -1085,43 +1085,43 @@ export default function UploadPage() {
           </div>
         ) : (
           /* STATE 2: FILE LOADED (Active Batch Review & Execution) */
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6 min-w-0">
             {/* Top Metric Strip */}
-            <div className="rounded-lg border border-gray-200 bg-white">
-              <div className="grid grid-cols-2 divide-y divide-gray-100 sm:grid-cols-4 sm:divide-y-0 sm:divide-x">
-                <div className="p-4">
-                  <span className="text-xs text-gray-500">Total Contacts</span>
-                  <p className="mt-1 text-xl font-bold text-gray-900">{data.length}</p>
+            <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+              <div className="grid grid-cols-2 divide-x divide-y divide-gray-100 sm:grid-cols-4 sm:divide-y-0">
+                <div className="p-3 sm:p-4">
+                  <span className="text-[11px] sm:text-xs text-gray-500">Total Contacts</span>
+                  <p className="mt-0.5 sm:mt-1 text-lg sm:text-xl font-bold text-gray-900">{data.length}</p>
                 </div>
-                <div className="p-4">
-                  <span className="text-xs text-emerald-600 font-medium">Ready to Draft</span>
-                  <p className="mt-1 text-xl font-bold text-gray-900">{readyCount}</p>
+                <div className="p-3 sm:p-4">
+                  <span className="text-[11px] sm:text-xs text-emerald-600 font-medium">Ready to Send</span>
+                  <p className="mt-0.5 sm:mt-1 text-lg sm:text-xl font-bold text-gray-900">{readyCount}</p>
                 </div>
-                <div className="p-4">
-                  <span className="text-xs text-amber-600 font-medium">Flagged Rows</span>
-                  <p className="mt-1 text-xl font-bold text-gray-900">{issueCount}</p>
+                <div className="p-3 sm:p-4">
+                  <span className="text-[11px] sm:text-xs text-amber-600 font-medium">Flagged Rows</span>
+                  <p className="mt-0.5 sm:mt-1 text-lg sm:text-xl font-bold text-gray-900">{issueCount}</p>
                 </div>
-                <div className="p-4">
-                  <span className="text-xs text-blue-600 font-medium">Selected for Queue</span>
-                  <p className="mt-1 text-xl font-bold text-gray-900">{selectedCount}</p>
+                <div className="p-3 sm:p-4">
+                  <span className="text-[11px] sm:text-xs text-blue-600 font-medium">Selected</span>
+                  <p className="mt-0.5 sm:mt-1 text-lg sm:text-xl font-bold text-gray-900">{selectedCount}</p>
                 </div>
               </div>
             </div>
 
             {/* Batch Controls Bar - Modern 2-Tier Layout */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-xs space-y-3.5">
+            <div className="rounded-2xl border border-gray-200 bg-white p-3.5 sm:p-4 shadow-xs space-y-3 sm:space-y-3.5 min-w-0">
               {/* Row 1: Active File & Primary Dispatch Action */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-gray-100">
-                <div className="flex items-center gap-2.5">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-[#ff5722]">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 pb-3 border-b border-gray-100">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-[#ff5722]">
                     <FileSpreadsheet className="h-4 w-4" />
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-gray-900 text-sm max-w-[260px] truncate">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-semibold text-gray-900 text-xs sm:text-sm max-w-[180px] sm:max-w-[260px] truncate">
                         {fileName}
                       </span>
-                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-bold text-gray-700">
+                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10.5px] sm:text-[11px] font-bold text-gray-700 shrink-0">
                         {data.length} contacts
                       </span>
                     </div>
@@ -1136,53 +1136,42 @@ export default function UploadPage() {
                   </div>
                 </div>
 
-                {/* Right: Channel Switch + Connection Test + Primary Action Button */}
-                <div className="flex flex-wrap items-center gap-2.5">
+                {/* Right: Channel Switch + Connection Test + Primary Action Buttons */}
+                <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 w-full lg:w-auto">
                   {/* Channel Switch */}
-                  <div className="flex items-center rounded-xl border border-gray-200 bg-gray-50/80 p-0.5">
+                  <div className="grid grid-cols-2 sm:flex items-center rounded-xl border border-gray-200 bg-gray-50/80 p-0.5 w-full sm:w-auto">
                     <button
                       type="button"
                       onClick={() => setBulkChannel("direct")}
                       className={cn(
-                        "px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center gap-1.5",
+                        "px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5",
                         bulkChannel === "direct"
                           ? "bg-white text-blue-700 shadow-2xs border border-blue-200 font-bold"
                           : "text-gray-500 hover:text-gray-800"
                       )}
                     >
-                      <Send className="h-3 w-3 text-blue-600" />
-                      <span>⚡ Envoi Direct</span>
+                      <Send className="h-3 w-3 text-blue-600 shrink-0" />
+                      <span className="truncate">⚡ Envoi Direct</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setBulkChannel("draft")}
                       className={cn(
-                        "px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center gap-1.5",
+                        "px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5",
                         bulkChannel === "draft"
                           ? "bg-white text-[#ff5722] shadow-2xs border border-[#ff5722]/30 font-bold"
                           : "text-gray-500 hover:text-gray-800"
                       )}
                     >
-                      <FileText className="h-3 w-3 text-[#ff5722]" />
-                      <span>📝 Brouillons Gmail</span>
+                      <FileText className="h-3 w-3 text-[#ff5722] shrink-0" />
+                      <span className="truncate">📝 Brouillons</span>
                     </button>
                   </div>
-
-                  {/* Preflight Test */}
-                  <button
-                    type="button"
-                    onClick={() => setIsPreflightModalOpen(true)}
-                    className="h-9 px-3 text-xs font-medium rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 transition inline-flex items-center gap-1.5 shadow-2xs cursor-pointer"
-                    title="Vérifier si votre compte email est bien connecté"
-                  >
-                    <ShieldCheck className="h-3.5 w-3.5 text-blue-600" />
-                    <span className="hidden sm:inline">Connexion</span>
-                  </button>
 
                   {/* Main Action Button */}
                   <button
                     className={cn(
-                      "h-10 px-5 text-xs sm:text-sm font-semibold rounded-xl text-white transition flex items-center gap-2 shadow-sm cursor-pointer disabled:opacity-50 disabled:pointer-events-none",
+                      "w-full sm:w-auto h-10 px-4 sm:px-5 text-xs sm:text-sm font-semibold rounded-xl text-white transition flex items-center justify-center gap-2 shadow-sm cursor-pointer disabled:opacity-50 disabled:pointer-events-none",
                       bulkChannel === "direct"
                         ? "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
                         : "bg-[#ff5722] hover:bg-[#e64a19] active:bg-[#d84315]"
@@ -1198,42 +1187,56 @@ export default function UploadPage() {
                     type="button"
                   >
                     {isProcessing ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin shrink-0" />
                     ) : bulkChannel === "direct" ? (
-                      <Send className="h-4 w-4" />
+                      <Send className="h-4 w-4 shrink-0" />
                     ) : (
-                      <Play className="h-4 w-4" />
+                      <Play className="h-4 w-4 shrink-0" />
                     )}
-                    {isProcessing
-                      ? bulkChannel === "direct"
-                        ? `Envoi direct (${progress.current}/${progress.total})`
-                        : `Création Brouillons (${progress.current}/${progress.total})`
-                      : bulkChannel === "direct"
-                        ? `Lancer l'Envoi Direct (${selectedCount})`
-                        : `Créer les Brouillons (${selectedCount})`}
+                    <span className="truncate">
+                      {isProcessing
+                        ? bulkChannel === "direct"
+                          ? `Envoi direct (${progress.current}/${progress.total})`
+                          : `Création Brouillons (${progress.current}/${progress.total})`
+                        : bulkChannel === "direct"
+                          ? `Lancer l'Envoi Direct (${selectedCount})`
+                          : `Créer les Brouillons (${selectedCount})`}
+                    </span>
                   </button>
 
-                  {/* Schedule Bulk Button */}
-                  <button
-                    type="button"
-                    onClick={() => setIsScheduleModalOpen(true)}
-                    disabled={
-                      data.length === 0 ||
-                      selectedRows.size === 0 ||
-                      isProcessing ||
-                      integrationLoading ||
-                      channelBlocked
-                    }
-                    title="Programmer l'envoi de ce lot à une date/heure précise avec espacement anti-spam"
-                    className="h-10 px-4 text-xs sm:text-sm font-semibold rounded-xl border border-blue-200 bg-blue-50/80 hover:bg-blue-100 active:bg-blue-200 text-blue-700 transition flex items-center gap-2 shadow-2xs cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
-                  >
-                    <Clock className="h-4 w-4 text-blue-600" />
-                    <span>Programmer ({selectedCount})</span>
-                  </button>
+                  {/* Secondary pair: Preflight + Schedule */}
+                  <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={() => setIsPreflightModalOpen(true)}
+                      className="h-10 sm:h-9 px-3 text-xs font-medium rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 transition inline-flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+                      title="Vérifier si votre compte email est bien connecté"
+                    >
+                      <ShieldCheck className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                      <span>Connexion</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsScheduleModalOpen(true)}
+                      disabled={
+                        data.length === 0 ||
+                        selectedRows.size === 0 ||
+                        isProcessing ||
+                        integrationLoading ||
+                        channelBlocked
+                      }
+                      title="Programmer l'envoi de ce lot à une date/heure précise avec espacement anti-spam"
+                      className="h-10 px-3 sm:px-4 text-xs sm:text-sm font-semibold rounded-xl border border-blue-200 bg-blue-50/80 hover:bg-blue-100 active:bg-blue-200 text-blue-700 transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                    >
+                      <Clock className="h-4 w-4 text-blue-600 shrink-0" />
+                      <span className="truncate">Programmer ({selectedCount})</span>
+                    </button>
+                  </div>
 
                   {isProcessing && (
                     <button
-                      className="h-10 px-3 text-xs font-semibold rounded-xl text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition cursor-pointer"
+                      className="w-full sm:w-auto h-10 px-3 text-xs font-semibold rounded-xl text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition cursor-pointer"
                       onClick={cancelBatchProcess}
                       type="button"
                       title="Arrêter la file d'attente"
@@ -1326,7 +1329,7 @@ export default function UploadPage() {
                           className="fixed inset-0 z-40"
                           onClick={() => setIsTemplateDropdownOpen(false)}
                         />
-                        <div className="absolute left-0 top-[calc(100%+6px)] z-50 w-72 rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl animate-in fade-in zoom-in-95 duration-100">
+                        <div className="absolute left-0 top-[calc(100%+6px)] z-50 w-[min(18rem,calc(100vw-3rem))] rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl animate-in fade-in zoom-in-95 duration-100">
                           <div className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400">
                             Candidatures PFE 2027
                           </div>
@@ -1396,11 +1399,11 @@ export default function UploadPage() {
                 </div>
 
                 {/* Middle: CV Selector & Cover letter toggle */}
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                    <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">CV :</span>
+                <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-3 w-full lg:w-auto min-w-0">
+                  <div className="flex items-center gap-2 text-xs text-gray-600 min-w-0 w-full sm:w-auto">
+                    <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider shrink-0">CV :</span>
                     <select
-                      className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-800 outline-none focus:border-blue-500"
+                      className="w-full sm:w-auto sm:max-w-[220px] min-w-0 h-9 sm:h-auto rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-800 outline-none focus:border-blue-500 truncate"
                       value={selectedCvId || ""}
                       onChange={(e) => {
                         const nextId = e.target.value;
@@ -1421,25 +1424,36 @@ export default function UploadPage() {
                     </select>
                   </div>
 
-                  <label className="flex items-center gap-1.5 cursor-pointer rounded-lg border border-gray-200 bg-gray-50 hover:bg-white px-2.5 py-1 text-xs font-medium text-gray-700 transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={includeCoverLetter}
-                      onChange={(e) => {
-                        setIncludeCoverLetter(e.target.checked);
-                        if (e.target.checked) {
-                          toast.info("Lettre de motivation PDF incluse lors de l'envoi");
-                        }
-                      }}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
-                    />
-                    <FileText className="h-3.5 w-3.5 text-blue-600" />
-                    <span>Joindre Lettre PDF</span>
-                  </label>
+                  <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto">
+                    <label className="flex items-center justify-center sm:justify-start gap-1.5 cursor-pointer rounded-lg border border-gray-200 bg-gray-50 hover:bg-white px-2.5 py-1.5 sm:py-1 h-9 sm:h-auto text-xs font-medium text-gray-700 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={includeCoverLetter}
+                        onChange={(e) => {
+                          setIncludeCoverLetter(e.target.checked);
+                          if (e.target.checked) {
+                            toast.info("Lettre de motivation PDF incluse lors de l'envoi");
+                          }
+                        }}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5 shrink-0"
+                      />
+                      <FileText className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                      <span className="truncate">Lettre PDF</span>
+                    </label>
+
+                    <button
+                      className="rounded-lg border border-gray-200 bg-white hover:bg-gray-50 px-3 py-1.5 sm:py-1 h-9 sm:h-auto text-xs font-medium text-gray-700 transition cursor-pointer lg:hidden text-center"
+                      disabled={data.length === 0 || isProcessing}
+                      onClick={isAllSelected ? deselectAll : handleSelectAll}
+                      type="button"
+                    >
+                      {isAllSelected ? "Tout décocher" : "Tout cocher"}
+                    </button>
+                  </div>
                 </div>
 
-                {/* Right: Table Selection Button */}
-                <div>
+                {/* Right: Desktop Table Selection Button */}
+                <div className="hidden lg:block shrink-0">
                   <button
                     className="rounded-lg border border-gray-200 bg-white hover:bg-gray-50 px-3 py-1 text-xs font-medium text-gray-700 transition cursor-pointer"
                     disabled={data.length === 0 || isProcessing}
@@ -1468,9 +1482,115 @@ export default function UploadPage() {
               </div>
             )}
 
-            {/* Table */}
-            <div className="rounded-lg border border-gray-200 bg-white">
-              <div className="overflow-x-auto">
+            {/* Table (Desktop) & Card List (Mobile) */}
+            <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+              {/* Mobile Card List (Zero Horizontal Scroll) */}
+              <div className="md:hidden divide-y divide-gray-100">
+                {paginatedData.map((row, relativeIndex) => {
+                  const index = (currentPage - 1) * ROWS_PER_PAGE + relativeIndex;
+                  const validationState = getValidationState(row, duplicateEmails, withdrawnEmails);
+                  const isSelected = selectedRows.has(index);
+                  const valMessage = getValidationMessage(row, validationState);
+
+                  return (
+                    <div
+                      key={`mob-${row.email}-${index}`}
+                      onClick={() => toggleRow(index)}
+                      className={cn(
+                        "p-3.5 space-y-2.5 transition cursor-pointer",
+                        isSelected ? "bg-blue-50/20" : "bg-white hover:bg-gray-50/70"
+                      )}
+                    >
+                      {/* Top row: Checkbox + Company + Status Chip */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2.5 min-w-0">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleRow(index);
+                            }}
+                            type="button"
+                            className="mt-0.5 text-gray-400 hover:text-gray-600 shrink-0"
+                          >
+                            {isSelected ? (
+                              <CheckSquare className="h-4 w-4 text-[#ff5722]" />
+                            ) : (
+                              <Square className="h-4 w-4" />
+                            )}
+                          </button>
+                          <div className="min-w-0">
+                            <p className="font-bold text-gray-900 text-xs truncate">
+                              {row.company || "Unknown"}
+                            </p>
+                            <p className="text-[11px] font-mono text-gray-600 break-all">
+                              {row.email || "Missing email"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="shrink-0">{renderStatusChip(validationState)}</div>
+                      </div>
+
+                      {/* Position / Contact */}
+                      {(row.position || row.name) && (
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-gray-500 pl-6.5">
+                          {row.position && <span className="font-medium text-gray-700">{row.position}</span>}
+                          {row.position && row.name && <span className="text-gray-300">·</span>}
+                          {row.name && <span>{row.name}</span>}
+                        </div>
+                      )}
+
+                      {/* Controls Row: CV Selector + Cover Letter */}
+                      <div
+                        className="flex items-center gap-2 pl-6.5"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <select
+                          value={row.cvId || selectedCvId || (cvLibrary[0]?.id || "")}
+                          onChange={(e) => {
+                            const newCvId = e.target.value;
+                            const matched = cvLibrary.find((c) => c.id === newCvId);
+                            updateRowCv(index, newCvId, matched?.fileName);
+                          }}
+                          className="flex-1 min-w-0 h-8 rounded-lg border border-gray-200 bg-white px-2 text-[11px] font-medium text-gray-700 outline-none focus:border-[#ff5722] truncate"
+                        >
+                          {cvLibrary.length === 0 ? (
+                            <option value="">Aucun CV</option>
+                          ) : (
+                            cvLibrary.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                📄 {c.label}
+                              </option>
+                            ))
+                          )}
+                        </select>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCoverLetterRow(row);
+                          }}
+                          title="Télécharger la Lettre de motivation PDF pour cette entreprise"
+                          className="inline-flex items-center gap-1 h-8 text-[11px] font-medium text-blue-600 hover:text-blue-800 bg-blue-50/80 hover:bg-blue-100 border border-blue-200/60 rounded-lg px-2.5 shrink-0 transition"
+                        >
+                          <FileText className="h-3 w-3" />
+                          <span>Lettre</span>
+                        </button>
+                      </div>
+
+                      {/* Validation detail / error feedback */}
+                      {validationState !== "ready" && valMessage && (
+                        <p className="text-[10.5px] text-gray-500 pl-6.5 leading-snug">
+                          {valMessage}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop Table */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="min-w-full text-left text-xs">
                   <thead>
                     <tr className="border-b border-gray-100 bg-gray-50/75 text-[11px] font-semibold text-gray-500">
@@ -1585,14 +1705,14 @@ export default function UploadPage() {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between border-t border-gray-100 px-4 py-2.5 text-xs text-gray-500">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-2 border-t border-gray-100 px-4 py-2.5 text-xs text-gray-500">
                   <span>
-                    Showing {((currentPage - 1) * ROWS_PER_PAGE) + 1} to{" "}
-                    {Math.min(currentPage * ROWS_PER_PAGE, data.length)} of {data.length}
+                    Affichage {((currentPage - 1) * ROWS_PER_PAGE) + 1} à{" "}
+                    {Math.min(currentPage * ROWS_PER_PAGE, data.length)} sur {data.length}
                   </span>
                   <div className="flex items-center gap-1">
                     <button
-                      className="rounded border border-gray-200 p-1 hover:bg-gray-50 disabled:opacity-40"
+                      className="rounded border border-gray-200 p-1.5 sm:p-1 hover:bg-gray-50 disabled:opacity-40"
                       disabled={currentPage === 1}
                       onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                     >
@@ -1602,7 +1722,7 @@ export default function UploadPage() {
                       {currentPage} / {totalPages}
                     </span>
                     <button
-                      className="rounded border border-gray-200 p-1 hover:bg-gray-50 disabled:opacity-40"
+                      className="rounded border border-gray-200 p-1.5 sm:p-1 hover:bg-gray-50 disabled:opacity-40"
                       disabled={currentPage === totalPages}
                       onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                     >

@@ -731,11 +731,11 @@ export default function ApplyPage() {
     !emailCheck.valid;
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex flex-col justify-start">
+    <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 py-3 sm:py-4 flex flex-col justify-start min-w-0">
       {/* Sleek Header Line */}
-      <div className="flex items-center justify-between gap-3 pb-2.5 mb-3.5 border-b border-gray-200 shrink-0">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-700">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 pb-2.5 mb-3.5 border-b border-gray-200 shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-700 shrink-0">
             1-à-1
           </span>
           <h1 className="text-base sm:text-lg font-bold tracking-tight text-gray-950 truncate">
@@ -747,50 +747,51 @@ export default function ApplyPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="grid grid-cols-3 sm:flex sm:items-center gap-1.5 sm:gap-2 w-full sm:w-auto shrink-0">
           <button
             type="button"
             onClick={handleTestConnections}
             disabled={integrationLoading}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-medium shadow-2xs transition cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-[11px] sm:text-xs font-medium shadow-2xs transition cursor-pointer disabled:opacity-50"
           >
-            <ShieldCheck className={cn("h-3.5 w-3.5", smtpHealthy ? "text-emerald-600" : "text-blue-600")} />
-            <span>Tester connexion</span>
+            <ShieldCheck className={cn("h-3.5 w-3.5 shrink-0", smtpHealthy ? "text-emerald-600" : "text-blue-600")} />
+            <span className="truncate sm:hidden">Connexion</span>
+            <span className="hidden sm:inline">Tester connexion</span>
             {smtpHealthy && (
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
             )}
           </button>
 
           <button
             type="button"
             onClick={() => setIsQueueModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-medium shadow-2xs transition cursor-pointer"
+            className="inline-flex items-center justify-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-[11px] sm:text-xs font-medium shadow-2xs transition cursor-pointer"
             title="Consulter les emails en attente et l'historique programmé"
           >
-            <Clock className="h-3.5 w-3.5 text-blue-600" />
-            <span>Programmés</span>
+            <Clock className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+            <span className="truncate">Programmés</span>
             {scheduledCount > 0 && (
-              <span className="rounded-full bg-blue-100 px-1.5 py-0.2 text-[10px] font-bold text-blue-700">
+              <span className="rounded-full bg-blue-100 px-1.5 py-0.2 text-[10px] font-bold text-blue-700 shrink-0">
                 {scheduledCount}
               </span>
             )}
           </button>
 
           <Link
-            href="/cv-library"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-medium shadow-2xs transition"
+            href="/cvs"
+            className="inline-flex items-center justify-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-[11px] sm:text-xs font-medium shadow-2xs transition"
           >
-            <FileText className="h-3.5 w-3.5 text-gray-400" />
-            <span>CVs ({cvLibrary.length})</span>
+            <FileText className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+            <span className="truncate">CVs ({cvLibrary.length})</span>
           </Link>
         </div>
       </div>
 
       {/* Main Grid: 50% Form + 50% Dual-Tab Pane */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-stretch min-w-0">
         
         {/* LEFT COLUMN: THE FORM (50% WIDTH) */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 shadow-xs flex flex-col justify-between space-y-4">
+        <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 shadow-xs flex flex-col justify-between space-y-3.5 sm:space-y-4 min-w-0">
           
           {/* 1. Canal d'envoi (Segmented Control) */}
           <div className="grid grid-cols-2 gap-1.5 rounded-xl bg-gray-100/80 p-1 shrink-0">
@@ -798,34 +799,36 @@ export default function ApplyPage() {
               type="button"
               onClick={() => setDispatchChannel("direct")}
               className={cn(
-                "flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition cursor-pointer",
+                "flex items-center justify-center gap-1.5 sm:gap-2 py-2 px-2 sm:px-3 rounded-lg text-[11.5px] sm:text-xs font-semibold transition cursor-pointer",
                 dispatchChannel === "direct"
                   ? "bg-white text-blue-700 shadow-2xs border border-blue-200 font-bold"
                   : "text-gray-600 hover:text-gray-900"
               )}
             >
-              <Send className="h-3.5 w-3.5 text-blue-600" />
-              <span>⚡ Envoi Direct (Inbox)</span>
+              <Send className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+              <span className="sm:hidden truncate">⚡ Envoi Direct</span>
+              <span className="hidden sm:inline">⚡ Envoi Direct (Inbox)</span>
             </button>
 
             <button
               type="button"
               onClick={() => setDispatchChannel("draft")}
               className={cn(
-                "flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition cursor-pointer",
+                "flex items-center justify-center gap-1.5 sm:gap-2 py-2 px-2 sm:px-3 rounded-lg text-[11.5px] sm:text-xs font-semibold transition cursor-pointer",
                 dispatchChannel === "draft"
                   ? "bg-white text-[#ff5722] shadow-2xs border border-orange-200 font-bold"
                   : "text-gray-600 hover:text-gray-900"
               )}
             >
-              <FileText className="h-3.5 w-3.5 text-[#ff5722]" />
-              <span>📝 Brouillon Gmail (Relire)</span>
+              <FileText className="h-3.5 w-3.5 text-[#ff5722] shrink-0" />
+              <span className="sm:hidden truncate">📝 Brouillon</span>
+              <span className="hidden sm:inline">📝 Brouillon Gmail (Relire)</span>
             </button>
           </div>
 
           {/* 2. Destinataire (Recruiter Email) */}
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-1">
               <label className="text-xs font-semibold text-gray-700">
                 Email du recruteur ou entreprise <span className="text-red-500">*</span>
               </label>
@@ -924,7 +927,7 @@ export default function ApplyPage() {
 
           {/* 3. Modèle de candidature & Personnalisation */}
           <div className="space-y-1.5 relative">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <label className="text-xs font-semibold text-gray-700">
                 Modèle de candidature
               </label>
@@ -1068,14 +1071,14 @@ export default function ApplyPage() {
           </div>
 
           {/* 4. Pièces jointes (CV & Lettre) */}
-          <div className="rounded-xl border border-gray-100 bg-gray-50/70 p-3 space-y-2.5">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs text-gray-700 font-medium flex items-center gap-1.5">
+          <div className="rounded-xl border border-gray-100 bg-gray-50/70 p-3 space-y-2.5 min-w-0">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-2 min-w-0">
+              <span className="text-xs text-gray-700 font-medium flex items-center gap-1.5 shrink-0">
                 <FileText className="h-3.5 w-3.5 text-blue-600" />
                 CV joint :
               </span>
               <select
-                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-800 outline-none focus:border-blue-500 max-w-[260px] truncate"
+                className="w-full sm:w-auto sm:max-w-[260px] min-w-0 h-9 sm:h-auto rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-800 outline-none focus:border-blue-500 truncate"
                 value={selectedCvId || ""}
                 onChange={(e) => {
                   const newId = e.target.value;
@@ -1184,69 +1187,71 @@ export default function ApplyPage() {
         </div>
 
         {/* RIGHT COLUMN: DUAL-TAB PANE (50% WIDTH) */}
-        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs flex flex-col justify-between">
+        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs flex flex-col justify-between min-w-0">
           
           {/* Tab Bar */}
-          <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50/70 p-2 shrink-0">
-            <div className="flex items-center gap-1.5">
+          <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50/70 p-1.5 sm:p-2 shrink-0 gap-1.5">
+            <div className="flex items-center gap-1 sm:gap-1.5 min-w-0">
               <button
                 type="button"
                 onClick={() => setRightTab("preview")}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer",
+                  "flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-[11.5px] sm:text-xs font-semibold transition cursor-pointer whitespace-nowrap",
                   rightTab === "preview"
                     ? "bg-white text-gray-900 shadow-xs border border-gray-200 font-bold"
                     : "text-gray-500 hover:text-gray-800"
                 )}
               >
-                <Eye className="h-3.5 w-3.5 text-blue-600" />
-                <span>Aperçu en Direct</span>
+                <Eye className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                <span>Aperçu</span>
+                <span className="hidden sm:inline">en Direct</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setRightTab("logs")}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer",
+                  "flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-[11.5px] sm:text-xs font-semibold transition cursor-pointer whitespace-nowrap",
                   rightTab === "logs"
                     ? "bg-white text-gray-900 shadow-xs border border-gray-200 font-bold"
                     : "text-gray-500 hover:text-gray-800"
                 )}
               >
-                <Terminal className="h-3.5 w-3.5 text-purple-600" />
-                <span>Journal d&apos;Envoi</span>
+                <Terminal className="h-3.5 w-3.5 text-purple-600 shrink-0" />
+                <span>Journal</span>
+                <span className="hidden sm:inline">d&apos;Envoi</span>
                 {logs.length > 0 && (
-                  <span className="rounded-full bg-purple-100 px-1.5 py-0.2 text-[10px] font-bold text-purple-700">
+                  <span className="rounded-full bg-purple-100 px-1.5 py-0.2 text-[10px] font-bold text-purple-700 shrink-0">
                     {logs.length}
                   </span>
                 )}
               </button>
             </div>
 
-            <span className="text-[11px] font-medium text-gray-400 pr-2">
+            <span className="hidden sm:inline text-[11px] font-medium text-gray-400 pr-2 shrink-0">
               {rightTab === "preview" ? "Temps réel" : "Logs"}
             </span>
           </div>
 
           {/* Content Area */}
-          <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between overflow-hidden">
+          <div className="p-3.5 sm:p-5 flex-1 flex flex-col justify-between overflow-hidden min-w-0">
             
             {/* TAB 1: LIVE EMAIL PREVIEW */}
             {rightTab === "preview" && (
-              <div className="flex-1 flex flex-col space-y-3.5 justify-between">
+              <div className="flex-1 flex flex-col space-y-3 sm:space-y-3.5 justify-between min-w-0">
                 {/* Simulated Envelope Header */}
-                <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-3 space-y-2 text-xs shrink-0">
-                  <div className="flex items-center justify-between text-gray-500 text-[10.5px] border-b border-gray-200/60 pb-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-red-400" />
-                      <span className="h-2 w-2 rounded-full bg-yellow-400" />
-                      <span className="h-2 w-2 rounded-full bg-green-400" />
-                      <span className="font-semibold text-gray-700 ml-1">Boîte de réception simulée</span>
+                <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-3 space-y-2 text-xs shrink-0 min-w-0">
+                  <div className="flex items-center justify-between text-gray-500 text-[10.5px] border-b border-gray-200/60 pb-1.5 gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="h-2 w-2 rounded-full bg-red-400 shrink-0" />
+                      <span className="h-2 w-2 rounded-full bg-yellow-400 shrink-0" />
+                      <span className="h-2 w-2 rounded-full bg-green-400 shrink-0" />
+                      <span className="font-semibold text-gray-700 ml-1 truncate">Boîte simulée</span>
                     </div>
-                    <span>SMTP / SSL</span>
+                    <span className="shrink-0">SMTP / SSL</span>
                   </div>
 
-                  <div className="space-y-1 text-gray-700 text-xs">
+                  <div className="space-y-1 text-gray-700 text-xs min-w-0">
                     <p className="truncate">
                       <strong className="text-gray-900">De :</strong> {candidateName} &lt;vous@gmail.com&gt;
                     </p>
@@ -1263,23 +1268,23 @@ export default function ApplyPage() {
                   </div>
 
                   {/* Attached Files Badges */}
-                  <div className="pt-2 border-t border-gray-200/60 flex flex-wrap gap-1.5">
-                    <span className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 font-mono text-[11px] text-blue-800">
-                      <FileCheck className="h-3 w-3 text-blue-600" />
-                      {cvFileName}
+                  <div className="pt-2 border-t border-gray-200/60 flex flex-wrap gap-1.5 min-w-0">
+                    <span className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 font-mono text-[11px] text-blue-800 max-w-full">
+                      <FileCheck className="h-3 w-3 text-blue-600 shrink-0" />
+                      <span className="truncate">{cvFileName}</span>
                     </span>
                     {includeCoverLetter && (
-                      <span className="inline-flex items-center gap-1 rounded-md border border-purple-200 bg-purple-50 px-2 py-0.5 font-mono text-[11px] text-purple-800">
-                        <FileText className="h-3 w-3 text-purple-600" />
-                        Lettre_{companyDisplayName.replace(/\s+/g, "_")}.pdf
+                      <span className="inline-flex items-center gap-1 rounded-md border border-purple-200 bg-purple-50 px-2 py-0.5 font-mono text-[11px] text-purple-800 max-w-full">
+                        <FileText className="h-3 w-3 text-purple-600 shrink-0" />
+                        <span className="truncate">Lettre_{companyDisplayName.replace(/\s+/g, "_")}.pdf</span>
                       </span>
                     )}
                   </div>
                 </div>
 
                 {/* Email Body Preview */}
-                <div className="rounded-xl border border-gray-100 bg-white p-3.5 overflow-y-auto min-h-[220px] max-h-[300px] sm:max-h-[340px] flex-1">
-                  <div className="text-xs text-gray-800 leading-relaxed whitespace-pre-wrap font-sans">
+                <div className="rounded-xl border border-gray-100 bg-white p-3 sm:p-3.5 overflow-y-auto min-h-[180px] sm:min-h-[220px] max-h-[260px] sm:max-h-[340px] flex-1">
+                  <div className="text-xs text-gray-800 leading-relaxed whitespace-pre-wrap font-sans break-words">
                     {liveMessage}
                   </div>
                 </div>
@@ -1386,36 +1391,36 @@ export default function ApplyPage() {
 
       {/* Modal for email customization */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="fixed inset-0" onClick={() => setIsModalOpen(false)} />
-          <div className="relative w-full max-w-xl rounded-2xl bg-white shadow-2xl border border-gray-100 overflow-hidden z-10 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150">
+          <div className="relative w-full max-w-xl rounded-2xl bg-white shadow-2xl border border-gray-100 overflow-hidden z-10 flex flex-col max-h-[92dvh] animate-in zoom-in-95 duration-150">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 bg-gray-50/60">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-[#ff5722]">
+            <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 sm:px-6 sm:py-4 bg-gray-50/60 shrink-0 gap-2">
+              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                <div className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-[#ff5722]">
                   <Edit3 className="h-4 w-4" />
                 </div>
-                <div>
-                  <h3 className="text-base font-semibold text-gray-900">
-                    Personnaliser l&apos;email pour ce poste
+                <div className="min-w-0">
+                  <h3 className="text-sm sm:text-base font-semibold text-gray-900 truncate">
+                    Personnaliser l&apos;email
                   </h3>
-                  <p className="text-xs text-gray-500">
-                    Modifie l&apos;objet et le corps sans altérer votre modèle enregistré
+                  <p className="text-[11px] sm:text-xs text-gray-500 truncate">
+                    Modifie l&apos;objet et le corps pour cette candidature
                   </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="rounded-lg p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+                className="rounded-lg p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition shrink-0"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 space-y-4 overflow-y-auto">
-              <div className="rounded-lg bg-orange-50/70 border border-orange-100 p-3 text-xs text-orange-950 flex items-start gap-2.5">
+            <div className="p-4 sm:p-6 space-y-3.5 sm:space-y-4 overflow-y-auto flex-1">
+              <div className="rounded-lg bg-orange-50/70 border border-orange-100 p-2.5 sm:p-3 text-xs text-orange-950 flex items-start gap-2.5">
                 <Sparkles className="h-4 w-4 text-[#ff5722] shrink-0 mt-0.5" />
                 <span>
                   Cet ajustement est appliqué uniquement à cette candidature directe. Votre modèle d&apos;origine reste intact.
@@ -1429,7 +1434,7 @@ export default function ApplyPage() {
                 </label>
                 <input
                   type="text"
-                  className="w-full rounded-xl border border-gray-200 bg-white p-2.5 text-sm outline-none focus:border-blue-500"
+                  className="w-full rounded-xl border border-gray-200 bg-white p-2.5 text-xs sm:text-sm outline-none focus:border-blue-500"
                   value={tempSubject}
                   onChange={(e) => setTempSubject(e.target.value)}
                   placeholder="Ex : Candidature Stage PFE / Data Science..."
@@ -1439,7 +1444,7 @@ export default function ApplyPage() {
 
               {/* Message */}
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-1">
                   <label className="text-xs text-gray-700 font-medium">
                     Corps de l&apos;email / Message *
                   </label>
@@ -1448,7 +1453,7 @@ export default function ApplyPage() {
                   </span>
                 </div>
                 <textarea
-                  className="min-h-[220px] w-full rounded-xl border border-gray-200 bg-white p-3 text-xs font-mono leading-relaxed outline-none focus:border-blue-500"
+                  className="min-h-[170px] sm:min-h-[220px] w-full rounded-xl border border-gray-200 bg-white p-3 text-xs font-mono leading-relaxed outline-none focus:border-blue-500"
                   value={tempMessage}
                   onChange={(e) => setTempMessage(e.target.value)}
                   placeholder="Tapez ou adaptez le message pour cette entreprise..."
@@ -1458,31 +1463,31 @@ export default function ApplyPage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-between border-t border-gray-100 px-6 py-4 bg-gray-50/80">
+            <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2.5 border-t border-gray-100 px-4 py-3 sm:px-6 sm:py-4 bg-gray-50/80 shrink-0">
               <button
                 type="button"
                 onClick={handleResetInModal}
-                className="inline-flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-900 transition font-medium cursor-pointer"
+                className="inline-flex items-center justify-center sm:justify-start gap-1.5 text-xs text-gray-600 hover:text-gray-900 transition font-medium cursor-pointer py-1"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
                 <span>Réinitialiser au modèle</span>
               </button>
 
-              <div className="flex items-center gap-2.5">
+              <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                  className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer justify-center flex items-center"
                 >
                   Annuler
                 </button>
                 <button
                   type="button"
                   onClick={handleSaveCustomization}
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-medium text-white hover:bg-blue-700 transition inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-medium text-white hover:bg-blue-700 transition inline-flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
                 >
-                  <Check className="h-3.5 w-3.5" />
-                  <span>Valider la personnalisation</span>
+                  <Check className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">Valider</span>
                 </button>
               </div>
             </div>

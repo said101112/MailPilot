@@ -62,8 +62,8 @@ export default function PreflightCheckModal({
   const supabaseHealthy = status?.supabase.configured === true;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="relative w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4 backdrop-blur-xs animate-in fade-in duration-150">
+      <div className="relative w-full max-w-md max-h-[92dvh] overflow-y-auto rounded-2xl border border-gray-200 bg-white p-4 sm:p-6 shadow-2xl">
         {/* Header */}
         <div className="flex items-start justify-between pb-4 border-b border-gray-100">
           <div className="flex items-center gap-3">

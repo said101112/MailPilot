@@ -198,61 +198,61 @@ export default function ScheduleModal(props: ScheduleModalProps) {
     : targetDate;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
       <div className="fixed inset-0" onClick={onClose} />
-      <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-gray-100 overflow-hidden z-10 flex flex-col animate-in zoom-in-95 duration-150">
+      <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-gray-100 overflow-hidden z-10 flex flex-col max-h-[92dvh] animate-in zoom-in-95 duration-150">
         
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 bg-gray-50/70">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-              <Clock className="h-5 w-5" />
+        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 sm:px-6 sm:py-4 bg-gray-50/70 shrink-0 gap-2">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+              <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
-            <div>
-              <h3 className="text-base font-bold text-gray-900">
+            <div className="min-w-0">
+              <h3 className="text-sm sm:text-base font-bold text-gray-900 truncate">
                 {mode === "single"
                   ? "Programmer l'Envoi Direct"
                   : `Programmer le Lot (${count} candidatures)`}
               </h3>
-              <p className="text-xs text-gray-500">
-                L&apos;email sera expédié à la date et heure choisies via Gmail SMTP
+              <p className="text-[11px] sm:text-xs text-gray-500 truncate">
+                L&apos;email sera expédié à l&apos;heure choisie via Gmail SMTP
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
+            className="rounded-lg p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer shrink-0"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-5">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto flex-1">
           {/* Preset Buttons */}
           <div>
             <label className="text-xs font-semibold text-gray-700 block mb-2">
               Horaires recommandés (Taux d&apos;ouverture maximal)
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
               {/* Preset 1: Demain matin */}
               <button
                 type="button"
                 onClick={() => setSelectedPreset("tomorrow_am")}
                 className={cn(
-                  "p-3 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between",
+                  "p-2.5 sm:p-3 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between",
                   selectedPreset === "tomorrow_am"
                     ? "border-blue-600 bg-blue-50/70 ring-1 ring-blue-600"
                     : "border-gray-200 hover:bg-gray-50"
                 )}
               >
-                <div className="flex items-center gap-1.5 text-blue-600 mb-1">
-                  <Sunrise className="h-4 w-4" />
-                  <span className="text-[11px] font-bold uppercase tracking-wider">Demain matin</span>
+                <div className="flex items-center gap-1 text-blue-600 mb-1">
+                  <Sunrise className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                  <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider truncate">Matin</span>
                 </div>
                 <p className="text-xs font-semibold text-gray-900">08h30</p>
-                <span className="text-[10.5px] text-gray-500">
+                <span className="text-[10px] sm:text-[10.5px] text-gray-500 truncate">
                   {presets.tomorrowMorning.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" })}
                 </span>
               </button>
@@ -262,18 +262,18 @@ export default function ScheduleModal(props: ScheduleModalProps) {
                 type="button"
                 onClick={() => setSelectedPreset("tomorrow_pm")}
                 className={cn(
-                  "p-3 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between",
+                  "p-2.5 sm:p-3 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between",
                   selectedPreset === "tomorrow_pm"
                     ? "border-blue-600 bg-blue-50/70 ring-1 ring-blue-600"
                     : "border-gray-200 hover:bg-gray-50"
                 )}
               >
-                <div className="flex items-center gap-1.5 text-amber-600 mb-1">
-                  <Sun className="h-4 w-4" />
-                  <span className="text-[11px] font-bold uppercase tracking-wider">Après-midi</span>
+                <div className="flex items-center gap-1 text-amber-600 mb-1">
+                  <Sun className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                  <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider truncate">Après-midi</span>
                 </div>
                 <p className="text-xs font-semibold text-gray-900">14h00</p>
-                <span className="text-[10.5px] text-gray-500">
+                <span className="text-[10px] sm:text-[10.5px] text-gray-500 truncate">
                   {presets.tomorrowAfternoon.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" })}
                 </span>
               </button>
@@ -283,18 +283,18 @@ export default function ScheduleModal(props: ScheduleModalProps) {
                 type="button"
                 onClick={() => setSelectedPreset("monday")}
                 className={cn(
-                  "p-3 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between",
+                  "p-2.5 sm:p-3 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between",
                   selectedPreset === "monday"
                     ? "border-blue-600 bg-blue-50/70 ring-1 ring-blue-600"
                     : "border-gray-200 hover:bg-gray-50"
                 )}
               >
-                <div className="flex items-center gap-1.5 text-purple-600 mb-1">
-                  <Calendar className="h-4 w-4" />
-                  <span className="text-[11px] font-bold uppercase tracking-wider">Lundi pro.</span>
+                <div className="flex items-center gap-1 text-purple-600 mb-1">
+                  <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                  <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider truncate">Lundi pro.</span>
                 </div>
                 <p className="text-xs font-semibold text-gray-900">09h00</p>
-                <span className="text-[10.5px] text-gray-500">
+                <span className="text-[10px] sm:text-[10.5px] text-gray-500 truncate">
                   {presets.nextMonday.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
                 </span>
               </button>
@@ -415,11 +415,11 @@ export default function ScheduleModal(props: ScheduleModalProps) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between border-t border-gray-100 px-6 py-4 bg-gray-50/80">
+        <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 border-t border-gray-100 px-4 py-3 sm:px-6 sm:py-4 bg-gray-50/80 shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+            className="w-full sm:w-auto rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer flex items-center justify-center"
           >
             Annuler
           </button>
@@ -428,9 +428,9 @@ export default function ScheduleModal(props: ScheduleModalProps) {
             type="button"
             onClick={handleConfirm}
             disabled={!isValidDate || isSubmitting}
-            className="rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-xs font-bold text-white transition shadow-sm inline-flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+            className="w-full sm:w-auto rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-xs font-bold text-white transition shadow-sm inline-flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
           >
-            <Clock className="h-3.5 w-3.5" />
+            <Clock className="h-3.5 w-3.5 shrink-0" />
             <span>
               {isSubmitting
                 ? "Programmation en cours..."
