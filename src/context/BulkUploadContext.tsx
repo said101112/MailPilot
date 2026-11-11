@@ -51,8 +51,11 @@ export interface CSVRow {
   cvId?: string;
   cvFileName?: string;
   coverLetterAttached?: boolean;
+  sentAt?: string;
   [key: string]: string | boolean | undefined;
 }
+
+export type BatchStatus = "idle" | "running" | "paused" | "completed";
 
 interface StoredBulkState {
   data: CSVRow[];
@@ -61,6 +64,10 @@ interface StoredBulkState {
   selectedTemplateId: string | null;
   selectedCvId?: string | null;
   includeCoverLetter?: boolean;
+  bulkChannel?: "draft" | "direct";
+  antiSpamDelaySeconds?: number;
+  batchStatus?: BatchStatus;
+  pausedAt?: string | null;
   defaultPosition: string;
   defaultContactName: string;
   inputMode: "file" | "paste";
@@ -97,16 +104,61 @@ interface BulkUploadContextType {
   currentPage: number;
   setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
   isProcessing: boolean;
+  batchStatus: BatchStatus;
+  pausedAt: string | null;
+  antiSpamDelaySeconds: number;
+  setAntiSpamDelaySeconds: (sec: number) => void;
+  cooldownRemaining: number;
+  dailySentCount: number;
   progress: { current: number; total: number };
   setProgress: React.Dispatch<React.SetStateAction<{ current: number; total: number }>>;
   bulkChannel: "draft" | "direct";
   setBulkChannel: (channel: "draft" | "direct") => void;
   startBatchProcess: (activeTemplate: MessageTemplate, options?: { includeCoverLetter?: boolean }) => Promise<void>;
+  pauseBatchProcess: () => void;
   cancelBatchProcess: () => void;
+  resetBatchSession: () => void;
   clearBatch: () => void;
 }
 
 const BULK_STORAGE_KEY = "mailpilot_bulk_upload_state_v1";
+const DAILY_SENT_STORAGE_KEY = "mailpilot_daily_sent_count_v1";
+
+function getTodayDateKey(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function readDailySentCount(): number {
+  if (typeof window === "undefined") return 0;
+  try {
+    const raw = window.localStorage.getItem(DAILY_SENT_STORAGE_KEY);
+    if (!raw) return 0;
+    const parsed = JSON.parse(raw) as { date?: string; count?: number };
+    if (parsed.date === getTodayDateKey() && typeof parsed.count === "number") {
+      return parsed.count;
+    }
+    return 0;
+  } catch {
+    return 0;
+  }
+}
+
+function incrementDailySentCount(): number {
+  const nextCount = readDailySentCount() + 1;
+  if (typeof window !== "undefined") {
+    try {
+      window.localStorage.setItem(
+        DAILY_SENT_STORAGE_KEY,
+        JSON.stringify({ date: getTodayDateKey(), count: nextCount })
+      );
+    } catch {}
+  }
+  return nextCount;
+}
 
 const BulkUploadContext = createContext<BulkUploadContextType | null>(null);
 
@@ -120,6 +172,11 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
   const [defaultPosition, setDefaultPosition] = useState("Stage PFE / Emploi");
   const [defaultContactName, setDefaultContactName] = useState("Hiring Manager");
   const [bulkChannel, setBulkChannel] = useState<"draft" | "direct">("direct");
+  const [antiSpamDelaySeconds, setAntiSpamDelaySeconds] = useState<number>(25);
+  const [batchStatus, setBatchStatus] = useState<BatchStatus>("idle");
+  const [pausedAt, setPausedAt] = useState<string | null>(null);
+  const [cooldownRemaining, setCooldownRemaining] = useState<number>(0);
+  const [dailySentCount, setDailySentCount] = useState<number>(0);
   const [inputMode, setInputMode] = useState<"file" | "paste">("file");
   const [pastedText, setPastedText] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -129,28 +186,61 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
   const cancelRequestedRef = useRef(false);
   const isHydratedRef = useRef(false);
   const includeCoverLetterRef = useRef(includeCoverLetter);
+  const bulkChannelRef = useRef(bulkChannel);
+  const antiSpamDelayRef = useRef(antiSpamDelaySeconds);
 
   useEffect(() => {
     includeCoverLetterRef.current = includeCoverLetter;
   }, [includeCoverLetter]);
 
-  // 1. Initial Load from LocalStorage
   useEffect(() => {
+    bulkChannelRef.current = bulkChannel;
+  }, [bulkChannel]);
+
+  useEffect(() => {
+    antiSpamDelayRef.current = antiSpamDelaySeconds;
+  }, [antiSpamDelaySeconds]);
+
+  // 1. Initial Load from LocalStorage (supports pause/refresh/next-day resume seamlessly)
+  useEffect(() => {
+    setDailySentCount(readDailySentCount());
+
     try {
       const stored = window.localStorage.getItem(BULK_STORAGE_KEY);
       if (stored) {
         const parsed: StoredBulkState = JSON.parse(stored);
         if (Array.isArray(parsed.data) && parsed.data.length > 0) {
-          setData(parsed.data);
+          // Recover any row stuck mid-flight ("sending") when page closed or refreshed
+          const recoveredRows: CSVRow[] = parsed.data.map((r) =>
+            r.status === "sending" ? { ...r, status: "pending", error: undefined } : r
+          );
+
+          setData(recoveredRows);
           setFileName(parsed.fileName || "bulk_contacts.csv");
+
           if (Array.isArray(parsed.selectedRowIndices)) {
             setSelectedRows(new Set(parsed.selectedRowIndices));
+          } else {
+            // Ensure remaining unsent rows are selected
+            const pendingIdxs = recoveredRows
+              .map((r, i) => (r.status === "pending" || r.status === "error" ? i : -1))
+              .filter((i) => i !== -1);
+            setSelectedRows(new Set(pendingIdxs));
           }
+
           if (parsed.selectedTemplateId) setSelectedTemplateId(parsed.selectedTemplateId);
           if (parsed.selectedCvId) setSelectedCvId(parsed.selectedCvId);
           if (typeof parsed.includeCoverLetter === "boolean") {
             setIncludeCoverLetter(parsed.includeCoverLetter);
             includeCoverLetterRef.current = parsed.includeCoverLetter;
+          }
+          if (parsed.bulkChannel === "draft" || parsed.bulkChannel === "direct") {
+            setBulkChannel(parsed.bulkChannel);
+            bulkChannelRef.current = parsed.bulkChannel;
+          }
+          if (typeof parsed.antiSpamDelaySeconds === "number" && parsed.antiSpamDelaySeconds >= 2) {
+            setAntiSpamDelaySeconds(parsed.antiSpamDelaySeconds);
+            antiSpamDelayRef.current = parsed.antiSpamDelaySeconds;
           }
           if (parsed.defaultPosition) setDefaultPosition(parsed.defaultPosition);
           if (parsed.defaultContactName) setDefaultContactName(parsed.defaultContactName);
@@ -158,6 +248,24 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
           if (parsed.pastedText) setPastedText(parsed.pastedText);
           if (parsed.currentPage) setCurrentPage(parsed.currentPage);
           if (parsed.progress) setProgress(parsed.progress);
+
+          // If batch was actively running before reload/tab close, transition cleanly to paused!
+          const hasSentSome = recoveredRows.some((r) => r.status === "success");
+          const hasPending = recoveredRows.some((r) => r.status === "pending" || r.status === "error");
+
+          if (parsed.batchStatus === "running" && hasPending) {
+            setBatchStatus("paused");
+            setPausedAt(parsed.pausedAt || new Date().toISOString());
+          } else if (parsed.batchStatus === "paused" && hasPending) {
+            setBatchStatus("paused");
+            setPausedAt(parsed.pausedAt || new Date().toISOString());
+          } else if (hasSentSome && !hasPending) {
+            setBatchStatus("completed");
+            setPausedAt(null);
+          } else {
+            setBatchStatus(parsed.batchStatus || "idle");
+            setPausedAt(parsed.pausedAt || null);
+          }
         }
       }
     } catch (e) {
@@ -190,6 +298,10 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
         selectedTemplateId,
         selectedCvId,
         includeCoverLetter,
+        bulkChannel,
+        antiSpamDelaySeconds,
+        batchStatus,
+        pausedAt,
         defaultPosition,
         defaultContactName,
         inputMode,
@@ -208,6 +320,10 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
     selectedTemplateId,
     selectedCvId,
     includeCoverLetter,
+    bulkChannel,
+    antiSpamDelaySeconds,
+    batchStatus,
+    pausedAt,
     defaultPosition,
     defaultContactName,
     inputMode,
@@ -262,6 +378,14 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
     setSelectedRows(new Set());
   }, [isProcessing]);
 
+  const resetBatchSession = useCallback(() => {
+    cancelRequestedRef.current = true;
+    setIsProcessing(false);
+    setCooldownRemaining(0);
+    setBatchStatus("idle");
+    setPausedAt(null);
+  }, []);
+
   const clearBatch = useCallback(() => {
     if (isProcessing) {
       cancelRequestedRef.current = true;
@@ -273,31 +397,58 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
     setPastedText("");
     setCurrentPage(1);
     setIsProcessing(false);
+    setCooldownRemaining(0);
+    setBatchStatus("idle");
+    setPausedAt(null);
     try {
       window.localStorage.removeItem(BULK_STORAGE_KEY);
     } catch {}
     toast.info("Batch réinitialisé.");
   }, [isProcessing]);
 
-  const cancelBatchProcess = useCallback(() => {
+  const pauseBatchProcess = useCallback(() => {
     if (!isProcessing) return;
     cancelRequestedRef.current = true;
-    toast.warning("Interruption de l'envoi demandée...");
+    setCooldownRemaining(0);
+    setBatchStatus("paused");
+    setPausedAt(new Date().toISOString());
+    toast.info("Mise en pause de l'envoi...");
   }, [isProcessing]);
+
+  const cancelBatchProcess = useCallback(() => {
+    pauseBatchProcess();
+  }, [pauseBatchProcess]);
 
   const startBatchProcess = useCallback(
     async (
       activeTemplate: MessageTemplate,
       options?: { includeCoverLetter?: boolean }
     ) => {
-      const selectedIndexes = Array.from(selectedRows).sort((a, b) => a - b);
-      if (selectedIndexes.length === 0) {
-        toast.error("Veuillez sélectionner au moins une ligne à traiter.");
+      const nextData = [...data];
+      const allSelected = Array.from(selectedRows).sort((a, b) => a - b);
+
+      // Only dispatch rows not yet sent ("pending" or "error"); automatically skip already-sent rows
+      const todoIndexes = allSelected.filter((idx) => nextData[idx] && nextData[idx].status !== "success");
+
+      if (todoIndexes.length === 0) {
+        if (allSelected.length > 0 && nextData.some((r) => r.status === "success")) {
+          setBatchStatus("completed");
+          setPausedAt(null);
+          toast.info("Toutes les lignes sélectionnées ont déjà été envoyées.");
+        } else {
+          toast.error("Veuillez sélectionner au moins une ligne à traiter.");
+        }
         return;
       }
 
+      const alreadySentCount = nextData.filter((r) => r.status === "success").length;
+      const overallTotal = alreadySentCount + todoIndexes.length;
+
       cancelRequestedRef.current = false;
       setIsProcessing(true);
+      setBatchStatus("running");
+      setPausedAt(null);
+      setCooldownRemaining(0);
 
       const savedName = readCandidateName();
       const {
@@ -305,23 +456,24 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
       } = await supabase.auth.getUser();
       const emailValidationCache = new Map<string, EmailPreflightResult>();
       const withdrawnSet = await getWithdrawnEmails();
+      const activeChannel = bulkChannelRef.current;
 
       let successCount = 0;
       let failCount = 0;
-      const nextData = [...data];
+      let wasPaused = false;
 
-      setProgress({ current: 0, total: selectedIndexes.length });
+      setProgress({ current: alreadySentCount, total: overallTotal });
 
-      for (let step = 0; step < selectedIndexes.length; step += 1) {
+      for (let step = 0; step < todoIndexes.length; step += 1) {
         if (cancelRequestedRef.current) {
-          toast.warning(`File d'attente interrompue à l'étape ${step}/${selectedIndexes.length}.`);
+          wasPaused = true;
           break;
         }
 
-        const index = selectedIndexes[step];
+        const index = todoIndexes[step];
         nextData[index] = { ...nextData[index], status: "sending", error: undefined };
         setData([...nextData]);
-        setProgress({ current: step + 1, total: selectedIndexes.length });
+        setProgress({ current: alreadySentCount + step + 1, total: overallTotal });
 
         try {
           const row = nextData[index];
@@ -443,7 +595,7 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
             }
           }
 
-          if (bulkChannel === "direct") {
+          if (activeChannel === "direct") {
             await sendDirectApplication({
               ...row,
               message: processedMessage,
@@ -455,6 +607,7 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
               cover_letter_base64: finalCoverLetterBase64,
               cover_letter_filename: finalCoverLetterFileName,
             });
+            setDailySentCount(incrementDailySentCount());
           } else {
             await sendApplication({
               ...row,
@@ -470,7 +623,7 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
           }
 
           if (user) {
-            const compToSave = row.company || inferCompanyFromEmail(row.email)?.name || null;
+            const compToSave = rowCtx.companyName || null;
             await supabase.from("applications").insert([
               {
                 user_id: user.id,
@@ -498,6 +651,7 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
             ...nextData[index],
             status: "success",
             error: undefined,
+            sentAt: new Date().toISOString(),
             coverLetterAttached: !!finalCoverLetterBase64,
           };
           successCount += 1;
@@ -524,14 +678,50 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
           }
         }
 
+        // Persist updated row & keep ONLY unfinished rows selected continuously (safe against sudden refresh/close)
         setData([...nextData]);
+        const liveRemaining = new Set<number>();
+        for (const idx of allSelected) {
+          if (nextData[idx] && nextData[idx].status !== "success") {
+            liveRemaining.add(idx);
+          }
+        }
+        setSelectedRows(liveRemaining);
 
-        if (step < selectedIndexes.length - 1 && !cancelRequestedRef.current) {
-          await delay(2000);
+        // Anti-spam randomized human-like cooldown before next email (interruptible every 500ms!)
+        if (step < todoIndexes.length - 1) {
+          if (cancelRequestedRef.current) {
+            wasPaused = true;
+            break;
+          }
+
+          const baseSeconds = activeChannel === "direct" ? antiSpamDelayRef.current : 2;
+          // Apply +/- 20% natural jitter for direct SMTP so intervals never look robotic
+          const jitterFactor = activeChannel === "direct" ? 0.8 + Math.random() * 0.4 : 1;
+          const waitSeconds = Math.max(2, Math.round(baseSeconds * jitterFactor));
+
+          setCooldownRemaining(waitSeconds);
+          const deadline = Date.now() + waitSeconds * 1000;
+
+          while (Date.now() < deadline) {
+            if (cancelRequestedRef.current) {
+              wasPaused = true;
+              break;
+            }
+            const remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+            setCooldownRemaining(remaining);
+            await delay(500);
+          }
+          setCooldownRemaining(0);
+
+          if (wasPaused || cancelRequestedRef.current) {
+            wasPaused = true;
+            break;
+          }
         }
       }
 
-      // Remaining selection: keep rows that are still pending or in error
+      // Final selection cleanup: keep only remaining pending or error rows
       const remainingSelection = new Set<number>();
       nextData.forEach((row, index) => {
         if (row.status === "pending" || row.status === "error") {
@@ -541,15 +731,38 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
 
       setSelectedRows(remainingSelection);
       setIsProcessing(false);
+      setCooldownRemaining(0);
 
-      if (failCount > 0 && successCount === 0) {
-        toast.error(`Traitement terminé : les ${failCount} envois ont échoué.`);
-      } else if (failCount > 0) {
-        toast.warning(
-          `Traitement terminé : ${successCount} brouillons créés, ${failCount} en échec.`
+      const remainingPendingCount = nextData.filter(
+        (r) => r.status === "pending" || r.status === "error"
+      ).length;
+
+      if (wasPaused || cancelRequestedRef.current) {
+        const nowIso = new Date().toISOString();
+        setBatchStatus("paused");
+        setPausedAt(nowIso);
+        toast.info(
+          `⏸️ Envoi mis en pause (${alreadySentCount + successCount} envoyé(s), ${remainingPendingCount} restant(s)). Vous pouvez actualiser ou reprendre plus tard !`
         );
-      } else if (successCount > 0) {
-        toast.success(`Traitement terminé : ${successCount} brouillons créés dans Gmail !`);
+      } else {
+        setBatchStatus(remainingPendingCount === 0 ? "completed" : "idle");
+        setPausedAt(null);
+
+        if (failCount > 0 && successCount === 0) {
+          toast.error(`Traitement terminé : les ${failCount} envois ont échoué.`);
+        } else if (failCount > 0) {
+          toast.warning(
+            activeChannel === "direct"
+              ? `Envoi terminé : ${successCount} envoyés directement, ${failCount} en échec.`
+              : `Traitement terminé : ${successCount} brouillons créés, ${failCount} en échec.`
+          );
+        } else if (successCount > 0) {
+          toast.success(
+            activeChannel === "direct"
+              ? `Envoi terminé : ${successCount} candidature${successCount > 1 ? "s" : ""} envoyée${successCount > 1 ? "s" : ""} sans spam !`
+              : `Traitement terminé : ${successCount} brouillons créés dans Gmail !`
+          );
+        }
       }
 
       if (successCount > 0) {
@@ -571,6 +784,8 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
       includeCoverLetter,
       defaultPosition,
       defaultContactName,
+      bulkChannel,
+      antiSpamDelaySeconds,
     ]
   );
 
@@ -604,12 +819,20 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
         currentPage,
         setCurrentPage,
         isProcessing,
+        batchStatus,
+        pausedAt,
+        antiSpamDelaySeconds,
+        setAntiSpamDelaySeconds,
+        cooldownRemaining,
+        dailySentCount,
         progress,
         setProgress,
         bulkChannel,
         setBulkChannel,
         startBatchProcess,
+        pauseBatchProcess,
         cancelBatchProcess,
+        resetBatchSession,
         clearBatch,
       }}
     >

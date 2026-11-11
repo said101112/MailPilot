@@ -18,6 +18,7 @@ import {
   FileText,
   Loader2,
   MinusSquare,
+  Pause,
   Play,
   Send,
   ShieldCheck,
@@ -68,6 +69,11 @@ import {
 } from "@/lib/schedulerService";
 import { generateCoverLetterPdf } from "@/lib/coverLetterPdf";
 import { personalizeEmailText, resolveEmailContext } from "@/lib/emailPersonalizer";
+import {
+  expandCsvRecords,
+  extractEmailsFromText,
+  splitEmailsFromCell,
+} from "@/lib/csvEmailParser";
 
 type ValidationState =
   | "processing"
@@ -81,33 +87,15 @@ type ValidationState =
 
 const MAX_CSV_BYTES = 25 * 1024 * 1024;
 
-const COLUMN_ALIASES: Record<string, string> = {
-  societe: "company",
-  entreprise: "company",
-  company: "company",
-  email: "email",
-  "e-mail": "email",
-  mail: "email",
-  name: "name",
-  "nom complet": "name",
-  nom: "name",
-  contact: "name",
-  manager: "name",
-  poste: "position",
-  position: "position",
-  titre: "position",
-  job: "position",
-};
-
 const VALIDATION_LABELS: Record<ValidationState, string> = {
-  processing: "Drafting",
-  sent: "Draft Created",
-  error: "Error",
-  "invalid-email": "Invalid Email",
-  duplicate: "Duplicate",
-  withdrawn: "Blocked",
-  incomplete: "Incomplete",
-  ready: "Ready",
+  processing: "Envoi...",
+  sent: "Envoyé ✓",
+  error: "Erreur",
+  "invalid-email": "Email Invalide",
+  duplicate: "Doublon",
+  withdrawn: "Bloqué",
+  incomplete: "Incomplet",
+  ready: "Prêt",
 };
 
 function formatTemplateName(t: { id: string; name: string }) {
@@ -131,21 +119,6 @@ function getValidationState(
   if (duplicateEmails.has(cleanEmail)) return "duplicate";
   if (!row.company || !row.position || !row.name) return "incomplete";
   return "ready";
-}
-
-function extractEmailsFromText(rawText: string): string[] {
-  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-  const matches = rawText.match(emailRegex) || [];
-  const seen = new Set<string>();
-  const unique: string[] = [];
-  for (const m of matches) {
-    const cleaned = m.trim().toLowerCase();
-    if (!seen.has(cleaned)) {
-      seen.add(cleaned);
-      unique.push(cleaned);
-    }
-  }
-  return unique;
 }
 
 function guessCompanyFromEmail(email: string): string {
@@ -182,12 +155,20 @@ export default function UploadPage() {
     currentPage,
     setCurrentPage,
     isProcessing,
+    batchStatus,
+    pausedAt,
+    antiSpamDelaySeconds,
+    setAntiSpamDelaySeconds,
+    cooldownRemaining,
+    dailySentCount,
     progress,
     setProgress,
     bulkChannel,
     setBulkChannel,
     startBatchProcess: contextStartBatchProcess,
+    pauseBatchProcess,
     cancelBatchProcess,
+    resetBatchSession,
     clearBatch,
   } = useBulkUpload();
 
@@ -214,6 +195,10 @@ export default function UploadPage() {
     window.addEventListener(SCHEDULED_UPDATED_EVENT, updateCount);
     return () => window.removeEventListener(SCHEDULED_UPDATED_EVENT, updateCount);
   }, []);
+  const [lastImportStats, setLastImportStats] = useState<{
+    sourceRows: number;
+    expandedExtra: number;
+  } | null>(null);
   const ROWS_PER_PAGE = 10;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -295,9 +280,18 @@ export default function UploadPage() {
     try {
       const preload = window.sessionStorage.getItem("truck_app_bulk_preload");
       if (preload) {
-        const rows = JSON.parse(preload);
-        if (Array.isArray(rows) && rows.length > 0) {
+        const rawRows = JSON.parse(preload);
+        if (Array.isArray(rawRows) && rawRows.length > 0) {
+          const { rows, sourceRowCount, expandedFromMultiCount } = expandCsvRecords(
+            rawRows as Array<Record<string, unknown>>,
+            { defaultPosition, defaultContactName }
+          );
           setData(rows);
+          setLastImportStats(
+            expandedFromMultiCount > 0
+              ? { sourceRows: sourceRowCount, expandedExtra: expandedFromMultiCount }
+              : null
+          );
           const initialSelection = new Set<number>();
           rows.forEach((_, idx) => initialSelection.add(idx));
           setSelectedRows(initialSelection);
@@ -428,12 +422,14 @@ export default function UploadPage() {
     validationCounts.withdrawn +
     validationCounts.incomplete +
     validationCounts.error;
+  const sentCount = data.filter((r) => r.status === "success").length;
+  const remainingCount = data.filter((r) => r.status === "pending" || r.status === "error").length;
   const selectedCount = selectedRows.size;
   const progressPercent =
-    progress.total > 0 && isProcessing
+    progress.total > 0 && (isProcessing || batchStatus === "paused")
       ? Math.round((progress.current / progress.total) * 100)
-      : data.length > 0
-        ? Math.round((readyCount / data.length) * 100)
+      : data.length > 0 && sentCount > 0
+        ? Math.round((sentCount / data.length) * 100)
         : 0;
   const isAllSelected =
     selectableIndexes.length > 0 && selectedRows.size === selectableIndexes.length;
@@ -579,45 +575,75 @@ export default function UploadPage() {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
-        const parsedData = results.data as Record<string, string>[];
+        const parsedData = results.data as Array<Record<string, unknown>>;
 
-        const normalizedData = parsedData.map((row) => {
-          const normalizedRow: Record<string, string> = {};
-
-          Object.entries(row).forEach(([key, value]) => {
-            const lowerKey = key.trim().toLowerCase();
-            const mappedKey = COLUMN_ALIASES[lowerKey] || lowerKey;
-            normalizedRow[mappedKey] = value?.trim() || "";
-          });
-
-          return normalizedRow;
+        const {
+          rows: expandedRows,
+          sourceRowCount,
+          expandedFromMultiCount,
+        } = expandCsvRecords(parsedData, {
+          defaultPosition,
+          defaultContactName,
         });
 
-        const validRows = normalizedData.filter((row) => row.email);
-
-        if (validRows.length === 0) {
-          toast.error("No valid rows found. Add at least one email column.");
+        if (expandedRows.length === 0) {
+          toast.error("Aucune ligne valide trouvée. Ajoutez au moins une colonne email.");
           return;
         }
 
-        const nextRows = validRows.map(
-          (row) =>
-            ({
-              ...row,
-              status: "pending",
-            }) as CSVRow,
+        resetBatchSession();
+        setData(expandedRows);
+        setProgress({ current: 0, total: expandedRows.length });
+        setSelectedRows(new Set(expandedRows.map((_, index) => index)));
+        setCurrentPage(1);
+        setLastImportStats(
+          expandedFromMultiCount > 0
+            ? { sourceRows: sourceRowCount, expandedExtra: expandedFromMultiCount }
+            : null
         );
 
-        setData(nextRows);
-        setProgress({ current: 0, total: validRows.length });
-        setSelectedRows(new Set(nextRows.map((_, index) => index)));
-        setCurrentPage(1);
-        toast.success(`${validRows.length} rows imported into the batch queue.`);
+        if (expandedFromMultiCount > 0) {
+          toast.success(
+            `${expandedRows.length} contacts importés depuis ${sourceRowCount} lignes (${expandedFromMultiCount} email${expandedFromMultiCount > 1 ? "s" : ""} multiple${expandedFromMultiCount > 1 ? "s" : ""} détecté${expandedFromMultiCount > 1 ? "s" : ""} et séparé${expandedFromMultiCount > 1 ? "s" : ""} automatiquement) !`
+          );
+        } else {
+          toast.success(`${expandedRows.length} contacts importés dans la file d'attente.`);
+        }
       },
       error: (error) => {
         toast.error(`CSV parsing failed: ${error.message}`);
       },
     });
+  };
+
+  // Post-import safety detection in case rows were preloaded or edited with multiple emails
+  const multiEmailRowCount = useMemo(() => {
+    return data.filter((row) => splitEmailsFromCell(row.email).length > 1).length;
+  }, [data]);
+
+  const handleSplitMultiEmailRows = () => {
+    const {
+      rows: expandedRows,
+      sourceRowCount,
+      expandedFromMultiCount,
+    } = expandCsvRecords(
+      data as unknown as Array<Record<string, unknown>>,
+      { defaultPosition, defaultContactName }
+    );
+
+    if (expandedFromMultiCount === 0) {
+      toast.info("Aucun email multiple à séparer.");
+      return;
+    }
+
+    setData(expandedRows);
+    setProgress({ current: 0, total: expandedRows.length });
+    setSelectedRows(new Set(expandedRows.map((_, index) => index)));
+    setCurrentPage(1);
+    setLastImportStats({ sourceRows: sourceRowCount, expandedExtra: expandedFromMultiCount });
+    toast.success(
+      `${expandedFromMultiCount} email${expandedFromMultiCount > 1 ? "s" : ""} supplémentaire${expandedFromMultiCount > 1 ? "s" : ""} détecté${expandedFromMultiCount > 1 ? "s" : ""} et séparé${expandedFromMultiCount > 1 ? "s" : ""} (${expandedRows.length} contacts au total) !`
+    );
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -646,6 +672,7 @@ export default function UploadPage() {
       status: "pending",
     }));
 
+    resetBatchSession();
     setFileName(`linkedin-paste-${detectedEmails.length}-contacts.csv`);
     setData(nextRows);
     setProgress({ current: 0, total: nextRows.length });
@@ -1033,9 +1060,9 @@ export default function UploadPage() {
                       <span className="font-mono font-semibold text-gray-800">company</span>
                       <span className="text-gray-500">Nom de l'entreprise</span>
                     </div>
-                    <div className="flex items-center justify-between p-2.5">
+                    <div className="flex items-center justify-between gap-2 p-2.5">
                       <span className="font-mono font-semibold text-gray-800">email</span>
-                      <span className="text-gray-500">Adresse email du recruteur</span>
+                      <span className="text-gray-500 text-right">1 ou plusieurs emails (séparés par , ou ;)</span>
                     </div>
                     <div className="flex items-center justify-between p-2.5">
                       <span className="font-mono font-semibold text-gray-800">position</span>
@@ -1046,6 +1073,9 @@ export default function UploadPage() {
                       <span className="text-gray-500">Nom du contact / recruteur</span>
                     </div>
                   </div>
+                  <p className="mt-2.5 text-[11px] leading-relaxed text-emerald-700 bg-emerald-50 border border-emerald-200/70 rounded-md px-2.5 py-1.5">
+                    ✨ Astuce : une même cellule peut contenir 2 emails ou plus (ex: <code className="font-mono">rh@a.com, jobs@a.com</code>) — ils seront séparés automatiquement à l&apos;import.
+                  </p>
                 </div>
               )}
 
@@ -1065,7 +1095,7 @@ export default function UploadPage() {
                   </div>
                   <div className="flex items-start gap-2">
                     <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" />
-                    <span>Automated 2-second delay between dispatches.</span>
+                    <span>Cadence anti-spam aléatoire (25s par défaut) &amp; reprise même après actualisation.</span>
                   </div>
                 </div>
               </div>
@@ -1082,21 +1112,27 @@ export default function UploadPage() {
                   <p className="mt-0.5 sm:mt-1 text-lg sm:text-xl font-bold text-gray-900">{data.length}</p>
                 </div>
                 <div className="p-3 sm:p-4">
-                  <span className="text-[11px] sm:text-xs text-emerald-600 font-medium">Ready to Send</span>
-                  <p className="mt-0.5 sm:mt-1 text-lg sm:text-xl font-bold text-gray-900">{readyCount}</p>
+                  <span className="text-[11px] sm:text-xs text-emerald-600 font-medium">
+                    {sentCount > 0 ? "Envoyés / Prêts" : "Prêts à envoyer"}
+                  </span>
+                  <p className="mt-0.5 sm:mt-1 text-lg sm:text-xl font-bold text-gray-900">
+                    {sentCount > 0 ? `${sentCount} / ${data.length}` : readyCount}
+                  </p>
                 </div>
                 <div className="p-3 sm:p-4">
-                  <span className="text-[11px] sm:text-xs text-amber-600 font-medium">Flagged Rows</span>
-                  <p className="mt-0.5 sm:mt-1 text-lg sm:text-xl font-bold text-gray-900">{issueCount}</p>
+                  <span className="text-[11px] sm:text-xs text-amber-600 font-medium">En attente / Problèmes</span>
+                  <p className="mt-0.5 sm:mt-1 text-lg sm:text-xl font-bold text-gray-900">
+                    {sentCount > 0 ? remainingCount : issueCount}
+                  </p>
                 </div>
                 <div className="p-3 sm:p-4">
-                  <span className="text-[11px] sm:text-xs text-blue-600 font-medium">Selected</span>
+                  <span className="text-[11px] sm:text-xs text-blue-600 font-medium">Sélectionnés</span>
                   <p className="mt-0.5 sm:mt-1 text-lg sm:text-xl font-bold text-gray-900">{selectedCount}</p>
                 </div>
               </div>
             </div>
 
-            {/* Batch Controls Bar - Modern 2-Tier Layout */}
+            {/* Batch Controls Bar - Modern Multi-Tier Layout */}
             <div className="rounded-2xl border border-gray-200 bg-white p-3.5 sm:p-4 shadow-xs space-y-3 sm:space-y-3.5 min-w-0">
               {/* Row 1: Active File & Primary Dispatch Action */}
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 pb-3 border-b border-gray-100">
@@ -1115,9 +1151,12 @@ export default function UploadPage() {
                     </div>
                     <button
                       type="button"
-                      onClick={clearBatch}
+                      onClick={() => {
+                        setLastImportStats(null);
+                        clearBatch();
+                      }}
                       disabled={isProcessing}
-                      className="text-[11px] text-gray-400 hover:text-gray-700 transition underline cursor-pointer"
+                      className="text-[11px] text-gray-400 hover:text-gray-700 transition underline cursor-pointer disabled:opacity-50"
                     >
                       Changer de fichier / Effacer
                     </button>
@@ -1130,9 +1169,10 @@ export default function UploadPage() {
                   <div className="grid grid-cols-2 sm:flex items-center rounded-xl border border-gray-200 bg-gray-50/80 p-0.5 w-full sm:w-auto">
                     <button
                       type="button"
+                      disabled={isProcessing}
                       onClick={() => setBulkChannel("direct")}
                       className={cn(
-                        "px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5",
+                        "px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-60",
                         bulkChannel === "direct"
                           ? "bg-white text-blue-700 shadow-2xs border border-blue-200 font-bold"
                           : "text-gray-500 hover:text-gray-800"
@@ -1143,9 +1183,10 @@ export default function UploadPage() {
                     </button>
                     <button
                       type="button"
+                      disabled={isProcessing}
                       onClick={() => setBulkChannel("draft")}
                       className={cn(
-                        "px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5",
+                        "px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-60",
                         bulkChannel === "draft"
                           ? "bg-white text-[#ff5722] shadow-2xs border border-[#ff5722]/30 font-bold"
                           : "text-gray-500 hover:text-gray-800"
@@ -1156,41 +1197,54 @@ export default function UploadPage() {
                     </button>
                   </div>
 
-                  {/* Main Action Button */}
-                  <button
-                    className={cn(
-                      "w-full sm:w-auto h-10 px-4 sm:px-5 text-xs sm:text-sm font-semibold rounded-xl text-white transition flex items-center justify-center gap-2 shadow-sm cursor-pointer disabled:opacity-50 disabled:pointer-events-none",
-                      bulkChannel === "direct"
-                        ? "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
-                        : "bg-[#ff5722] hover:bg-[#e64a19] active:bg-[#d84315]"
-                    )}
-                    disabled={
-                      data.length === 0 ||
-                      selectedRows.size === 0 ||
-                      isProcessing ||
-                      integrationLoading ||
-                      channelBlocked
-                    }
-                    onClick={handleStartBatchProcess}
-                    type="button"
-                  >
-                    {isProcessing ? (
-                      <Loader2 className="h-4 w-4 animate-spin shrink-0" />
-                    ) : bulkChannel === "direct" ? (
-                      <Send className="h-4 w-4 shrink-0" />
-                    ) : (
-                      <Play className="h-4 w-4 shrink-0" />
-                    )}
-                    <span className="truncate">
-                      {isProcessing
-                        ? bulkChannel === "direct"
-                          ? `Envoi direct (${progress.current}/${progress.total})`
-                          : `Création Brouillons (${progress.current}/${progress.total})`
-                        : bulkChannel === "direct"
-                          ? `Lancer l'Envoi Direct (${selectedCount})`
-                          : `Créer les Brouillons (${selectedCount})`}
-                    </span>
-                  </button>
+                  {/* Main Action Button (Start or Resume or Pause) */}
+                  {isProcessing ? (
+                    <button
+                      className="w-full sm:w-auto h-10 px-4 sm:px-5 text-xs sm:text-sm font-semibold rounded-xl text-amber-950 bg-amber-100 hover:bg-amber-200 border border-amber-300 transition flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+                      onClick={pauseBatchProcess}
+                      type="button"
+                      title="Mettre en pause l'envoi et conserver la progression pour plus tard"
+                    >
+                      <Pause className="h-4 w-4 text-amber-700 shrink-0" />
+                      <span className="truncate">
+                        {cooldownRemaining > 0
+                          ? `Mettre en pause (prochain : ${cooldownRemaining}s)`
+                          : `Mettre en pause (${progress.current}/${progress.total})`}
+                      </span>
+                    </button>
+                  ) : (
+                    <button
+                      className={cn(
+                        "w-full sm:w-auto h-10 px-4 sm:px-5 text-xs sm:text-sm font-semibold rounded-xl text-white transition flex items-center justify-center gap-2 shadow-sm cursor-pointer disabled:opacity-50 disabled:pointer-events-none",
+                        bulkChannel === "direct"
+                          ? "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
+                          : "bg-[#ff5722] hover:bg-[#e64a19] active:bg-[#d84315]"
+                      )}
+                      disabled={
+                        data.length === 0 ||
+                        selectedRows.size === 0 ||
+                        integrationLoading ||
+                        channelBlocked
+                      }
+                      onClick={handleStartBatchProcess}
+                      type="button"
+                    >
+                      {batchStatus === "paused" ? (
+                        <Play className="h-4 w-4 shrink-0" />
+                      ) : bulkChannel === "direct" ? (
+                        <Send className="h-4 w-4 shrink-0" />
+                      ) : (
+                        <Play className="h-4 w-4 shrink-0" />
+                      )}
+                      <span className="truncate">
+                        {batchStatus === "paused"
+                          ? `Reprendre l'envoi (${selectedCount})`
+                          : bulkChannel === "direct"
+                            ? `Lancer l'Envoi Direct (${selectedCount})`
+                            : `Créer les Brouillons (${selectedCount})`}
+                      </span>
+                    </button>
+                  )}
 
                   {/* Secondary pair: Preflight + Schedule */}
                   <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto">
@@ -1221,17 +1275,6 @@ export default function UploadPage() {
                       <span className="truncate">Programmer ({selectedCount})</span>
                     </button>
                   </div>
-
-                  {isProcessing && (
-                    <button
-                      className="w-full sm:w-auto h-10 px-3 text-xs font-semibold rounded-xl text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition cursor-pointer"
-                      onClick={cancelBatchProcess}
-                      type="button"
-                      title="Arrêter la file d'attente"
-                    >
-                      Arrêter
-                    </button>
-                  )}
                 </div>
               </div>
 
@@ -1452,16 +1495,178 @@ export default function UploadPage() {
                   </button>
                 </div>
               </div>
+
+              {/* Row 3: Anti-Spam Pacing & Daily Quota Strip */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-2 border-t border-gray-100">
+                {bulkChannel === "direct" ? (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[11px] font-semibold text-gray-600 mr-1">
+                      Cadence anti-spam (±20% aléatoire) :
+                    </span>
+                    {[
+                      { sec: 10, label: "⚡ 10s", hint: "Rapide" },
+                      { sec: 25, label: "🛡️ 25s", hint: "Recommandé" },
+                      { sec: 45, label: "🐢 45s", hint: "Prudent" },
+                      { sec: 60, label: "🔒 60s", hint: "Ultra-sûr" },
+                    ].map((preset) => {
+                      const active = antiSpamDelaySeconds === preset.sec;
+                      return (
+                        <button
+                          key={preset.sec}
+                          type="button"
+                          disabled={isProcessing}
+                          onClick={() => setAntiSpamDelaySeconds(preset.sec)}
+                          className={`rounded-md px-2 py-1 text-[11px] font-medium border transition cursor-pointer disabled:opacity-50 ${
+                            active
+                              ? "border-[#ff5722] bg-orange-50 text-[#ff5722] font-semibold"
+                              : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                          }`}
+                        >
+                          {preset.label}{" "}
+                          <span className="hidden sm:inline opacity-75">
+                            ({preset.hint})
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-[11px] text-gray-600">
+                    📝 Mode Brouillon Gmail : cadence rapide (2s) — aucun risque spam SMTP.
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium border ${
+                      dailySentCount >= 40
+                        ? "border-amber-200 bg-amber-50 text-amber-800"
+                        : "border-gray-200 bg-white text-gray-600"
+                    }`}
+                    title="Limite conseillée pour un Gmail personnel : ~50 candidatures/jour max"
+                  >
+                    <span>Aujourd&apos;hui :</span>
+                    <strong className="tabular-nums">{dailySentCount} / 50</strong>
+                    <span className="hidden sm:inline">recommandés</span>
+                  </span>
+                </div>
+              </div>
             </div>
 
-            {/* Live Queue Progress */}
-            {isProcessing && (
-              <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-4">
-                <div className="flex items-center justify-between text-xs font-semibold text-blue-900">
-                  <span>Queue Execution in Progress...</span>
-                  <span>{progressPercent}%</span>
+            {/* Post-Import Multi-Email Detection Banner (if any row still has >1 email) */}
+            {multiEmailRowCount > 0 && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div className="flex items-start gap-2.5 text-xs text-amber-950">
+                  <Sparkles className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold">
+                      {multiEmailRowCount} ligne{multiEmailRowCount > 1 ? "s contiennent" : " contient"} plusieurs adresses email dans la même colonne !
+                    </p>
+                    <p className="text-[11px] text-amber-800">
+                      Séparez-les automatiquement pour envoyer un email personnalisé individuel à chaque destinataire.
+                    </p>
+                  </div>
                 </div>
-                <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-blue-100">
+                <button
+                  type="button"
+                  onClick={handleSplitMultiEmailRows}
+                  disabled={isProcessing}
+                  className="w-full sm:w-auto shrink-0 rounded-lg bg-amber-600 hover:bg-amber-700 text-white px-3.5 py-2 text-xs font-semibold transition cursor-pointer shadow-xs"
+                >
+                  ✨ Détecter &amp; Séparer ({multiEmailRowCount})
+                </button>
+              </div>
+            )}
+
+            {/* Confirmation Summary when Multi-Email CSV was auto-split */}
+            {lastImportStats && lastImportStats.expandedExtra > 0 && multiEmailRowCount === 0 && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 px-3.5 py-2.5 flex items-center justify-between gap-2 text-xs text-emerald-900">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <span>
+                    <strong>Emails multiples détectés :</strong> {lastImportStats.sourceRows} lignes CSV converties en{" "}
+                    <strong>{data.length} contacts individuels</strong> (+{lastImportStats.expandedExtra} extrait
+                    {lastImportStats.expandedExtra > 1 ? "s" : ""}).
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setLastImportStats(null)}
+                  className="text-emerald-700 hover:text-emerald-950 text-[11px] underline shrink-0 cursor-pointer"
+                >
+                  Masquer
+                </button>
+              </div>
+            )}
+
+            {/* Persistent Paused Session Resume Banner */}
+            {batchStatus === "paused" &&
+              !isProcessing &&
+              data.length > 0 &&
+              remainingCount > 0 && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm font-semibold text-amber-900">
+                      <span>⏸️ Envoi en pause — état conservé</span>
+                      {pausedAt && (
+                        <span className="text-[11px] font-normal text-amber-700">
+                          (mis en pause le{" "}
+                          {new Date(pausedAt).toLocaleString("fr-FR", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                          )
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-amber-800">
+                      <strong>{sentCount}</strong> envoyé{sentCount > 1 ? "s" : ""} •{" "}
+                      <strong>{remainingCount}</strong> restant{remainingCount > 1 ? "s" : ""} — les
+                      contacts déjà envoyés sont ignorés automatiquement même après actualisation ou
+                      le lendemain.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleStartBatchProcess}
+                    disabled={
+                      selectedRows.size === 0 ||
+                      integrationLoading ||
+                      channelBlocked
+                    }
+                    className="shrink-0 inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#ff5722] hover:bg-[#e64a19] text-white px-4 py-2 text-xs font-semibold transition shadow-xs disabled:opacity-50 cursor-pointer"
+                  >
+                    <span>▶ Reprendre l&apos;envoi ({selectedCount})</span>
+                  </button>
+                </div>
+              )}
+
+            {/* Live Queue Progress & Anti-Spam Cooldown */}
+            {isProcessing && (
+              <div className="rounded-lg border border-blue-200 bg-blue-50/60 p-4 space-y-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-blue-900">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span>
+                      Envoyés : {progress.current} / {progress.total} ({progressPercent}%)
+                    </span>
+                    {cooldownRemaining > 0 && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-white border border-blue-200 px-2.5 py-0.5 text-[11px] font-medium text-blue-800 tabular-nums">
+                        🛡️ Délai anti-spam : prochain envoi dans {cooldownRemaining}s
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={pauseBatchProcess}
+                    className="inline-flex items-center gap-1 rounded-md border border-amber-300 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-900 transition cursor-pointer"
+                  >
+                    <Pause className="w-3 h-3" />
+                    <span>Pause</span>
+                  </button>
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-blue-100">
                   <div
                     className="h-full bg-[#ff5722] transition-all duration-300"
                     style={{ width: `${progressPercent}%` }}
