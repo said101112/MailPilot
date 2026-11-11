@@ -30,6 +30,7 @@ import {
   type CvProfile,
 } from "@/lib/workspace";
 import { cn } from "@/lib/utils";
+import { formatEmailToHtml, personalizeEmailText } from "@/lib/emailPersonalizer";
 
 interface TestLog {
   timestamp: string;
@@ -206,16 +207,25 @@ export default function TestDraftPage() {
       }
 
       // 3. Placeholders replacement
-      const replace = (text: string) => {
-        return text
-          .replace(/\[Company\]/gi, companyName)
-          .replace(/\[Position\]/gi, positionTitle)
-          .replace(/\[Name\]/gi, contactName)
-          .replace(/\[MyName\]/gi, candidateName);
+      const personalizationOpts = {
+        email: recipientEmail,
+        company: companyName,
+        position: positionTitle,
+        contactName,
+        candidateName,
+        isEnglish,
       };
 
-      const processedSubject = `[TEST SANDBOX] ${replace(activeTemplate.subject)}`;
-      const processedMessage = replace(activeTemplate.message).replace(/\n/g, "<br>");
+      const processedSubject = `[TEST SANDBOX] ${personalizeEmailText(activeTemplate.subject, {
+        ...personalizationOpts,
+        stripFormatting: true,
+      })}`;
+      const processedMessage = formatEmailToHtml(
+        personalizeEmailText(activeTemplate.message, {
+          ...personalizationOpts,
+          boldCompany: true,
+        })
+      );
 
       if (testChannel === "direct") {
         addLog("Envoi direct via Gmail SMTP (smtp.gmail.com:465)...", "info");

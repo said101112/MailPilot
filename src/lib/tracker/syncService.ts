@@ -1,25 +1,11 @@
 import { supabase } from "@/lib/supabase";
 import { getAuthUserId } from "@/lib/auth";
+import { inferCompanyFromEmail } from "@/lib/emailPersonalizer";
 import { ensureCompanyLogo } from "./queries";
 import type { CompanyRow, ContactRow, JobApplicationRow } from "./types";
 import { resolveCountryCategory } from "./countries";
 
-const PUBLIC_EMAIL_DOMAINS = new Set([
-  "gmail.com",
-  "yahoo.com",
-  "yahoo.fr",
-  "hotmail.com",
-  "hotmail.fr",
-  "outlook.com",
-  "outlook.fr",
-  "live.com",
-  "icloud.com",
-  "proton.me",
-  "protonmail.com",
-  "orange.fr",
-  "free.fr",
-  "wanadoo.fr",
-]);
+export { inferCompanyFromEmail };
 
 /**
  * Infer human-friendly Contact Full Name and Role from email and optional company name
@@ -97,33 +83,6 @@ export function parseContactFromEmail(
   return {
     fullName: comp ? `Contact ${comp}` : "Contact Entreprise",
     role: "Contact Entreprise",
-  };
-}
-
-/**
- * Infer company name and domain from recipient email address
- */
-export function inferCompanyFromEmail(email: string): {
-  name: string;
-  domain: string;
-  website: string;
-} | null {
-  const parts = email.trim().toLowerCase().split("@");
-  if (parts.length < 2) return null;
-  const domain = parts[1];
-
-  if (PUBLIC_EMAIL_DOMAINS.has(domain)) return null;
-
-  // e.g. "talentmind.ma" -> "talentmind", "btpconsulting.ma" -> "btpconsulting"
-  const domainParts = domain.split(".");
-  const root = domainParts[0] || "";
-  if (!root || root.length < 2) return null;
-
-  const formattedName = root.charAt(0).toUpperCase() + root.slice(1);
-  return {
-    name: formattedName,
-    domain: domain,
-    website: `https://${domain}`,
   };
 }
 

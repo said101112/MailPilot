@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 import { readCandidateName } from "./workspace";
+import { inferFirstNameFromEmail, personalizeEmailText } from "./emailPersonalizer";
 
 export interface CoverLetterOptions {
   candidateName?: string;
@@ -105,6 +106,8 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
     rawSubject.toLowerCase().includes("internship") ||
     rawBody.toLowerCase().includes("dear hiring") ||
     rawBody.toLowerCase().includes("kind regards") ||
+    rawBody.toLowerCase().includes("best regards") ||
+    rawBody.toLowerCase().includes("[at company]") ||
     rawBody.toLowerCase().includes("dear ");
 
   // Détection du domaine (Data/IA vs Développement)
@@ -151,6 +154,10 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
     lowerCompany === "hiring manager" ||
     lowerCompany === "l'entreprise" ||
     lowerCompany === "entreprise" ||
+    lowerCompany === "votre entreprise" ||
+    lowerCompany === "votre équipe" ||
+    lowerCompany === "équipe recrutement" ||
+    lowerCompany === "equipe recrutement" ||
     lowerCompany === "company" ||
     lowerCompany === "société" ||
     lowerCompany === "societe" ||
@@ -326,11 +333,20 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
 
   // 4. Objet de la lettre (Sous le bloc destinataire avec gestion dynamique multi-lignes)
   y = recipientBoxY + boxHeight + 7;
-  let objectText = opts.subject || "";
+  let objectText = opts.subject
+    ? personalizeEmailText(opts.subject, {
+        company: isGenericCompany ? null : rawCompany,
+        contactName: opts.contactName,
+        position,
+        candidateName: name,
+        isEnglish,
+        stripFormatting: true,
+      })
+    : "";
   if (!objectText) {
     objectText = isEnglish
-      ? `Subject: Application for a Final-Year Internship – February 2027`
-      : `Objet : Candidature pour un stage PFE – Février 2027`;
+      ? `Subject: Application for a 6-Month Final-Year Internship – February 2027`
+      : `Objet : Candidature pour un stage PFE de 6 mois – Février 2027`;
   } else if (!objectText.toLowerCase().startsWith("objet") && !objectText.toLowerCase().startsWith("subject")) {
     objectText = isEnglish ? `Subject: ${objectText}` : `Objet : ${objectText}`;
   }
@@ -353,32 +369,31 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
   doc.text(subjectLines, subjectTextX, y);
   y += totalSubjectHeight + 4.5;
 
-  // 5. Formule d'appel
+  // 5. Formule d'appel naturelle (jamais "Madame, Monsieur")
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9.5);
   doc.setTextColor(...COLOR_DARK);
 
-  let salutation = isEnglish ? "Dear Hiring Team," : "Madame, Monsieur,";
-  if (
-    opts.contactName &&
-    !["hiring manager", "recruteur direct", "direct", "recruteur"].includes(opts.contactName.toLowerCase().trim()) &&
-    opts.contactName.trim().length > 0
-  ) {
-    salutation = isEnglish ? `Dear ${opts.contactName},` : `Bonjour ${opts.contactName},`;
-  }
+  const firstName = inferFirstNameFromEmail("", opts.contactName);
+  const salutation = isEnglish
+    ? firstName
+      ? `Hello ${firstName},`
+      : "Hello,"
+    : firstName
+      ? `Bonjour ${firstName},`
+      : "Bonjour,";
   doc.text(salutation, leftMargin, y);
 
   // 6. Corps de la lettre (nettoyage des doublons/en-têtes redondants)
   y += 5.5;
-  const displayCompany = isGenericCompany
-    ? (isEnglish ? "your team" : "votre entreprise")
-    : rawCompany;
-
-  const cleanBody = rawBody
-    .replace(/\[Company\]/g, displayCompany)
-    .replace(/\[Position\]/g, position)
-    .replace(/\[MyName\]/g, name)
-    .replace(/\[Name\]/g, opts.contactName || (isEnglish ? "Hiring Manager" : "Madame, Monsieur"));
+  const cleanBody = personalizeEmailText(rawBody, {
+    company: isGenericCompany ? null : rawCompany,
+    contactName: opts.contactName,
+    position,
+    candidateName: name,
+    isEnglish,
+    stripFormatting: true,
+  });
 
   const rawParagraphs = cleanBody.split(/\n+/).filter(Boolean);
 
@@ -398,7 +413,12 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
       lower.startsWith("madame, monsieur") ||
       lower.startsWith("dear hiring team") ||
       lower.startsWith("dear ") ||
+      lower === "bonjour," ||
+      lower === "bonjour" ||
       lower.startsWith("bonjour ") ||
+      lower === "hello," ||
+      lower === "hello" ||
+      lower.startsWith("hello ") ||
       // Supprimer les liens redondants avec l'en-tête (portfolio, github, linkedin)
       lower.includes("consulter mes réalisations") ||
       lower.includes("explore my projects") ||
@@ -413,6 +433,10 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
       lower.startsWith("- linkedin") ||
       // Supprimer les formules de clôture pour éviter la duplication
       lower.includes("je serais ravi de pouvoir échanger") ||
+      lower.includes("je serais ravi d’échanger") ||
+      lower.includes("je serais ravi d'échanger") ||
+      lower.includes("merci d’avance pour votre temps") ||
+      lower.includes("merci d'avance pour votre temps") ||
       lower.includes("would welcome the opportunity to discuss") ||
       lower.includes("thank you for your time and consideration") ||
       lower.includes("salutations distinguées") ||
@@ -422,9 +446,11 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
       lower.includes("dans l'attente d'un échange") ||
       lower.includes("dans l'attente de votre retour") ||
       lower.startsWith("kind regards") ||
+      lower.startsWith("best regards") ||
       lower.startsWith("bien cordialement") ||
       lower.startsWith("cordialement") ||
-      lower.startsWith("sincerely")
+      lower.startsWith("sincerely") ||
+      lower.startsWith("excellente journée")
     ) {
       continue;
     }
@@ -464,8 +490,8 @@ export function generateCoverLetterPdf(opts: CoverLetterOptions) {
   }
 
   const closing = isEnglish
-    ? "Thank you for your time and consideration. I would welcome the opportunity to discuss my background and motivation in an interview."
-    : "Je serais ravi de pouvoir échanger avec vous lors d’un entretien. Je vous remercie pour votre attention et vous prie d’agréer, Madame, Monsieur, l’expression de mes salutations distinguées.";
+    ? "I would welcome the opportunity to discuss my background in a quick call or interview. Thank you for your time and consideration.\n\nKind regards,"
+    : "Je serais ravi d’échanger avec vous lors d’un entretien. Merci d’avance pour votre temps et votre retour.\n\nBien cordialement,";
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);

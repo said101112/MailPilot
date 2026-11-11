@@ -33,6 +33,11 @@ import {
 } from "@/lib/tracker/syncService";
 import type { MessageTemplate } from "@/lib/templates";
 import { generateCoverLetterPdf } from "@/lib/coverLetterPdf";
+import {
+  formatEmailToHtml,
+  personalizeEmailText,
+  resolveEmailContext,
+} from "@/lib/emailPersonalizer";
 
 export interface CSVRow {
   company: string;
@@ -362,20 +367,40 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
             continue;
           }
 
-          const replace = (text: string) => {
-            let processedText = text;
-            Object.keys(row).forEach((key) => {
-              const val = row[key as keyof CSVRow];
-              if (typeof val === "string") {
-                const regex = new RegExp(`\\[${key}\\]`, "gi");
-                processedText = processedText.replace(regex, val);
-              }
-            });
-            return processedText.replace(/\[MyName\]/gi, savedName);
-          };
+          const isEnglishTpl = activeTemplate.id.includes("_en");
+          const rowCtx = resolveEmailContext(
+            {
+              email: row.email,
+              company: row.company,
+              contactName: row.name || defaultContactName,
+              position: row.position || defaultPosition,
+              candidateName: savedName,
+              isEnglish: isEnglishTpl,
+            },
+            activeTemplate.message
+          );
 
-          const processedMessage = replace(activeTemplate.message).replace(/\n/g, "<br>");
-          const processedSubject = replace(activeTemplate.subject);
+          const plainMessage = personalizeEmailText(activeTemplate.message, {
+            email: row.email,
+            company: rowCtx.companyName,
+            contactName: rowCtx.firstName,
+            position: row.position || defaultPosition,
+            candidateName: savedName,
+            isEnglish: rowCtx.isEnglish,
+            boldCompany: true,
+            extraFields: row as unknown as Record<string, unknown>,
+          });
+          const processedMessage = formatEmailToHtml(plainMessage);
+          const processedSubject = personalizeEmailText(activeTemplate.subject, {
+            email: row.email,
+            company: rowCtx.companyName,
+            contactName: rowCtx.firstName,
+            position: row.position || defaultPosition,
+            candidateName: savedName,
+            isEnglish: rowCtx.isEnglish,
+            stripFormatting: true,
+            extraFields: row as unknown as Record<string, unknown>,
+          });
 
           // Resolve CV for this row: row-specific CV -> batch default CV -> active CV -> legacy fallback
           const cvLibrary = readStoredCvLibrary();
@@ -402,16 +427,16 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
           if (shouldAttachCoverLetter) {
             try {
               const letterPdf = generateCoverLetterPdf({
-                company: row.company || "L'Entreprise",
+                company: rowCtx.companyName || "Recruteur",
                 position: row.position || defaultPosition,
-                contactName: row.name || defaultContactName,
-                body: activeTemplate.message,
-                subject: activeTemplate.subject,
+                contactName: rowCtx.firstName || undefined,
+                body: plainMessage,
+                subject: processedSubject,
               });
               finalCoverLetterBase64 = letterPdf.getBase64();
               finalCoverLetterFileName = letterPdf.fileName;
               console.log(
-                `[MailPilot] Cover letter generated for ${row.company || "Company"}: ${finalCoverLetterFileName} (${finalCoverLetterBase64.length} chars)`
+                `[MailPilot] Cover letter generated for ${rowCtx.companyName || "Recruteur"}: ${finalCoverLetterFileName} (${finalCoverLetterBase64.length} chars)`
               );
             } catch (err) {
               console.warn("Cover letter PDF generation warning:", err);

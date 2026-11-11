@@ -1,4 +1,5 @@
 import nodemailer, { type SendMailOptions } from "nodemailer";
+import { formatEmailToHtml, stripEmailFormatting } from "./emailPersonalizer";
 
 export interface DirectMailPayload {
   to: string;
@@ -107,7 +108,7 @@ export async function verifySmtpConnection(): Promise<SmtpConfigStatus> {
  * Converts HTML/formatted text into clean plain text for multipart/alternative (prevents SPAM)
  */
 function convertToPlainText(htmlOrText: string): string {
-  return htmlOrText
+  return stripEmailFormatting(htmlOrText)
     .replace(/<br\s*[\/]?>/gi, "\n")
     .replace(/<\/p>/gi, "\n\n")
     .replace(/<[^>]+>/gi, "")
@@ -157,15 +158,13 @@ export async function sendDirectEmail(payload: DirectMailPayload) {
   }
 
   const plainText = convertToPlainText(payload.message);
-  const htmlBody = payload.message.includes("<br") || payload.message.includes("<p")
-    ? payload.message
-    : payload.message.replace(/\n/g, "<br>");
+  const htmlBody = formatEmailToHtml(payload.message);
 
   const mailOptions: SendMailOptions = {
     from: fromHeader,
     to: payload.to,
     replyTo: payload.replyTo || user,
-    subject: payload.subject,
+    subject: stripEmailFormatting(payload.subject),
     text: plainText,
     html: `<!DOCTYPE html><html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #1f2937;">${htmlBody}</body></html>`,
     attachments,

@@ -55,6 +55,12 @@ import {
   inferCompanyFromEmail,
   syncEmailDispatchToTracker,
 } from "@/lib/tracker/syncService";
+import {
+  formatEmailToHtml,
+  personalizeEmailText,
+  resolveEmailContext,
+  stripEmailFormatting,
+} from "@/lib/emailPersonalizer";
 import PreflightCheckModal from "@/components/PreflightCheckModal";
 import ScheduleModal from "@/components/ScheduleModal";
 import ScheduledQueueModal from "@/components/ScheduledQueueModal";
@@ -85,6 +91,27 @@ interface LastSendResult {
   company: string;
   channel: "direct" | "draft";
   attachments: string[];
+}
+
+function renderFormattedPreview(text: string) {
+  const tokens = text.split(/(\*\*[^*\n]+\*\*|<strong>.*?<\/strong>)/gi);
+  return tokens.map((token, idx) => {
+    if (token.startsWith("**") && token.endsWith("**") && token.length > 4) {
+      return (
+        <strong key={idx} className="font-semibold text-gray-950">
+          {token.slice(2, -2)}
+        </strong>
+      );
+    }
+    if (/^<strong>.*<\/strong>$/i.test(token)) {
+      return (
+        <strong key={idx} className="font-semibold text-gray-950">
+          {token.replace(/<\/?strong>/gi, "")}
+        </strong>
+      );
+    }
+    return <span key={idx}>{token}</span>;
+  });
 }
 
 export default function ApplyPage() {
@@ -238,8 +265,16 @@ export default function ApplyPage() {
 
   const handleOpenCustomModal = () => {
     const current = templates.find((t) => t.id === selectedTemplateId) || DEFAULT_TEMPLATES[0];
-    setTempSubject(isCustomized ? customSubject : (customSubject || current.subject));
-    setTempMessage(isCustomized ? customMessage : (customMessage || current.message));
+    if (isCustomized) {
+      setTempSubject(customSubject || current.subject);
+      setTempMessage(customMessage || current.message);
+    } else if (email.trim().includes("@")) {
+      setTempSubject(liveSubject);
+      setTempMessage(liveMessage);
+    } else {
+      setTempSubject(current.subject);
+      setTempMessage(current.message);
+    }
     setIsModalOpen(true);
   };
 
@@ -458,31 +493,55 @@ export default function ApplyPage() {
 
   // Live Interpolation Calculations for Real-Time Preview
   const inferredCompany = useMemo(() => inferCompanyFromEmail(email), [email]);
-  const companyDisplayName = inferredCompany?.name || "votre entreprise";
   const candidateName = readCandidateName() || "Said Nichan";
 
   const activeTemplate = useMemo(() => {
     return templates.find((t) => t.id === selectedTemplateId) || DEFAULT_TEMPLATES[0];
   }, [templates, selectedTemplateId]);
 
+  const emailContext = useMemo(
+    () =>
+      resolveEmailContext(
+        {
+          email,
+          candidateName,
+          isEnglish: selectedTemplateId.includes("_en"),
+        },
+        activeTemplate.message
+      ),
+    [email, candidateName, selectedTemplateId, activeTemplate.message]
+  );
+
+  const companyDisplayName = emailContext.companyName || "Recruteur";
+
   const rawSubject = isCustomized ? (customSubject.trim() || activeTemplate.subject) : activeTemplate.subject;
   const rawMessage = isCustomized ? (customMessage.trim() || activeTemplate.message) : activeTemplate.message;
 
-  const replaceTags = (text: string) => {
-    return text
-      .replace(/in the \[Position\] role/gi, "in the open position")
-      .replace(/\[Position\] role/gi, "open position")
-      .replace(/\[Position\]/g, "open position")
-      .replace(/\{position\}/gi, "open position")
-      .replace(/\[Company\]/g, companyDisplayName)
-      .replace(/\{company\}/gi, companyDisplayName)
-      .replace(/\[MyName\]/g, candidateName)
-      .replace(/\{name\}/gi, candidateName)
-      .replace(/\[HR Name\]/g, "Hiring Manager");
-  };
+  const liveSubject = useMemo(
+    () =>
+      personalizeEmailText(rawSubject, {
+        email,
+        company: emailContext.companyName,
+        contactName: emailContext.firstName,
+        candidateName,
+        isEnglish: emailContext.isEnglish,
+        stripFormatting: true,
+      }),
+    [rawSubject, email, emailContext.companyName, emailContext.firstName, candidateName, emailContext.isEnglish]
+  );
 
-  const liveSubject = useMemo(() => replaceTags(rawSubject), [rawSubject, companyDisplayName, candidateName]);
-  const liveMessage = useMemo(() => replaceTags(rawMessage), [rawMessage, companyDisplayName, candidateName]);
+  const liveMessage = useMemo(
+    () =>
+      personalizeEmailText(rawMessage, {
+        email,
+        company: emailContext.companyName,
+        contactName: emailContext.firstName,
+        candidateName,
+        isEnglish: emailContext.isEnglish,
+        boldCompany: true,
+      }),
+    [rawMessage, email, emailContext.companyName, emailContext.firstName, candidateName, emailContext.isEnglish]
+  );
 
   const matchedCv = useMemo(() => {
     if (selectedCvId) {
@@ -499,7 +558,7 @@ export default function ApplyPage() {
       const letterPdf = generateCoverLetterPdf({
         company: companyDisplayName,
         position: "Stage PFE / Emploi",
-        contactName: "Hiring Manager",
+        contactName: emailContext.firstName || undefined,
         body: liveMessage,
         subject: liveSubject,
       });
@@ -507,7 +566,7 @@ export default function ApplyPage() {
     } catch {
       return { base64: undefined, fileName: undefined };
     }
-  }, [includeCoverLetter, companyDisplayName, liveMessage, liveSubject]);
+  }, [includeCoverLetter, companyDisplayName, emailContext.firstName, liveMessage, liveSubject]);
 
   const handleOpenGmailWeb = async () => {
     if (!email || !emailCheck.valid) {
@@ -523,7 +582,7 @@ export default function ApplyPage() {
 
     const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(
       email
-    )}&su=${encodeURIComponent(liveSubject)}&body=${encodeURIComponent(liveMessage)}`;
+    )}&su=${encodeURIComponent(liveSubject)}&body=${encodeURIComponent(stripEmailFormatting(liveMessage))}`;
 
     window.open(gmailUrl, "_blank", "noopener,noreferrer");
     toast.success("Onglet Gmail ouvert avec l'email pré-rempli ! N'oubliez pas d'attacher votre CV.");
@@ -610,7 +669,7 @@ export default function ApplyPage() {
           const letterPdf = generateCoverLetterPdf({
             company: companyDisplayName,
             position: "Stage PFE / Emploi",
-            contactName: "Hiring Manager",
+            contactName: emailContext.firstName || undefined,
             body: liveMessage,
             subject: liveSubject,
           });
@@ -633,7 +692,7 @@ export default function ApplyPage() {
           email: email,
           candidateName: candidateName,
           subject: liveSubject,
-          message: liveMessage,
+          message: formatEmailToHtml(liveMessage),
           cv_base64: finalCvBase64,
           cv_filename: finalCvFileName,
           cv_data: finalCvBase64,
@@ -652,7 +711,7 @@ export default function ApplyPage() {
           email: email,
           candidateName: candidateName,
           subject: liveSubject,
-          message: liveMessage.replace(/\n/g, "<br>"),
+          message: formatEmailToHtml(liveMessage),
           cv_base64: finalCvBase64,
           cv_filename: finalCvFileName,
           cv_data: finalCvBase64,
@@ -832,11 +891,22 @@ export default function ApplyPage() {
               <label className="text-xs font-semibold text-gray-700">
                 Email du recruteur ou entreprise <span className="text-red-500">*</span>
               </label>
-              {inferredCompany && inferredCompany.name && (
-                <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
-                  🏢 {inferredCompany.name}
-                </span>
-              )}
+              <div className="flex flex-wrap items-center gap-1">
+                {emailContext.firstName && (
+                  <span className="text-[10.5px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                    👋 {emailContext.firstName}
+                  </span>
+                )}
+                {inferredCompany && inferredCompany.name ? (
+                  <span className="text-[11px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
+                    🏢 {inferredCompany.name}
+                  </span>
+                ) : email && emailCheck.valid && emailContext.isPublicProvider ? (
+                  <span className="text-[10.5px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                    ✉️ Email personnel · Formule neutre
+                  </span>
+                ) : null}
+              </div>
             </div>
 
             <div className="relative">
@@ -1285,7 +1355,7 @@ export default function ApplyPage() {
                 {/* Email Body Preview */}
                 <div className="rounded-xl border border-gray-100 bg-white p-3 sm:p-3.5 overflow-y-auto min-h-[180px] sm:min-h-[220px] max-h-[260px] sm:max-h-[340px] flex-1">
                   <div className="text-xs text-gray-800 leading-relaxed whitespace-pre-wrap font-sans break-words">
-                    {liveMessage}
+                    {renderFormattedPreview(liveMessage)}
                   </div>
                 </div>
               </div>
@@ -1449,7 +1519,7 @@ export default function ApplyPage() {
                     Corps de l&apos;email / Message *
                   </label>
                   <span className="text-[11px] text-gray-400">
-                    Variables : [Company], [Position], [MyName]
+                    Variables : [Company], [MyName] · Gras : **texte**
                   </span>
                 </div>
                 <textarea

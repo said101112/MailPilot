@@ -3,6 +3,7 @@
 import { sendDirectApplication, sendApplication } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import { syncEmailDispatchToTracker } from "@/lib/tracker/syncService";
+import { formatEmailToHtml, stripEmailFormatting } from "@/lib/emailPersonalizer";
 
 export interface ScheduledEmail {
   id: string;
@@ -154,14 +155,17 @@ export async function processDueScheduledEmails(): Promise<{
 
     for (const item of dueItems) {
       try {
+        const cleanSubject = stripEmailFormatting(item.subject);
+        const formattedBody = formatEmailToHtml(item.message);
+
         if (item.channel === "direct") {
           await sendDirectApplication({
             company: item.company_name,
             position: item.position || "Stage PFE / Emploi",
             email: item.recipient_email,
             candidateName: item.candidate_name,
-            subject: item.subject,
-            message: item.message,
+            subject: cleanSubject,
+            message: formattedBody,
             cv_base64: item.cv_base64,
             cv_filename: item.cv_filename,
             cv_data: item.cv_base64,
@@ -177,8 +181,8 @@ export async function processDueScheduledEmails(): Promise<{
             position: item.position || "Stage PFE / Emploi",
             email: item.recipient_email,
             candidateName: item.candidate_name,
-            subject: item.subject,
-            message: item.message.replace(/\n/g, "<br>"),
+            subject: cleanSubject,
+            message: formattedBody,
             cv_base64: item.cv_base64,
             cv_filename: item.cv_filename,
             cv_data: item.cv_base64,

@@ -67,6 +67,7 @@ import {
   type ScheduledEmail,
 } from "@/lib/schedulerService";
 import { generateCoverLetterPdf } from "@/lib/coverLetterPdf";
+import { personalizeEmailText, resolveEmailContext } from "@/lib/emailPersonalizer";
 
 type ValidationState =
   | "processing"
@@ -147,36 +148,9 @@ function extractEmailsFromText(rawText: string): string[] {
   return unique;
 }
 
-const COMMON_FREE_PROVIDERS = new Set([
-  "gmail.com",
-  "yahoo.com",
-  "yahoo.fr",
-  "hotmail.com",
-  "hotmail.fr",
-  "outlook.com",
-  "outlook.fr",
-  "live.com",
-  "icloud.com",
-  "proton.me",
-  "protonmail.com",
-]);
-
 function guessCompanyFromEmail(email: string): string {
-  const parts = email.split("@");
-  if (parts.length < 2) return "Recruteur";
-  const domain = parts[1].toLowerCase();
-  if (COMMON_FREE_PROVIDERS.has(domain)) {
-    return "Équipe Recrutement";
-  }
-  const cleanDomain = domain.replace(
-    /^(recrutement|recruitment|carrieres|carriere|careers|career|rh|hr|jobs|job|talent|talents|contact|stages|stage|pfe)\./i,
-    "",
-  );
-  const domainParts = cleanDomain.split(".");
-  const namePart =
-    domainParts.length >= 2 ? domainParts[domainParts.length - 2] : domainParts[0];
-  if (!namePart) return "Entreprise";
-  return namePart.charAt(0).toUpperCase() + namePart.slice(1);
+  const inferred = inferCompanyFromEmail(email);
+  return inferred?.name || "Équipe Recrutement";
 }
 
 export default function UploadPage() {
@@ -477,33 +451,47 @@ export default function UploadPage() {
     const selectedList = data.filter((_, index) => selectedRows.has(index));
 
     const rows = selectedList.map((row) => {
-      const company = row.company || guessCompanyFromEmail(row.email) || "Entreprise";
       const position = row.position || defaultPosition || "Stage PFE / Emploi";
-      const parsedContact = parseContactFromEmail(row.email);
-      const contactName =
+      const rawContact =
         typeof row.name === "string" && row.name.trim()
           ? row.name.trim()
-          : (parsedContact?.fullName || defaultContactName || "");
+          : defaultContactName || "";
+      const rowCtx = resolveEmailContext(
+        {
+          email: row.email,
+          company: row.company,
+          contactName: rawContact,
+          position,
+          candidateName,
+          isEnglish: activeTemplate.id.includes("_en"),
+        },
+        activeTemplate.message
+      );
 
-      const replace = (text: string) => {
-        let processedText = text;
-        Object.keys(row).forEach((key) => {
-          const val = row[key as keyof CSVRow];
-          if (typeof val === "string") {
-            const regex = new RegExp(`\\[${key}\\]`, "gi");
-            processedText = processedText.replace(regex, val);
-          }
-        });
-        return processedText
-          .replace(/\[Company\]/gi, company)
-          .replace(/\[Position\]/gi, position)
-          .replace(/\[HR Name\]/gi, contactName || "Hiring Manager")
-          .replace(/\[Name\]/gi, contactName || "Hiring Manager")
-          .replace(/\[MyName\]/gi, candidateName);
-      };
+      const subject = personalizeEmailText(activeTemplate.subject, {
+        email: row.email,
+        company: rowCtx.companyName,
+        contactName: rowCtx.firstName,
+        position,
+        candidateName,
+        isEnglish: rowCtx.isEnglish,
+        stripFormatting: true,
+        extraFields: row as unknown as Record<string, unknown>,
+      });
+      const message = personalizeEmailText(activeTemplate.message, {
+        email: row.email,
+        company: rowCtx.companyName,
+        contactName: rowCtx.firstName,
+        position,
+        candidateName,
+        isEnglish: rowCtx.isEnglish,
+        boldCompany: true,
+        extraFields: row as unknown as Record<string, unknown>,
+      });
 
-      const subject = replace(activeTemplate.subject);
-      const message = replace(activeTemplate.message);
+      const resolvedCompanyLabel = rowCtx.companyName || "Recruteur";
+      const parsedContact = parseContactFromEmail(row.email, resolvedCompanyLabel);
+      const displayContact = rawContact || parsedContact.fullName || "";
 
       const rowCv = row.cvId ? cvLibrary.find((c) => c.id === row.cvId) : null;
       const cvBase64 = rowCv?.base64 || fallbackCvBase64;
@@ -515,9 +503,9 @@ export default function UploadPage() {
       if (includeCoverLetter) {
         try {
           const letterPdf = generateCoverLetterPdf({
-            company,
+            company: resolvedCompanyLabel,
             position,
-            contactName: contactName || "Hiring Manager",
+            contactName: rowCtx.firstName || undefined,
             body: message,
             subject,
           });
@@ -530,9 +518,9 @@ export default function UploadPage() {
 
       return {
         email: row.email,
-        company,
+        company: resolvedCompanyLabel,
         position,
-        name: contactName,
+        name: displayContact,
         subject,
         message,
         cv_filename: cvFilename,

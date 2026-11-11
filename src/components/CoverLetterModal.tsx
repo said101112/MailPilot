@@ -111,7 +111,7 @@ export function CoverLetterModal({
         candidateTitle: profile.title,
         company: company.trim() || "Entreprise",
         position: position.trim() || "Poste",
-        contactName: contactName.trim() || "Madame, Monsieur",
+        contactName: contactName.trim() || undefined,
         subject: subjectText,
         body: messageBody,
       });
@@ -135,7 +135,7 @@ export function CoverLetterModal({
         candidateTitle: profile.title,
         company: company.trim() || "Entreprise",
         position: position.trim() || "Poste",
-        contactName: contactName.trim() || "Madame, Monsieur",
+        contactName: contactName.trim() || undefined,
         subject: subjectText,
         body: messageBody,
       });
