@@ -126,6 +126,31 @@ function guessCompanyFromEmail(email: string): string {
   return inferred?.name || "Équipe Recrutement";
 }
 
+function formatDurationFr(totalSeconds: number, exact = false): string {
+  const s = Math.max(0, Math.round(totalSeconds));
+  if (s === 0) return "0s";
+  const prefix = exact ? "" : "~";
+  if (s < 60) return `${prefix}${s}s`;
+  const hours = Math.floor(s / 3600);
+  const mins = Math.floor((s % 3600) / 60);
+  const secs = s % 60;
+  if (hours > 0) {
+    return mins > 0 ? `${prefix}${hours}h ${mins}min` : `${prefix}${hours}h`;
+  }
+  if (exact) {
+    return `${mins} min ${secs.toString().padStart(2, "0")}s`;
+  }
+  return secs >= 15 && mins < 5 ? `${prefix}${mins} min ${secs}s` : `${prefix}${mins} min`;
+}
+
+function formatEstimatedFinishTime(remainingSeconds: number): string {
+  if (remainingSeconds <= 0) return "";
+  return new Date(Date.now() + remainingSeconds * 1000).toLocaleTimeString("fr-FR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export default function UploadPage() {
   const {
     data,
@@ -425,6 +450,58 @@ export default function UploadPage() {
   const sentCount = data.filter((r) => r.status === "success").length;
   const remainingCount = data.filter((r) => r.status === "pending" || r.status === "error").length;
   const selectedCount = selectedRows.size;
+  const pendingSelectedCount = useMemo(() => {
+    let count = 0;
+    selectedRows.forEach((idx) => {
+      if (data[idx] && data[idx].status !== "success") {
+        count += 1;
+      }
+    });
+    return count;
+  }, [data, selectedRows]);
+
+  const baseDelaySeconds = bulkChannel === "direct" ? antiSpamDelaySeconds : 2;
+  const avgSendOverheadSeconds = 2;
+  const estimatedRemainingSeconds = useMemo(() => {
+    if (isProcessing) {
+      const emailsLeftAfterCurrent = Math.max(0, progress.total - progress.current);
+      if (cooldownRemaining > 0) {
+        return (
+          cooldownRemaining +
+          emailsLeftAfterCurrent * avgSendOverheadSeconds +
+          Math.max(0, emailsLeftAfterCurrent - 1) * baseDelaySeconds
+        );
+      }
+      if (emailsLeftAfterCurrent === 0) return avgSendOverheadSeconds;
+      return (
+        emailsLeftAfterCurrent * (baseDelaySeconds + avgSendOverheadSeconds) +
+        avgSendOverheadSeconds
+      );
+    }
+
+    if (pendingSelectedCount <= 0) return 0;
+    return (
+      Math.max(0, pendingSelectedCount - 1) * baseDelaySeconds +
+      pendingSelectedCount * avgSendOverheadSeconds
+    );
+  }, [
+    isProcessing,
+    progress.total,
+    progress.current,
+    cooldownRemaining,
+    baseDelaySeconds,
+    pendingSelectedCount,
+  ]);
+
+  const estimatedDurationLabel =
+    estimatedRemainingSeconds > 0
+      ? formatDurationFr(estimatedRemainingSeconds, isProcessing)
+      : "";
+  const estimatedFinishClock =
+    estimatedRemainingSeconds >= 30
+      ? formatEstimatedFinishTime(estimatedRemainingSeconds)
+      : "";
+
   const progressPercent =
     progress.total > 0 && (isProcessing || batchStatus === "paused")
       ? Math.round((progress.current / progress.total) * 100)
@@ -1536,7 +1613,23 @@ export default function UploadPage() {
                   </div>
                 )}
 
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  {estimatedRemainingSeconds > 0 && !isProcessing && (
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50/70 px-2.5 py-0.5 text-[11px] font-medium text-blue-800 tabular-nums"
+                      title={`Estimation pour ${pendingSelectedCount} contact${pendingSelectedCount > 1 ? "s" : ""} sélectionné${pendingSelectedCount > 1 ? "s" : ""} avec une cadence moyenne de ${baseDelaySeconds}s + ~2s d'envoi`}
+                    >
+                      <Clock className="h-3 w-3 text-blue-600 shrink-0" />
+                      <span>Durée estimée :</span>
+                      <strong>{estimatedDurationLabel}</strong>
+                      {estimatedFinishClock && (
+                        <span className="hidden sm:inline text-blue-700/80">
+                          (fin ~{estimatedFinishClock})
+                        </span>
+                      )}
+                    </span>
+                  )}
+
                   <span
                     className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium border ${
                       dailySentCount >= 40
@@ -1623,9 +1716,16 @@ export default function UploadPage() {
                     </div>
                     <p className="text-xs text-amber-800">
                       <strong>{sentCount}</strong> envoyé{sentCount > 1 ? "s" : ""} •{" "}
-                      <strong>{remainingCount}</strong> restant{remainingCount > 1 ? "s" : ""} — les
-                      contacts déjà envoyés sont ignorés automatiquement même après actualisation ou
-                      le lendemain.
+                      <strong>{remainingCount}</strong> restant{remainingCount > 1 ? "s" : ""}
+                      {estimatedDurationLabel && (
+                        <>
+                          {" "}
+                          • Temps restant estimé :{" "}
+                          <strong className="tabular-nums">{estimatedDurationLabel}</strong>
+                        </>
+                      )}{" "}
+                      — les contacts déjà envoyés sont ignorés automatiquement même après
+                      actualisation ou le lendemain.
                     </p>
                   </div>
                   <button
@@ -1651,9 +1751,20 @@ export default function UploadPage() {
                     <span>
                       Envoyés : {progress.current} / {progress.total} ({progressPercent}%)
                     </span>
+                    {estimatedDurationLabel && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-white border border-blue-200 px-2.5 py-0.5 text-[11px] font-medium text-blue-900 tabular-nums">
+                        <Clock className="h-3 w-3 text-blue-600 shrink-0" />
+                        <span>Temps restant : ~{estimatedDurationLabel}</span>
+                        {estimatedFinishClock && (
+                          <span className="hidden sm:inline text-blue-700/80">
+                            (fin ~{estimatedFinishClock})
+                          </span>
+                        )}
+                      </span>
+                    )}
                     {cooldownRemaining > 0 && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-white border border-blue-200 px-2.5 py-0.5 text-[11px] font-medium text-blue-800 tabular-nums">
-                        🛡️ Délai anti-spam : prochain envoi dans {cooldownRemaining}s
+                        🛡️ Prochain envoi dans {cooldownRemaining}s
                       </span>
                     )}
                   </div>
