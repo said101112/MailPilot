@@ -4,6 +4,8 @@ import { sendDirectApplication, sendApplication } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import { syncEmailDispatchToTracker } from "@/lib/tracker/syncService";
 import { formatEmailToHtml, stripEmailFormatting } from "@/lib/emailPersonalizer";
+import { readStoredCv, readStoredCvLibrary, getActiveCv } from "@/lib/workspace";
+import { generateCoverLetterPdf } from "@/lib/coverLetterPdf";
 
 export interface ScheduledEmail {
   id: string;
@@ -16,8 +18,10 @@ export interface ScheduledEmail {
   candidate_name: string;
   subject: string;
   message: string;
+  cv_id?: string;
   cv_filename?: string;
   cv_base64?: string;
+  has_cover_letter?: boolean;
   cover_letter_filename?: string;
   cover_letter_base64?: string;
   channel: "direct" | "draft";
@@ -34,6 +38,23 @@ function notifyChange() {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event(SCHEDULED_UPDATED_EVENT));
   }
+}
+
+/**
+ * Strips heavy PDF base64 from items before saving to localStorage.
+ * Keeps payload ~400 bytes per email instead of 2 MB, preventing QuotaExceededError.
+ * CVs and cover letters are resolved dynamically at dispatch time.
+ */
+function sanitizeForStorage(item: ScheduledEmail): ScheduledEmail {
+  const copy: ScheduledEmail = { ...item };
+  if (copy.cover_letter_base64) {
+    copy.has_cover_letter = true;
+    delete copy.cover_letter_base64;
+  }
+  if (copy.cv_base64 && copy.cv_base64.length > 50000) {
+    delete copy.cv_base64;
+  }
+  return copy;
 }
 
 export function getScheduledEmails(): ScheduledEmail[] {
@@ -54,10 +75,24 @@ export function getScheduledEmails(): ScheduledEmail[] {
 function saveScheduledEmails(list: ScheduledEmail[]) {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    const lightweight = list.map(sanitizeForStorage);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(lightweight));
     notifyChange();
   } catch (err) {
-    console.error("Failed to save scheduled emails:", err);
+    console.warn("Storage warning in saveScheduledEmails, retrying with full strip:", err);
+    try {
+      const fullyStripped = list.map((item) => {
+        const c = { ...item };
+        if (c.cover_letter_base64) c.has_cover_letter = true;
+        delete c.cv_base64;
+        delete c.cover_letter_base64;
+        return c;
+      });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(fullyStripped));
+      notifyChange();
+    } catch (quotaErr) {
+      console.error("Critical: localStorage quota fully exceeded:", quotaErr);
+    }
   }
 }
 
@@ -158,6 +193,44 @@ export async function processDueScheduledEmails(): Promise<{
         const cleanSubject = stripEmailFormatting(item.subject);
         const formattedBody = formatEmailToHtml(item.message);
 
+        // Dynamically resolve CV if stripped from storage
+        const cvLib = readStoredCvLibrary();
+        const matchedCv = item.cv_id ? cvLib.find((c) => c.id === item.cv_id) : null;
+        const activeCv = getActiveCv();
+        const legacyCv = readStoredCv();
+
+        const effectiveCvBase64 =
+          item.cv_base64 ||
+          matchedCv?.base64 ||
+          activeCv?.base64 ||
+          legacyCv?.base64;
+
+        const effectiveCvFileName =
+          item.cv_filename ||
+          matchedCv?.fileName ||
+          activeCv?.fileName ||
+          legacyCv?.fileName ||
+          `${(item.candidate_name || "Candidat").replace(/\s+/g, "_")}_Resume.pdf`;
+
+        // Dynamically generate cover letter if requested and not stored
+        let effectiveCoverLetterBase64 = item.cover_letter_base64;
+        let effectiveCoverLetterFileName = item.cover_letter_filename;
+
+        if (!effectiveCoverLetterBase64 && item.has_cover_letter) {
+          try {
+            const letterPdf = generateCoverLetterPdf({
+              company: item.company_name,
+              position: item.position || "Stage PFE / Emploi",
+              body: item.message,
+              subject: item.subject,
+            });
+            effectiveCoverLetterBase64 = letterPdf.getBase64();
+            effectiveCoverLetterFileName = letterPdf.fileName;
+          } catch (err) {
+            console.warn("Cover letter dynamic generation warning:", err);
+          }
+        }
+
         if (item.channel === "direct") {
           await sendDirectApplication({
             company: item.company_name,
@@ -166,12 +239,12 @@ export async function processDueScheduledEmails(): Promise<{
             candidateName: item.candidate_name,
             subject: cleanSubject,
             message: formattedBody,
-            cv_base64: item.cv_base64,
-            cv_filename: item.cv_filename,
-            cv_data: item.cv_base64,
-            cv_name: item.cv_filename,
-            cover_letter_base64: item.cover_letter_base64,
-            cover_letter_filename: item.cover_letter_filename,
+            cv_base64: effectiveCvBase64,
+            cv_filename: effectiveCvFileName,
+            cv_data: effectiveCvBase64,
+            cv_name: effectiveCvFileName,
+            cover_letter_base64: effectiveCoverLetterBase64,
+            cover_letter_filename: effectiveCoverLetterFileName,
             notes: "Envoi programmé MailPilot",
             jobUrl: "",
           });
@@ -183,12 +256,12 @@ export async function processDueScheduledEmails(): Promise<{
             candidateName: item.candidate_name,
             subject: cleanSubject,
             message: formattedBody,
-            cv_base64: item.cv_base64,
-            cv_filename: item.cv_filename,
-            cv_data: item.cv_base64,
-            cv_name: item.cv_filename,
-            cover_letter_base64: item.cover_letter_base64,
-            cover_letter_filename: item.cover_letter_filename,
+            cv_base64: effectiveCvBase64,
+            cv_filename: effectiveCvFileName,
+            cv_data: effectiveCvBase64,
+            cv_name: effectiveCvFileName,
+            cover_letter_base64: effectiveCoverLetterBase64,
+            cover_letter_filename: effectiveCoverLetterFileName,
             notes: "Brouillon programmé MailPilot",
             jobUrl: "",
           });

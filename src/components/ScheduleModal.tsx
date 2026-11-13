@@ -29,8 +29,10 @@ interface ScheduleModalSingleProps {
     candidate_name: string;
     subject: string;
     message: string;
+    cv_id?: string;
     cv_filename?: string;
     cv_base64?: string;
+    has_cover_letter?: boolean;
     cover_letter_filename?: string;
     cover_letter_base64?: string;
     channel: "direct" | "draft";
@@ -52,8 +54,10 @@ interface ScheduleModalBulkProps {
       name: string;
       subject: string;
       message: string;
+      cv_id?: string;
       cv_filename?: string;
       cv_base64?: string;
+      has_cover_letter?: boolean;
       cover_letter_filename?: string;
       cover_letter_base64?: string;
     }>;
@@ -133,8 +137,10 @@ export default function ScheduleModal(props: ScheduleModalProps) {
           candidate_name: props.emailData.candidate_name,
           subject: props.emailData.subject,
           message: props.emailData.message,
+          cv_id: props.emailData.cv_id,
           cv_filename: props.emailData.cv_filename,
           cv_base64: props.emailData.cv_base64,
+          has_cover_letter: props.emailData.has_cover_letter || !!props.emailData.cover_letter_base64,
           cover_letter_filename: props.emailData.cover_letter_filename,
           cover_letter_base64: props.emailData.cover_letter_base64,
           channel: props.emailData.channel,
@@ -162,8 +168,10 @@ export default function ScheduleModal(props: ScheduleModalProps) {
             candidate_name: row.name,
             subject: row.subject,
             message: row.message,
+            cv_id: row.cv_id,
             cv_filename: row.cv_filename,
             cv_base64: row.cv_base64,
+            has_cover_letter: row.has_cover_letter || !!row.cover_letter_base64,
             cover_letter_filename: row.cover_letter_filename,
             cover_letter_base64: row.cover_letter_base64,
             channel: props.batchData.channel,

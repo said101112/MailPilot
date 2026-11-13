@@ -197,12 +197,27 @@ export default function ScheduledQueueModal({ isOpen, onClose }: ScheduledQueueM
         {/* Content List */}
         <div className="p-4 sm:p-6 space-y-3 overflow-y-auto flex-1">
           {filteredEmails.length === 0 ? (
-            <div className="py-12 flex flex-col items-center justify-center text-center space-y-2 text-gray-400">
-              <Clock className="h-10 w-10 text-gray-300 stroke-1" />
-              <p className="text-sm font-medium text-gray-600">Aucun email dans cette catégorie</p>
-              <p className="text-xs text-gray-400 max-w-sm">
-                Vous pouvez programmer des candidatures individuelles depuis &quot;Candidature Spontanée&quot; ou par lots entiers depuis &quot;Envoi Groupé&quot;.
+            <div className="py-10 px-4 flex flex-col items-center justify-center text-center space-y-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 mb-1">
+                <Clock className="h-6 w-6 stroke-1.5" />
+              </div>
+              <p className="text-sm font-bold text-gray-900">
+                {filter === "pending"
+                  ? "Aucun email en attente de délivrance"
+                  : filter === "sent"
+                    ? "Aucun email expédié dans l'historique"
+                    : "Aucun email programmé"}
               </p>
+              <div className="max-w-md text-xs text-gray-500 space-y-2">
+                <p>
+                  Pour planifier un envoi : saisissez l&apos;email du recruteur, cliquez sur le bouton{" "}
+                  <strong className="text-blue-700">« Programmer »</strong> en bas du formulaire (ou depuis <strong className="text-gray-800">Envoi Groupé</strong>), choisissez un horaire puis cliquez sur{" "}
+                  <strong className="text-blue-700">« Confirmer la programmation »</strong>.
+                </p>
+                <p className="text-[11px] text-gray-400 bg-gray-50 border border-gray-100 rounded-lg p-2">
+                  💡 Les emails programmés sont stockés dans votre navigateur et expédiés automatiquement à l&apos;heure choisie dès que MailPilot est ouvert.
+                </p>
+              </div>
             </div>
           ) : (
             filteredEmails.map((item) => {

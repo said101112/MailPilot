@@ -596,8 +596,10 @@ export default function UploadPage() {
         name: displayContact,
         subject,
         message,
+        cv_id: row.cvId || selectedCvId || undefined,
         cv_filename: cvFilename,
         cv_base64: cvBase64,
+        has_cover_letter: includeCoverLetter,
         cover_letter_filename: coverLetterFilename,
         cover_letter_base64: coverLetterBase64,
       };
