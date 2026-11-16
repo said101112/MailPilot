@@ -1,6 +1,6 @@
 "use client";
 
-import { sendDirectApplication, sendApplication } from "@/lib/api";
+import { sendDirectApplication, sendApplication, createDirectDraftApplication } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import { syncEmailDispatchToTracker } from "@/lib/tracker/syncService";
 import { formatEmailToHtml, stripEmailFormatting } from "@/lib/emailPersonalizer";
@@ -24,7 +24,7 @@ export interface ScheduledEmail {
   has_cover_letter?: boolean;
   cover_letter_filename?: string;
   cover_letter_base64?: string;
-  channel: "direct" | "draft";
+  channel: "direct" | "draft_smtp" | "draft_n8n" | "draft";
   batch_id?: string;
   batch_name?: string;
   error_message?: string;
@@ -245,7 +245,24 @@ export async function processDueScheduledEmails(): Promise<{
             cv_name: effectiveCvFileName,
             cover_letter_base64: effectiveCoverLetterBase64,
             cover_letter_filename: effectiveCoverLetterFileName,
-            notes: "Envoi programmé MailPilot",
+            notes: "Envoi programmé MailPilot (Direct)",
+            jobUrl: "",
+          });
+        } else if (item.channel === "draft_smtp") {
+          await createDirectDraftApplication({
+            company: item.company_name,
+            position: item.position || "Stage PFE / Emploi",
+            email: item.recipient_email,
+            candidateName: item.candidate_name,
+            subject: cleanSubject,
+            message: formattedBody,
+            cv_base64: effectiveCvBase64,
+            cv_filename: effectiveCvFileName,
+            cv_data: effectiveCvBase64,
+            cv_name: effectiveCvFileName,
+            cover_letter_base64: effectiveCoverLetterBase64,
+            cover_letter_filename: effectiveCoverLetterFileName,
+            notes: "Brouillon direct programmé MailPilot (Gmail)",
             jobUrl: "",
           });
         } else {
@@ -262,7 +279,7 @@ export async function processDueScheduledEmails(): Promise<{
             cv_name: effectiveCvFileName,
             cover_letter_base64: effectiveCoverLetterBase64,
             cover_letter_filename: effectiveCoverLetterFileName,
-            notes: "Brouillon programmé MailPilot",
+            notes: "Brouillon programmé MailPilot (n8n)",
             jobUrl: "",
           });
         }

@@ -35,7 +35,7 @@ interface ScheduleModalSingleProps {
     has_cover_letter?: boolean;
     cover_letter_filename?: string;
     cover_letter_base64?: string;
-    channel: "direct" | "draft";
+    channel: "direct" | "draft_smtp" | "draft_n8n" | "draft";
   };
 }
 
@@ -46,7 +46,7 @@ interface ScheduleModalBulkProps {
   onScheduledBulk?: (scheduledList: ScheduledEmail[]) => void;
   batchData: {
     batch_name: string;
-    channel: "direct" | "draft";
+    channel: "direct" | "draft_smtp" | "draft_n8n" | "draft";
     rows: Array<{
       email: string;
       company: string;
@@ -201,6 +201,7 @@ export default function ScheduleModal(props: ScheduleModalProps) {
   };
 
   const count = mode === "bulk" ? (props.batchData?.rows?.length ?? 0) : 1;
+  const channelType = mode === "single" ? props.emailData.channel : props.batchData.channel;
   const lastDate = mode === "bulk" && count > 1 && hasValidDate
     ? new Date(targetDate.getTime() + (count - 1) * intervalSeconds * 1000)
     : targetDate;
@@ -219,11 +220,19 @@ export default function ScheduleModal(props: ScheduleModalProps) {
             <div className="min-w-0">
               <h3 className="text-sm sm:text-base font-bold text-gray-900 truncate">
                 {mode === "single"
-                  ? "Programmer l'Envoi Direct"
+                  ? channelType === "direct"
+                    ? "Programmer l'Envoi Direct"
+                    : channelType === "draft_smtp"
+                      ? "Programmer le Brouillon Direct (Gmail)"
+                      : "Programmer le Brouillon (n8n)"
                   : `Programmer le Lot (${count} candidatures)`}
               </h3>
               <p className="text-[11px] sm:text-xs text-gray-500 truncate">
-                L&apos;email sera expédié à l&apos;heure choisie via Gmail SMTP
+                {channelType === "direct"
+                  ? "L'email sera expédié à l'heure choisie via Gmail SMTP"
+                  : channelType === "draft_smtp"
+                    ? "Le brouillon sera créé directement dans Gmail à l'heure choisie"
+                    : "Le brouillon sera généré via n8n à l'heure choisie"}
               </p>
             </div>
           </div>

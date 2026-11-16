@@ -252,6 +252,22 @@ export default function ScheduledQueueModal({ isOpen, onClose }: ScheduledQueueM
                           Lot
                         </span>
                       )}
+                      <span
+                        className={cn(
+                          "rounded px-1.5 py-0.2 text-[10px] font-bold",
+                          item.channel === "direct"
+                            ? "bg-blue-100 text-blue-800"
+                            : item.channel === "draft_smtp"
+                              ? "bg-indigo-100 text-indigo-800"
+                              : "bg-amber-100 text-amber-800"
+                        )}
+                      >
+                        {item.channel === "direct"
+                          ? "⚡ Direct"
+                          : item.channel === "draft_smtp"
+                            ? "📝 Brouillon Direct"
+                            : "🔄 Brouillon n8n"}
+                      </span>
                     </div>
 
                     <p className="text-xs text-gray-700 font-medium truncate">

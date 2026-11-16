@@ -28,6 +28,8 @@ import {
   getIntegrationStatus,
   sendApplication,
   sendDirectApplication,
+  createDirectDraftApplication,
+  type DispatchChannel,
   validateEmailBeforeSend,
   type EmailPreflightResult,
   type IntegrationStatusResponse,
@@ -89,7 +91,7 @@ interface LastSendResult {
   time: string;
   email: string;
   company: string;
-  channel: "direct" | "draft";
+  channel: DispatchChannel | "draft";
   attachments: string[];
 }
 
@@ -124,8 +126,8 @@ export default function ApplyPage() {
   const [duplicateMatch, setDuplicateMatch] = useState<DuplicateInfo | null>(null);
   const [, setCheckingDuplicate] = useState(false);
 
-  // Dual Dispatch Channel: "direct" (SMTP Inbox) or "draft" (n8n Gmail Draft)
-  const [dispatchChannel, setDispatchChannel] = useState<"direct" | "draft">("direct");
+  // Tri-Dispatch Channel: "direct" (SMTP Inbox), "draft_smtp" (Direct Gmail Draft), or "draft_n8n" (n8n Webhook)
+  const [dispatchChannel, setDispatchChannel] = useState<DispatchChannel>("direct");
 
   const [integrationLoading, setIntegrationLoading] = useState(true);
   const [integrationStatus, setIntegrationStatus] =
@@ -616,7 +618,13 @@ export default function ApplyPage() {
     setLogs([]);
     setLastResult(null);
 
-    addLog(`Démarrage du processus d'envoi (${dispatchChannel === "direct" ? "Envoi Direct SMTP" : "Brouillon Gmail"})...`, "info");
+    const channelLogLabel =
+      dispatchChannel === "direct"
+        ? "Envoi Direct SMTP"
+        : dispatchChannel === "draft_smtp"
+          ? "Brouillon Direct Gmail (Google)"
+          : "Brouillon via n8n";
+    addLog(`Démarrage du processus (${channelLogLabel})...`, "info");
 
     try {
       if (integrationLoading) {
@@ -630,15 +638,15 @@ export default function ApplyPage() {
       }
       addLog("Vérification syntaxique et domaine MX réussie ✓", "success");
 
-      if (dispatchChannel === "draft" && n8nBlocked) {
+      if (dispatchChannel === "draft_n8n" && n8nBlocked) {
         setIsPreflightModalOpen(true);
-        throw new Error("Le service de brouillons est temporairement indisponible.");
+        throw new Error("Le service de brouillons n8n est temporairement indisponible.");
       }
 
-      if (dispatchChannel === "direct" && smtpBlocked) {
+      if ((dispatchChannel === "direct" || dispatchChannel === "draft_smtp") && smtpBlocked) {
         setIsPreflightModalOpen(true);
         throw new Error(
-          "Votre compte email n'est pas encore connecté. Cliquez sur 'Tester la connexion' pour configurer vos accès."
+          "Vos identifiants Google (App Password) ne sont pas configurés. Cliquez sur 'Tester la connexion' pour configurer vos accès."
         );
       }
 
@@ -703,8 +711,28 @@ export default function ApplyPage() {
           jobUrl: "",
         });
         addLog("Candidature délivrée avec succès dans la boîte principale du recruteur !", "success");
+      } else if (dispatchChannel === "draft_smtp") {
+        addLog("Connexion sécurisée à Gmail (IMAP) pour enregistrer le brouillon...", "info");
+        const res = await createDirectDraftApplication({
+          company: companyDisplayName,
+          position: "Stage PFE / Emploi",
+          email: email,
+          candidateName: candidateName,
+          subject: liveSubject,
+          message: formatEmailToHtml(liveMessage),
+          cv_base64: finalCvBase64,
+          cv_filename: finalCvFileName,
+          cv_data: finalCvBase64,
+          cv_name: finalCvFileName,
+          cover_letter_base64: finalCoverLetterBase64,
+          cover_letter_filename: finalCoverLetterFileName,
+          notes: "",
+          jobUrl: "",
+        });
+        const boxName = (res as { mailbox?: string }).mailbox || "Brouillons";
+        addLog(`Brouillon créé directement avec succès dans Gmail (${boxName}) avec vos pièces jointes !`, "success");
       } else {
-        addLog("Transmission des pièces jointes au service de brouillons Gmail...", "info");
+        addLog("Transmission des pièces jointes au service de brouillons n8n...", "info");
         await sendApplication({
           company: companyDisplayName,
           position: "Stage PFE / Emploi",
@@ -721,7 +749,7 @@ export default function ApplyPage() {
           notes: "",
           jobUrl: "",
         });
-        addLog("Brouillon créé avec succès dans votre boîte Gmail !", "success");
+        addLog("Brouillon créé avec succès dans votre boîte Gmail via n8n !", "success");
       }
 
       // Record in Supabase
@@ -766,8 +794,10 @@ export default function ApplyPage() {
 
       if (dispatchChannel === "direct") {
         toast.success("Candidature envoyée directement avec succès !");
+      } else if (dispatchChannel === "draft_smtp") {
+        toast.success("Brouillon créé directement dans votre boîte Gmail !");
       } else {
-        toast.success("Brouillon créé dans Gmail ! Consultez vos brouillons.");
+        toast.success("Brouillon créé dans Gmail via n8n !");
       }
 
       setEmail("");
@@ -852,37 +882,63 @@ export default function ApplyPage() {
         {/* LEFT COLUMN: THE FORM (50% WIDTH) */}
         <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 shadow-xs flex flex-col justify-between space-y-3.5 sm:space-y-4 min-w-0">
           
-          {/* 1. Canal d'envoi (Segmented Control) */}
-          <div className="grid grid-cols-2 gap-1.5 rounded-xl bg-gray-100/80 p-1 shrink-0">
-            <button
-              type="button"
-              onClick={() => setDispatchChannel("direct")}
-              className={cn(
-                "flex items-center justify-center gap-1.5 sm:gap-2 py-2 px-2 sm:px-3 rounded-lg text-[11.5px] sm:text-xs font-semibold transition cursor-pointer",
-                dispatchChannel === "direct"
-                  ? "bg-white text-blue-700 shadow-2xs border border-blue-200 font-bold"
-                  : "text-gray-600 hover:text-gray-900"
-              )}
-            >
-              <Send className="h-3.5 w-3.5 text-blue-600 shrink-0" />
-              <span className="sm:hidden truncate">⚡ Envoi Direct</span>
-              <span className="hidden sm:inline">⚡ Envoi Direct (Inbox)</span>
-            </button>
+          {/* 1. Canal d'envoi (Segmented Control: 3 méthodes) */}
+          <div className="space-y-1.5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 rounded-xl bg-gray-100/80 p-1 shrink-0">
+              <button
+                type="button"
+                onClick={() => setDispatchChannel("direct")}
+                className={cn(
+                  "flex items-center justify-center gap-1.5 py-2 px-2 sm:px-2.5 rounded-lg text-[11px] sm:text-xs font-semibold transition cursor-pointer",
+                  dispatchChannel === "direct"
+                    ? "bg-white text-blue-700 shadow-2xs border border-blue-200 font-bold"
+                    : "text-gray-600 hover:text-gray-900"
+                )}
+              >
+                <Send className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                <span className="truncate">⚡ Envoi Direct</span>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => setDispatchChannel("draft")}
-              className={cn(
-                "flex items-center justify-center gap-1.5 sm:gap-2 py-2 px-2 sm:px-3 rounded-lg text-[11.5px] sm:text-xs font-semibold transition cursor-pointer",
-                dispatchChannel === "draft"
-                  ? "bg-white text-[#ff5722] shadow-2xs border border-orange-200 font-bold"
-                  : "text-gray-600 hover:text-gray-900"
+              <button
+                type="button"
+                onClick={() => setDispatchChannel("draft_smtp")}
+                className={cn(
+                  "flex items-center justify-center gap-1.5 py-2 px-2 sm:px-2.5 rounded-lg text-[11px] sm:text-xs font-semibold transition cursor-pointer",
+                  dispatchChannel === "draft_smtp"
+                    ? "bg-white text-indigo-700 shadow-2xs border border-indigo-200 font-bold"
+                    : "text-gray-600 hover:text-gray-900"
+                )}
+              >
+                <FileText className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
+                <span className="truncate">📝 Brouillon Direct</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setDispatchChannel("draft_n8n")}
+                className={cn(
+                  "flex items-center justify-center gap-1.5 py-2 px-2 sm:px-2.5 rounded-lg text-[11px] sm:text-xs font-semibold transition cursor-pointer",
+                  dispatchChannel === "draft_n8n"
+                    ? "bg-white text-[#ff5722] shadow-2xs border border-orange-200 font-bold"
+                    : "text-gray-600 hover:text-gray-900"
+                )}
+              >
+                <Sparkles className="h-3.5 w-3.5 text-[#ff5722] shrink-0" />
+                <span className="truncate">🔄 Brouillon n8n</span>
+              </button>
+            </div>
+
+            <p className="text-[11px] text-gray-500 px-1 leading-snug">
+              {dispatchChannel === "direct" && (
+                <span>⚡ <strong>Envoi Direct :</strong> expédie immédiatement la candidature dans la boîte de réception du recruteur via Gmail SMTP.</span>
               )}
-            >
-              <FileText className="h-3.5 w-3.5 text-[#ff5722] shrink-0" />
-              <span className="sm:hidden truncate">📝 Brouillon</span>
-              <span className="hidden sm:inline">📝 Brouillon Gmail (Relire)</span>
-            </button>
+              {dispatchChannel === "draft_smtp" && (
+                <span>📝 <strong>Brouillon Direct (Gmail) :</strong> crée un brouillon prêt à relire directement dans votre compte Gmail sans passer par n8n (utilise vos identifiants Google).</span>
+              )}
+              {dispatchChannel === "draft_n8n" && (
+                <span>🔄 <strong>Brouillon via n8n :</strong> génère le brouillon dans votre compte Gmail via votre workflow d&apos;automatisation n8n.</span>
+              )}
+            </p>
           </div>
 
           {/* 2. Destinataire (Recruiter Email) */}
@@ -1202,7 +1258,9 @@ export default function ApplyPage() {
                   "sm:col-span-3 w-full h-11 sm:h-12 text-xs sm:text-sm font-bold rounded-xl text-white transition shadow-sm cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none",
                   dispatchChannel === "direct"
                     ? "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
-                    : "bg-[#ff5722] hover:bg-[#e64a19] active:bg-[#d84315]"
+                    : dispatchChannel === "draft_smtp"
+                      ? "bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800"
+                      : "bg-[#ff5722] hover:bg-[#e64a19] active:bg-[#d84315]"
                 )}
               >
                 {loading ? (
@@ -1211,20 +1269,26 @@ export default function ApplyPage() {
                     <span>
                       {dispatchChannel === "direct"
                         ? "Envoi en cours via Gmail SMTP..."
-                        : "Création du brouillon en cours..."}
+                        : dispatchChannel === "draft_smtp"
+                          ? "Création du brouillon direct dans Gmail..."
+                          : "Création du brouillon via n8n..."}
                     </span>
                   </>
                 ) : (
                   <>
                     {dispatchChannel === "direct" ? (
                       <Send className="h-4 w-4" />
+                    ) : dispatchChannel === "draft_smtp" ? (
+                      <FileText className="h-4 w-4" />
                     ) : (
                       <Sparkles className="h-4 w-4" />
                     )}
                     <span>
                       {dispatchChannel === "direct"
                         ? "Envoyer la candidature (Envoi Direct)"
-                        : "Créer le brouillon dans Gmail"}
+                        : dispatchChannel === "draft_smtp"
+                          ? "Créer le brouillon dans Gmail (Direct)"
+                          : "Créer le brouillon dans Gmail (via n8n)"}
                     </span>
                   </>
                 )}
@@ -1373,7 +1437,9 @@ export default function ApplyPage() {
                         <span>
                           {lastResult.channel === "direct"
                             ? "Candidature Envoyée !"
-                            : "Brouillon Créé !"}
+                            : lastResult.channel === "draft_smtp"
+                              ? "Brouillon Direct Créé !"
+                              : "Brouillon n8n Créé !"}
                         </span>
                       </div>
                       <span className="text-[10px] font-mono text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded">

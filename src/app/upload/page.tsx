@@ -633,7 +633,10 @@ export default function UploadPage() {
     integrationStatus?.smtp?.configured === false ||
     integrationStatus?.smtp?.healthy === false;
 
-  const channelBlocked = bulkChannel === "draft" ? n8nBlocked : smtpBlocked;
+  const channelBlocked =
+    bulkChannel === "draft_n8n" || bulkChannel === "draft"
+      ? n8nBlocked
+      : smtpBlocked;
 
   const processCsvFile = (file: File) => {
     const lowerFileName = file.name.toLowerCase();
@@ -771,15 +774,15 @@ export default function UploadPage() {
       return;
     }
 
-    if (bulkChannel === "draft" && n8nBlocked) {
-      toast.error(integrationStatus?.n8n.message || "n8n is not ready.");
+    if ((bulkChannel === "draft_n8n" || bulkChannel === "draft") && n8nBlocked) {
+      toast.error(integrationStatus?.n8n.message || "Le service de brouillons n8n n'est pas prêt.");
       return;
     }
 
-    if (bulkChannel === "direct" && smtpBlocked) {
+    if ((bulkChannel === "direct" || bulkChannel === "draft_smtp") && smtpBlocked) {
       toast.error(
         integrationStatus?.smtp?.message ||
-          "Gmail SMTP n'est pas configuré. Veuillez vérifier GMAIL_USER et GMAIL_APP_PASSWORD."
+          "Vos accès Google (App Password) ne sont pas configurés. Veuillez vérifier GMAIL_USER et GMAIL_APP_PASSWORD."
       );
       return;
     }
@@ -1244,35 +1247,49 @@ export default function UploadPage() {
 
                 {/* Right: Channel Switch + Connection Test + Primary Action Buttons */}
                 <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 w-full lg:w-auto">
-                  {/* Channel Switch */}
-                  <div className="grid grid-cols-2 sm:flex items-center rounded-xl border border-gray-200 bg-gray-50/80 p-0.5 w-full sm:w-auto">
+                  {/* Channel Switch: 3 methods */}
+                  <div className="grid grid-cols-3 sm:flex items-center rounded-xl border border-gray-200 bg-gray-50/80 p-0.5 w-full sm:w-auto">
                     <button
                       type="button"
                       disabled={isProcessing}
                       onClick={() => setBulkChannel("direct")}
                       className={cn(
-                        "px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-60",
+                        "px-2 sm:px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-60",
                         bulkChannel === "direct"
                           ? "bg-white text-blue-700 shadow-2xs border border-blue-200 font-bold"
                           : "text-gray-500 hover:text-gray-800"
                       )}
                     >
                       <Send className="h-3 w-3 text-blue-600 shrink-0" />
-                      <span className="truncate">⚡ Envoi Direct</span>
+                      <span className="truncate">⚡ Direct</span>
                     </button>
                     <button
                       type="button"
                       disabled={isProcessing}
-                      onClick={() => setBulkChannel("draft")}
+                      onClick={() => setBulkChannel("draft_smtp")}
                       className={cn(
-                        "px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-60",
-                        bulkChannel === "draft"
+                        "px-2 sm:px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-60",
+                        bulkChannel === "draft_smtp"
+                          ? "bg-white text-indigo-700 shadow-2xs border border-indigo-200 font-bold"
+                          : "text-gray-500 hover:text-gray-800"
+                      )}
+                    >
+                      <FileText className="h-3 w-3 text-indigo-600 shrink-0" />
+                      <span className="truncate">📝 Brouillon Gmail</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isProcessing}
+                      onClick={() => setBulkChannel("draft_n8n")}
+                      className={cn(
+                        "px-2 sm:px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-60",
+                        bulkChannel === "draft_n8n" || bulkChannel === "draft"
                           ? "bg-white text-[#ff5722] shadow-2xs border border-[#ff5722]/30 font-bold"
                           : "text-gray-500 hover:text-gray-800"
                       )}
                     >
-                      <FileText className="h-3 w-3 text-[#ff5722] shrink-0" />
-                      <span className="truncate">📝 Brouillons</span>
+                      <Sparkles className="h-3 w-3 text-[#ff5722] shrink-0" />
+                      <span className="truncate">🔄 n8n</span>
                     </button>
                   </div>
 
@@ -1297,7 +1314,9 @@ export default function UploadPage() {
                         "w-full sm:w-auto h-10 px-4 sm:px-5 text-xs sm:text-sm font-semibold rounded-xl text-white transition flex items-center justify-center gap-2 shadow-sm cursor-pointer disabled:opacity-50 disabled:pointer-events-none",
                         bulkChannel === "direct"
                           ? "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
-                          : "bg-[#ff5722] hover:bg-[#e64a19] active:bg-[#d84315]"
+                          : bulkChannel === "draft_smtp"
+                            ? "bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800"
+                            : "bg-[#ff5722] hover:bg-[#e64a19] active:bg-[#d84315]"
                       )}
                       disabled={
                         data.length === 0 ||
@@ -1312,15 +1331,19 @@ export default function UploadPage() {
                         <Play className="h-4 w-4 shrink-0" />
                       ) : bulkChannel === "direct" ? (
                         <Send className="h-4 w-4 shrink-0" />
+                      ) : bulkChannel === "draft_smtp" ? (
+                        <FileText className="h-4 w-4 shrink-0" />
                       ) : (
-                        <Play className="h-4 w-4 shrink-0" />
+                        <Sparkles className="h-4 w-4 shrink-0" />
                       )}
                       <span className="truncate">
                         {batchStatus === "paused"
-                          ? `Reprendre l'envoi (${selectedCount})`
+                          ? `Reprendre (${selectedCount})`
                           : bulkChannel === "direct"
                             ? `Lancer l'Envoi Direct (${selectedCount})`
-                            : `Créer les Brouillons (${selectedCount})`}
+                            : bulkChannel === "draft_smtp"
+                              ? `Créer Brouillons Directs (${selectedCount})`
+                              : `Créer Brouillons n8n (${selectedCount})`}
                       </span>
                     </button>
                   )}
@@ -1609,9 +1632,13 @@ export default function UploadPage() {
                       );
                     })}
                   </div>
+                ) : bulkChannel === "draft_smtp" ? (
+                  <div className="text-[11px] text-indigo-700 font-medium">
+                    📝 Mode Brouillon Direct (Gmail) : création rapide (2s) via vos identifiants Google — aucun risque spam SMTP.
+                  </div>
                 ) : (
-                  <div className="text-[11px] text-gray-600">
-                    📝 Mode Brouillon Gmail : cadence rapide (2s) — aucun risque spam SMTP.
+                  <div className="text-[11px] text-amber-800 font-medium">
+                    🔄 Mode Brouillon via n8n : création rapide (2s) via votre webhook d&apos;automatisation.
                   </div>
                 )}
 

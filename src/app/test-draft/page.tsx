@@ -13,7 +13,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
-import { sendApplication, sendDirectApplication } from "@/lib/api";
+import { sendApplication, sendDirectApplication, createDirectDraftApplication } from "@/lib/api";
 import { generateCoverLetterPdf } from "@/lib/coverLetterPdf";
 import { CoverLetterModal } from "@/components/CoverLetterModal";
 import {
@@ -49,7 +49,7 @@ export default function TestDraftPage() {
   const [cvLibrary, setCvLibrary] = useState<CvProfile[]>([]);
   const [selectedCvId, setSelectedCvId] = useState<string>("");
   const [includeCoverLetter, setIncludeCoverLetter] = useState<boolean>(true);
-  const [testChannel, setTestChannel] = useState<"draft" | "direct">("direct");
+  const [testChannel, setTestChannel] = useState<"direct" | "draft_smtp" | "draft_n8n">("direct");
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -245,6 +245,25 @@ export default function TestDraftPage() {
           cover_letter_filename: finalCoverLetterFileName,
         });
         addLog("Email délivré avec succès directement via Google SMTP (sans passer par spam) !", "success");
+      } else if (testChannel === "draft_smtp") {
+        addLog("Création directe du brouillon dans Gmail (via IMAP & identifiants Google)...", "info");
+        const res = await createDirectDraftApplication({
+          email: recipientEmail,
+          company: companyName,
+          position: positionTitle,
+          name: contactName,
+          candidateName,
+          subject: processedSubject,
+          message: processedMessage,
+          cv_base64: finalCvBase64,
+          cv_filename: finalCvFileName,
+          cv_data: finalCvBase64,
+          cv_name: finalCvFileName,
+          cover_letter_base64: finalCoverLetterBase64,
+          cover_letter_filename: finalCoverLetterFileName,
+        });
+        const boxName = (res as { mailbox?: string }).mailbox || "Brouillons";
+        addLog(`Brouillon créé avec succès directement dans Gmail (${boxName}) sans passer par n8n !`, "success");
       } else {
         addLog("Envoi de la requête au Webhook n8n (création du brouillon Gmail)...", "info");
         await sendApplication({
@@ -282,8 +301,10 @@ export default function TestDraftPage() {
 
       if (testChannel === "direct") {
         toast.success("Email test envoyé directement dans votre boîte principale !");
+      } else if (testChannel === "draft_smtp") {
+        toast.success("Brouillon test créé directement dans votre boîte Gmail !");
       } else {
-        toast.success("Brouillon test créé avec succès dans vos Brouillons Gmail !");
+        toast.success("Brouillon test créé via n8n dans vos Brouillons Gmail !");
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erreur inconnue lors du test.";
@@ -548,17 +569,17 @@ export default function TestDraftPage() {
                 </p>
               </div>
 
-              {/* Channel Selector */}
+              {/* Channel Selector: 3 methods */}
               <div className="pt-2 border-t border-gray-100">
                 <label className="editorial-label text-xs font-medium text-gray-700 mb-1.5 block">
-                  Canal d&apos;expédition du test
+                  Canal d&apos;expédition du test (3 méthodes)
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
                   <button
                     type="button"
                     onClick={() => setTestChannel("direct")}
                     className={cn(
-                      "flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg border text-xs font-medium transition cursor-pointer text-left",
+                      "flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg border text-xs font-medium transition cursor-pointer text-left",
                       testChannel === "direct"
                         ? "border-blue-600 bg-blue-50/50 text-blue-900 font-bold ring-1 ring-blue-600"
                         : "border-gray-200 bg-white hover:bg-gray-50 text-gray-600"
@@ -569,16 +590,29 @@ export default function TestDraftPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setTestChannel("draft")}
+                    onClick={() => setTestChannel("draft_smtp")}
                     className={cn(
-                      "flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg border text-xs font-medium transition cursor-pointer text-left",
-                      testChannel === "draft"
+                      "flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg border text-xs font-medium transition cursor-pointer text-left",
+                      testChannel === "draft_smtp"
+                        ? "border-indigo-600 bg-indigo-50/50 text-indigo-950 font-bold ring-1 ring-indigo-600"
+                        : "border-gray-200 bg-white hover:bg-gray-50 text-gray-600"
+                    )}
+                  >
+                    <FileText className="h-3.5 w-3.5 text-indigo-600" />
+                    <span>📝 Brouillon Direct</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTestChannel("draft_n8n")}
+                    className={cn(
+                      "flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg border text-xs font-medium transition cursor-pointer text-left",
+                      testChannel === "draft_n8n"
                         ? "border-[#ff5722] bg-orange-50/50 text-orange-950 font-bold ring-1 ring-[#ff5722]"
                         : "border-gray-200 bg-white hover:bg-gray-50 text-gray-600"
                     )}
                   >
-                    <FileText className="h-3.5 w-3.5 text-[#ff5722]" />
-                    <span>📝 Brouillon Gmail</span>
+                    <Sparkles className="h-3.5 w-3.5 text-[#ff5722]" />
+                    <span>🔄 Brouillon n8n</span>
                   </button>
                 </div>
               </div>
@@ -593,13 +627,21 @@ export default function TestDraftPage() {
                     "w-full h-11 text-xs font-semibold rounded-xl text-white transition shadow-sm cursor-pointer flex items-center justify-center gap-2",
                     testChannel === "direct"
                       ? "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
-                      : "bg-[#ff5722] hover:bg-[#e64a19] active:bg-[#d84315]"
+                      : testChannel === "draft_smtp"
+                        ? "bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800"
+                        : "bg-[#ff5722] hover:bg-[#e64a19] active:bg-[#d84315]"
                   )}
                 >
                   {isLoading ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>{testChannel === "direct" ? "Envoi direct en cours..." : "Création du brouillon en cours..."}</span>
+                      <span>
+                        {testChannel === "direct"
+                          ? "Envoi direct en cours..."
+                          : testChannel === "draft_smtp"
+                            ? "Création du brouillon direct dans Gmail..."
+                            : "Création du brouillon via n8n en cours..."}
+                      </span>
                     </>
                   ) : (
                     <>
@@ -607,7 +649,9 @@ export default function TestDraftPage() {
                       <span>
                         {testChannel === "direct"
                           ? "Tester l'Envoi Direct"
-                          : "Tester la Création du Brouillon"}
+                          : testChannel === "draft_smtp"
+                            ? "Tester le Brouillon Direct (Gmail)"
+                            : "Tester le Brouillon via n8n"}
                       </span>
                     </>
                   )}

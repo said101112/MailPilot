@@ -12,6 +12,8 @@ import { toast } from "sonner";
 import {
   sendApplication,
   sendDirectApplication,
+  createDirectDraftApplication,
+  type DispatchChannel,
   validateEmailBeforeSend,
   type EmailPreflightResult,
 } from "@/lib/api";
@@ -64,7 +66,7 @@ interface StoredBulkState {
   selectedTemplateId: string | null;
   selectedCvId?: string | null;
   includeCoverLetter?: boolean;
-  bulkChannel?: "draft" | "direct";
+  bulkChannel?: "direct" | "draft_smtp" | "draft_n8n" | "draft";
   antiSpamDelaySeconds?: number;
   batchStatus?: BatchStatus;
   pausedAt?: string | null;
@@ -112,8 +114,8 @@ interface BulkUploadContextType {
   dailySentCount: number;
   progress: { current: number; total: number };
   setProgress: React.Dispatch<React.SetStateAction<{ current: number; total: number }>>;
-  bulkChannel: "draft" | "direct";
-  setBulkChannel: (channel: "draft" | "direct") => void;
+  bulkChannel: "direct" | "draft_smtp" | "draft_n8n" | "draft";
+  setBulkChannel: (channel: "direct" | "draft_smtp" | "draft_n8n" | "draft") => void;
   startBatchProcess: (activeTemplate: MessageTemplate, options?: { includeCoverLetter?: boolean }) => Promise<void>;
   pauseBatchProcess: () => void;
   cancelBatchProcess: () => void;
@@ -171,7 +173,7 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
   const [includeCoverLetter, setIncludeCoverLetter] = useState(false);
   const [defaultPosition, setDefaultPosition] = useState("Stage PFE / Emploi");
   const [defaultContactName, setDefaultContactName] = useState("Hiring Manager");
-  const [bulkChannel, setBulkChannel] = useState<"draft" | "direct">("direct");
+  const [bulkChannel, setBulkChannel] = useState<"direct" | "draft_smtp" | "draft_n8n" | "draft">("direct");
   const [antiSpamDelaySeconds, setAntiSpamDelaySeconds] = useState<number>(25);
   const [batchStatus, setBatchStatus] = useState<BatchStatus>("idle");
   const [pausedAt, setPausedAt] = useState<string | null>(null);
@@ -234,7 +236,12 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
             setIncludeCoverLetter(parsed.includeCoverLetter);
             includeCoverLetterRef.current = parsed.includeCoverLetter;
           }
-          if (parsed.bulkChannel === "draft" || parsed.bulkChannel === "direct") {
+          if (
+            parsed.bulkChannel === "draft" ||
+            parsed.bulkChannel === "direct" ||
+            parsed.bulkChannel === "draft_smtp" ||
+            parsed.bulkChannel === "draft_n8n"
+          ) {
             setBulkChannel(parsed.bulkChannel);
             bulkChannelRef.current = parsed.bulkChannel;
           }
@@ -608,6 +615,18 @@ export function BulkUploadProvider({ children }: { children: React.ReactNode }) 
               cover_letter_filename: finalCoverLetterFileName,
             });
             setDailySentCount(incrementDailySentCount());
+          } else if (activeChannel === "draft_smtp") {
+            await createDirectDraftApplication({
+              ...row,
+              message: processedMessage,
+              subject: processedSubject,
+              cv_base64: finalCvBase64,
+              cv_filename: finalCvFileName,
+              cv_data: finalCvBase64,
+              cv_name: finalCvFileName,
+              cover_letter_base64: finalCoverLetterBase64,
+              cover_letter_filename: finalCoverLetterFileName,
+            });
           } else {
             await sendApplication({
               ...row,
