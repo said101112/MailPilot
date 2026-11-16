@@ -1,7 +1,7 @@
 import tls from "tls";
 import nodemailer, { type SendMailOptions } from "nodemailer";
 import { formatEmailToHtml, stripEmailFormatting } from "./emailPersonalizer";
-import { getSmtpCredentials, type DirectMailPayload } from "./nodemailer";
+import { getSmtpCredentials, detectMimeType, type DirectMailPayload } from "./nodemailer";
 
 export interface DirectDraftResult {
   success: boolean;
@@ -64,6 +64,33 @@ async function buildRfc822Message(
       content: Buffer.from(cleanBase64, "base64"),
       contentType: "application/pdf",
     });
+  }
+
+  // Extra attachment (Word document .docx/.doc, PDF, portfolio, etc.)
+  if (payload.extraAttachmentBase64) {
+    const cleanBase64 = payload.extraAttachmentBase64.replace(/^data:[^;]+;base64,/, "").trim();
+    const buffer = Buffer.from(cleanBase64, "base64");
+    const filename = payload.extraAttachmentFileName || "Document_joint.docx";
+    attachments.push({
+      filename,
+      content: buffer,
+      contentType: detectMimeType(filename),
+    });
+  }
+
+  if (Array.isArray(payload.extraAttachments)) {
+    for (const att of payload.extraAttachments) {
+      if (att.base64) {
+        const cleanBase64 = att.base64.replace(/^data:[^;]+;base64,/, "").trim();
+        const buffer = Buffer.from(cleanBase64, "base64");
+        const filename = att.filename || "Document_joint.docx";
+        attachments.push({
+          filename,
+          content: buffer,
+          contentType: att.contentType || detectMimeType(filename),
+        });
+      }
+    }
   }
 
   const plainText = convertToPlainText(payload.message);

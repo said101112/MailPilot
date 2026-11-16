@@ -1,6 +1,12 @@
 import nodemailer, { type SendMailOptions } from "nodemailer";
 import { formatEmailToHtml, stripEmailFormatting } from "./emailPersonalizer";
 
+export interface CustomAttachment {
+  filename: string;
+  base64: string;
+  contentType?: string;
+}
+
 export interface DirectMailPayload {
   to: string;
   subject: string;
@@ -10,7 +16,45 @@ export interface DirectMailPayload {
   cvFileName?: string;
   coverLetterBase64?: string;
   coverLetterFileName?: string;
+  extraAttachmentBase64?: string;
+  extraAttachmentFileName?: string;
+  extraAttachments?: CustomAttachment[];
   replyTo?: string;
+}
+
+export function detectMimeType(filename: string): string {
+  const ext = filename.split(".").pop()?.toLowerCase();
+  switch (ext) {
+    case "docx":
+      return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    case "doc":
+      return "application/msword";
+    case "pdf":
+      return "application/pdf";
+    case "png":
+      return "image/png";
+    case "jpg":
+    case "jpeg":
+      return "image/jpeg";
+    case "txt":
+      return "text/plain";
+    case "odt":
+      return "application/vnd.oasis.opendocument.text";
+    case "rtf":
+      return "application/rtf";
+    case "zip":
+      return "application/zip";
+    case "pptx":
+      return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+    case "ppt":
+      return "application/vnd.ms-powerpoint";
+    case "xlsx":
+      return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    case "xls":
+      return "application/vnd.ms-excel";
+    default:
+      return "application/octet-stream";
+  }
 }
 
 export interface SmtpConfigStatus {
@@ -155,6 +199,33 @@ export async function sendDirectEmail(payload: DirectMailPayload) {
       content: buffer,
       contentType: "application/pdf",
     });
+  }
+
+  // Extra attachment (Word document .docx/.doc, PDF, portfolio, etc.)
+  if (payload.extraAttachmentBase64) {
+    const cleanBase64 = payload.extraAttachmentBase64.replace(/^data:[^;]+;base64,/, "").trim();
+    const buffer = Buffer.from(cleanBase64, "base64");
+    const filename = payload.extraAttachmentFileName || "Document_joint.docx";
+    attachments.push({
+      filename,
+      content: buffer,
+      contentType: detectMimeType(filename),
+    });
+  }
+
+  if (Array.isArray(payload.extraAttachments)) {
+    for (const att of payload.extraAttachments) {
+      if (att.base64) {
+        const cleanBase64 = att.base64.replace(/^data:[^;]+;base64,/, "").trim();
+        const buffer = Buffer.from(cleanBase64, "base64");
+        const filename = att.filename || "Document_joint.docx";
+        attachments.push({
+          filename,
+          content: buffer,
+          contentType: att.contentType || detectMimeType(filename),
+        });
+      }
+    }
   }
 
   const plainText = convertToPlainText(payload.message);

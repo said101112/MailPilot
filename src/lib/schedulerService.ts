@@ -24,6 +24,8 @@ export interface ScheduledEmail {
   has_cover_letter?: boolean;
   cover_letter_filename?: string;
   cover_letter_base64?: string;
+  extra_attachment_filename?: string;
+  extra_attachment_base64?: string;
   channel: "direct" | "draft_smtp" | "draft_n8n" | "draft";
   batch_id?: string;
   batch_name?: string;
@@ -34,6 +36,9 @@ export interface ScheduledEmail {
 const STORAGE_KEY = "mailpilot_scheduled_emails";
 export const SCHEDULED_UPDATED_EVENT = "mailpilot_scheduled_updated";
 
+// In-memory cache to ensure items are never lost during the session even if localStorage is full
+let memoryScheduledCache: ScheduledEmail[] = [];
+
 function notifyChange() {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event(SCHEDULED_UPDATED_EVENT));
@@ -41,9 +46,9 @@ function notifyChange() {
 }
 
 /**
- * Strips heavy PDF base64 from items before saving to localStorage.
- * Keeps payload ~400 bytes per email instead of 2 MB, preventing QuotaExceededError.
- * CVs and cover letters are resolved dynamically at dispatch time.
+ * Strips heavy PDF/file base64 from items before saving to localStorage.
+ * Keeps payload ~300 bytes per email instead of 2 MB, preventing QuotaExceededError.
+ * CVs and cover letters are resolved dynamically at dispatch time from IndexedDB.
  */
 function sanitizeForStorage(item: ScheduledEmail): ScheduledEmail {
   const copy: ScheduledEmail = { ...item };
@@ -51,47 +56,75 @@ function sanitizeForStorage(item: ScheduledEmail): ScheduledEmail {
     copy.has_cover_letter = true;
     delete copy.cover_letter_base64;
   }
-  if (copy.cv_base64 && copy.cv_base64.length > 50000) {
-    delete copy.cv_base64;
+  // NEVER keep heavy cv_base64 in localStorage - CV is resolved at runtime from IndexedDB
+  delete copy.cv_base64;
+
+  // If extra attachment base64 is larger than 25KB, keep it in memory cache only to protect quota
+  if (copy.extra_attachment_base64 && copy.extra_attachment_base64.length > 25000) {
+    delete copy.extra_attachment_base64;
   }
   return copy;
 }
 
 export function getScheduledEmails(): ScheduledEmail[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.sort(
-      (a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()
-    );
-  } catch {
-    return [];
+  let fromStorage: ScheduledEmail[] = [];
+  if (typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) fromStorage = parsed;
+      }
+    } catch {}
   }
+
+  // Merge localStorage items with memory cache so no scheduled item is ever lost
+  const map = new Map<string, ScheduledEmail>();
+  for (const item of fromStorage) {
+    map.set(item.id, item);
+  }
+  for (const item of memoryScheduledCache) {
+    const existing = map.get(item.id);
+    map.set(item.id, { ...existing, ...item });
+  }
+
+  const merged = Array.from(map.values());
+  return merged.sort(
+    (a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()
+  );
 }
 
 function saveScheduledEmails(list: ScheduledEmail[]) {
+  // Update memory cache immediately
+  memoryScheduledCache = [...list];
+
   if (typeof window === "undefined") return;
+
   try {
     const lightweight = list.map(sanitizeForStorage);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(lightweight));
     notifyChange();
   } catch (err) {
-    console.warn("Storage warning in saveScheduledEmails, retrying with full strip:", err);
+    console.warn("Storage warning in saveScheduledEmails, recovering quota:", err);
     try {
+      // Reclaim space by removing legacy 2-5 MB key if present (CV is stored in IndexedDB)
+      try {
+        localStorage.removeItem("mailpilot_cv_data");
+      } catch {}
+
       const fullyStripped = list.map((item) => {
         const c = { ...item };
         if (c.cover_letter_base64) c.has_cover_letter = true;
         delete c.cv_base64;
         delete c.cover_letter_base64;
+        delete c.extra_attachment_base64;
         return c;
       });
       localStorage.setItem(STORAGE_KEY, JSON.stringify(fullyStripped));
       notifyChange();
     } catch (quotaErr) {
-      console.error("Critical: localStorage quota fully exceeded:", quotaErr);
+      console.error("Critical: localStorage quota fully exceeded, preserved in memory cache:", quotaErr);
+      notifyChange();
     }
   }
 }
@@ -245,6 +278,8 @@ export async function processDueScheduledEmails(): Promise<{
             cv_name: effectiveCvFileName,
             cover_letter_base64: effectiveCoverLetterBase64,
             cover_letter_filename: effectiveCoverLetterFileName,
+            extra_attachment_base64: item.extra_attachment_base64,
+            extra_attachment_filename: item.extra_attachment_filename,
             notes: "Envoi programmé MailPilot (Direct)",
             jobUrl: "",
           });
@@ -262,6 +297,8 @@ export async function processDueScheduledEmails(): Promise<{
             cv_name: effectiveCvFileName,
             cover_letter_base64: effectiveCoverLetterBase64,
             cover_letter_filename: effectiveCoverLetterFileName,
+            extra_attachment_base64: item.extra_attachment_base64,
+            extra_attachment_filename: item.extra_attachment_filename,
             notes: "Brouillon direct programmé MailPilot (Gmail)",
             jobUrl: "",
           });
@@ -279,6 +316,8 @@ export async function processDueScheduledEmails(): Promise<{
             cv_name: effectiveCvFileName,
             cover_letter_base64: effectiveCoverLetterBase64,
             cover_letter_filename: effectiveCoverLetterFileName,
+            extra_attachment_base64: item.extra_attachment_base64,
+            extra_attachment_filename: item.extra_attachment_filename,
             notes: "Brouillon programmé MailPilot (n8n)",
             jobUrl: "",
           });

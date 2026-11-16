@@ -35,6 +35,8 @@ interface ScheduleModalSingleProps {
     has_cover_letter?: boolean;
     cover_letter_filename?: string;
     cover_letter_base64?: string;
+    extra_attachment_filename?: string;
+    extra_attachment_base64?: string;
     channel: "direct" | "draft_smtp" | "draft_n8n" | "draft";
   };
 }
@@ -60,6 +62,8 @@ interface ScheduleModalBulkProps {
       has_cover_letter?: boolean;
       cover_letter_filename?: string;
       cover_letter_base64?: string;
+      extra_attachment_filename?: string;
+      extra_attachment_base64?: string;
     }>;
   };
 }
@@ -143,6 +147,8 @@ export default function ScheduleModal(props: ScheduleModalProps) {
           has_cover_letter: props.emailData.has_cover_letter || !!props.emailData.cover_letter_base64,
           cover_letter_filename: props.emailData.cover_letter_filename,
           cover_letter_base64: props.emailData.cover_letter_base64,
+          extra_attachment_filename: props.emailData.extra_attachment_filename,
+          extra_attachment_base64: props.emailData.extra_attachment_base64,
           channel: props.emailData.channel,
           scheduled_at: targetDate.toISOString(),
         });
@@ -174,6 +180,8 @@ export default function ScheduleModal(props: ScheduleModalProps) {
             has_cover_letter: row.has_cover_letter || !!row.cover_letter_base64,
             cover_letter_filename: row.cover_letter_filename,
             cover_letter_base64: row.cover_letter_base64,
+            extra_attachment_filename: row.extra_attachment_filename,
+            extra_attachment_base64: row.extra_attachment_base64,
             channel: props.batchData.channel,
             batch_name: props.batchData.batch_name,
             scheduled_at: emailTime.toISOString(),

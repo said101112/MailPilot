@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   AlertCircle,
@@ -17,6 +17,7 @@ import {
   FileText,
   Loader2,
   Mail,
+  Paperclip,
   RotateCcw,
   Send,
   ShieldCheck,
@@ -146,10 +147,43 @@ export default function ApplyPage() {
   const [tempSubject, setTempSubject] = useState("");
   const [tempMessage, setTempMessage] = useState("");
 
-  // CV & Cover Letter
+  // CV & Cover Letter & Additional Attachment (Word, etc.)
   const [cvLibrary, setCvLibrary] = useState<CvProfile[]>([]);
   const [selectedCvId, setSelectedCvId] = useState<string | null>(null);
   const [includeCoverLetter, setIncludeCoverLetter] = useState(false);
+  const [extraFile, setExtraFile] = useState<{ name: string; base64: string; size: number } | null>(null);
+  const extraFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExtraFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 15 * 1024 * 1024) {
+      toast.error("Le fichier sélectionné est trop volumineux (maximum 15 Mo).");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result as string;
+      setExtraFile({
+        name: file.name,
+        base64,
+        size: file.size,
+      });
+      toast.success(`Document joint : ${file.name} (${Math.round(file.size / 1024)} Ko)`);
+    };
+    reader.onerror = () => {
+      toast.error("Impossible de lire le fichier sélectionné.");
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const handleRemoveExtraFile = () => {
+    setExtraFile(null);
+    toast.info("Document additionnel retiré.");
+  };
 
   // Live execution logs & preview state
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -692,6 +726,10 @@ export default function ApplyPage() {
 
       const companyToSave = inferredCompany?.name || null;
 
+      if (extraFile) {
+        addLog(`Document additionnel joint : ${extraFile.name} (${Math.round(extraFile.size / 1024)} Ko)`, "info");
+      }
+
       if (dispatchChannel === "direct") {
         addLog("Connexion sécurisée au serveur Gmail SMTP...", "info");
         await sendDirectApplication({
@@ -707,6 +745,8 @@ export default function ApplyPage() {
           cv_name: finalCvFileName,
           cover_letter_base64: finalCoverLetterBase64,
           cover_letter_filename: finalCoverLetterFileName,
+          extra_attachment_base64: extraFile?.base64,
+          extra_attachment_filename: extraFile?.name,
           notes: "",
           jobUrl: "",
         });
@@ -726,6 +766,8 @@ export default function ApplyPage() {
           cv_name: finalCvFileName,
           cover_letter_base64: finalCoverLetterBase64,
           cover_letter_filename: finalCoverLetterFileName,
+          extra_attachment_base64: extraFile?.base64,
+          extra_attachment_filename: extraFile?.name,
           notes: "",
           jobUrl: "",
         });
@@ -746,6 +788,8 @@ export default function ApplyPage() {
           cv_name: finalCvFileName,
           cover_letter_base64: finalCoverLetterBase64,
           cover_letter_filename: finalCoverLetterFileName,
+          extra_attachment_base64: extraFile?.base64,
+          extra_attachment_filename: extraFile?.name,
           notes: "",
           jobUrl: "",
         });
@@ -781,6 +825,7 @@ export default function ApplyPage() {
       const attachmentsList = [
         finalCvFileName,
         ...(finalCoverLetterFileName ? [finalCoverLetterFileName] : []),
+        ...(extraFile ? [extraFile.name] : []),
       ];
 
       setLastResult({
@@ -803,6 +848,7 @@ export default function ApplyPage() {
       setEmail("");
       setEmailCheck(validateEmailFormat(""));
       setIsCustomized(false);
+      setExtraFile(null);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Impossible d'envoyer la candidature.";
       addLog(`Échec : ${message}`, "error");
@@ -1245,6 +1291,58 @@ export default function ApplyPage() {
                 Auto
               </span>
             </div>
+
+            {/* Document additionnel (Word, etc.) */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-2 pt-2 border-t border-gray-200/50 min-w-0">
+              <input
+                type="file"
+                ref={extraFileInputRef}
+                onChange={handleExtraFileChange}
+                accept=".docx,.doc,.pdf,.odt,.txt,.png,.jpg,.jpeg,.zip"
+                className="hidden"
+              />
+              <span className="text-xs text-gray-700 font-medium flex items-center gap-1.5 shrink-0">
+                <Paperclip className="h-3.5 w-3.5 text-indigo-600" />
+                Autre document (Word, etc.) :
+              </span>
+
+              {extraFile ? (
+                <div className="flex items-center gap-2 max-w-full min-w-0">
+                  <div className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50/80 px-2 py-1 text-xs text-indigo-900 min-w-0 truncate">
+                    <span className="truncate max-w-[140px] sm:max-w-[190px] font-medium font-mono text-[11px]">
+                      {extraFile.name}
+                    </span>
+                    <span className="text-[10px] text-indigo-600 shrink-0 font-sans">
+                      ({Math.round(extraFile.size / 1024)} Ko)
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => extraFileInputRef.current?.click()}
+                    className="text-[11px] font-medium text-indigo-600 hover:text-indigo-800 underline shrink-0 cursor-pointer"
+                  >
+                    Changer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRemoveExtraFile}
+                    className="text-[12px] text-gray-400 hover:text-red-600 shrink-0 font-bold px-1 cursor-pointer"
+                    title="Supprimer ce document"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => extraFileInputRef.current?.click()}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-gray-300 hover:border-indigo-400 bg-white hover:bg-indigo-50/40 px-2.5 py-1 text-xs font-medium text-gray-600 hover:text-indigo-700 transition cursor-pointer w-full sm:w-auto"
+                >
+                  <Paperclip className="h-3 w-3 text-indigo-500" />
+                  <span>Ajouter Word, PDF...</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* 5. Boutons d'action : Envoi Immédiat & Programmer */}
@@ -1411,6 +1509,12 @@ export default function ApplyPage() {
                       <span className="inline-flex items-center gap-1 rounded-md border border-purple-200 bg-purple-50 px-2 py-0.5 font-mono text-[11px] text-purple-800 max-w-full">
                         <FileText className="h-3 w-3 text-purple-600 shrink-0" />
                         <span className="truncate">Lettre_{companyDisplayName.replace(/\s+/g, "_")}.pdf</span>
+                      </span>
+                    )}
+                    {extraFile && (
+                      <span className="inline-flex items-center gap-1 rounded-md border border-indigo-200 bg-indigo-50 px-2 py-0.5 font-mono text-[11px] text-indigo-800 max-w-full">
+                        <Paperclip className="h-3 w-3 text-indigo-600 shrink-0" />
+                        <span className="truncate">{extraFile.name}</span>
                       </span>
                     )}
                   </div>
@@ -1664,6 +1768,8 @@ export default function ApplyPage() {
             has_cover_letter: includeCoverLetter,
             cover_letter_filename: scheduledCoverLetter.fileName,
             cover_letter_base64: scheduledCoverLetter.base64,
+            extra_attachment_filename: extraFile?.name,
+            extra_attachment_base64: extraFile?.base64,
             channel: dispatchChannel,
           }}
         />

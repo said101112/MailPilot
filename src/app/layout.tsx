@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import AppHeader from "@/components/AppHeader";
 import Navbar from "@/components/Navbar";
@@ -7,8 +6,6 @@ import { APP_DESCRIPTION, APP_NAME } from "@/lib/brand";
 import { BulkUploadProvider } from "@/context/BulkUploadContext";
 import ScheduledQueueRunner from "@/components/ScheduledQueueRunner";
 import "./globals.css";
-
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
   title: `${APP_NAME} | Premium Automation Workspace`,
@@ -24,7 +21,7 @@ export default function RootLayout({
     <html lang="fr" className="h-full">
       <body
         suppressHydrationWarning
-        className={`${inter.variable} h-full overflow-hidden bg-[var(--editorial-background)] antialiased`}
+        className="h-full overflow-hidden bg-[var(--editorial-background)] antialiased"
       >
         <BulkUploadProvider>
           <div className="flex h-screen h-dvh w-full max-w-full overflow-hidden">

@@ -10,6 +10,7 @@ import {
   FileText,
   Loader2,
   Mail,
+  Paperclip,
   Play,
   RotateCcw,
   Send,
@@ -297,6 +298,13 @@ export default function ScheduledQueueModal({ isOpen, onClose }: ScheduledQueueM
                         <span className="flex items-center gap-1">
                           <FileText className="h-3 w-3 text-purple-500" />
                           Lettre PDF
+                        </span>
+                      )}
+
+                      {item.extra_attachment_filename && (
+                        <span className="flex items-center gap-1 text-indigo-700 font-medium">
+                          <Paperclip className="h-3 w-3 text-indigo-500" />
+                          <span className="truncate max-w-[150px]">{item.extra_attachment_filename}</span>
                         </span>
                       )}
                     </div>

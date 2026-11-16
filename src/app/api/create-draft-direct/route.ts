@@ -88,6 +88,9 @@ export async function POST(request: Request) {
       cvFileName: payload.cv_filename || payload.cv_name,
       coverLetterBase64: payload.cover_letter_base64,
       coverLetterFileName: payload.cover_letter_filename,
+      extraAttachmentBase64: payload.extra_attachment_base64 || payload.extraAttachmentBase64,
+      extraAttachmentFileName: payload.extra_attachment_filename || payload.extraAttachmentFileName,
+      extraAttachments: payload.extra_attachments || payload.extraAttachments,
       replyTo: smtpUser,
     });
 

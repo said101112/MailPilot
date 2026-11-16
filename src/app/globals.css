@@ -27,6 +27,7 @@
   --editorial-sidebar-border: #e5e7eb;
   --editorial-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
   --editorial-shadow-soft: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  --font-inter: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 @theme {
