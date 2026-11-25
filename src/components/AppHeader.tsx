@@ -29,6 +29,7 @@ const pageTitles: Record<string, string> = {
   "/history": "History",
   "/connections": "Connections",
   "/templates": "Templates",
+  "/notes": "Bloc-Notes & Réponses",
   "/tracker": "Tracker",
   "/tracker/applications": "Candidatures",
   "/tracker/companies": "Entreprises",

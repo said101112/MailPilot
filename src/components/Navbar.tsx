@@ -22,6 +22,7 @@ import {
   PhoneCall,
   Send,
   Sparkles,
+  StickyNote,
   Upload,
   Users,
   X,
@@ -41,6 +42,7 @@ import {
   readStoredCvLibrary,
   toggleSidebarCollapsed,
 } from "@/lib/workspace";
+import { NOTES_UPDATED_EVENT, loadLocalNotes } from "@/lib/notes";
 
 const hunterNavSections = [
   {
@@ -70,6 +72,11 @@ const hunterNavSections = [
         name: "Bibliothèque CVs",
         href: "/cvs",
         icon: FileText,
+      },
+      {
+        name: "Bloc-Notes",
+        href: "/notes",
+        icon: StickyNote,
       },
       {
         name: "Test Draft (Sandbox)",
@@ -162,18 +169,27 @@ export default function Navbar() {
     data: bulkData,
   } = useBulkUpload();
   const [cvCount, setCvCount] = useState(0);
+  const [notesCount, setNotesCount] = useState(0);
 
   useEffect(() => {
     const syncCv = () => {
       const libs = readStoredCvLibrary();
       setCvCount(libs.length);
     };
+    const syncNotesCount = () => {
+      setNotesCount(loadLocalNotes().length);
+    };
     syncCv();
+    syncNotesCount();
     window.addEventListener(WORKSPACE_CV_EVENT, syncCv);
+    window.addEventListener(NOTES_UPDATED_EVENT, syncNotesCount);
     window.addEventListener("storage", syncCv);
+    window.addEventListener("storage", syncNotesCount);
     return () => {
       window.removeEventListener(WORKSPACE_CV_EVENT, syncCv);
+      window.removeEventListener(NOTES_UPDATED_EVENT, syncNotesCount);
       window.removeEventListener("storage", syncCv);
+      window.removeEventListener("storage", syncNotesCount);
     };
   }, []);
 
@@ -257,14 +273,29 @@ export default function Navbar() {
       {/* Mobile Top Navbar */}
       <div className="fixed inset-x-0 top-0 z-40 flex h-14 w-full max-w-full items-center justify-between border-b border-gray-200 bg-white px-3 sm:px-4 lg:hidden">
         <BrandLogo />
-        <button
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50 active:bg-gray-100"
-          onClick={() => setMobileOpen((value) => !value)}
-          type="button"
-          aria-label="Menu"
-        >
-          {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-        </button>
+        <div className="flex items-center gap-1.5">
+          <Link
+            href="/notes"
+            className={cn(
+              "flex h-8 items-center gap-1 rounded-md border px-2 text-[11px] font-semibold transition",
+              isActivePath("/notes")
+                ? "border-[#ff5722]/40 bg-orange-50 text-[#ff5722]"
+                : "border-gray-200 text-gray-600 hover:bg-gray-50"
+            )}
+            title="Ouvrir le Bloc-Notes"
+          >
+            <StickyNote className="h-3.5 w-3.5 shrink-0" />
+            <span>Notes</span>
+          </Link>
+          <button
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50 active:bg-gray-100"
+            onClick={() => setMobileOpen((value) => !value)}
+            type="button"
+            aria-label="Menu"
+          >
+            {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Backdrop */}
@@ -329,6 +360,11 @@ export default function Navbar() {
                       {item.href === "/cvs" && cvCount > 0 && (
                         <span className="ml-auto rounded-full bg-gray-100 px-1.5 py-0.2 text-[10px] font-semibold text-gray-600">
                           {cvCount}
+                        </span>
+                      )}
+                      {item.href === "/notes" && notesCount > 0 && (
+                        <span className="ml-auto rounded-full bg-gray-100 px-1.5 py-0.2 text-[10px] font-semibold text-gray-600">
+                          {notesCount}
                         </span>
                       )}
                     </Link>
@@ -430,6 +466,11 @@ export default function Navbar() {
                         {item.href === "/cvs" && cvCount > 0 && !isCollapsed && (
                           <span className="ml-auto rounded-full bg-gray-100 px-1.5 py-0.2 text-[10px] font-semibold text-gray-600">
                             {cvCount}
+                          </span>
+                        )}
+                        {item.href === "/notes" && notesCount > 0 && !isCollapsed && (
+                          <span className="ml-auto rounded-full bg-gray-100 px-1.5 py-0.2 text-[10px] font-semibold text-gray-600">
+                            {notesCount}
                           </span>
                         )}
                       </Link>

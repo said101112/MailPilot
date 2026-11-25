@@ -9,6 +9,7 @@ import {
   MessageSquarePlus,
   Network,
   Send,
+  StickyNote,
   Upload,
   Users,
   type LucideIcon,
@@ -51,6 +52,12 @@ export const workspaceNavigationSections: Array<{
         href: "/cvs",
         description: "Gérer vos profils de CV (Data, Fullstack, PFE...).",
         icon: FileText,
+      },
+      {
+        name: "Bloc-Notes",
+        href: "/notes",
+        description: "Réponses texte rapides, liens utiles et notes synchronisées.",
+        icon: StickyNote,
       },
       {
         name: "Test Draft (Sandbox)",
@@ -133,6 +140,7 @@ export const workspaceNavigation = workspaceNavigationSections.flatMap(
 export const searchPlaceholders: Record<string, string> = {
   "/": "Search applications...",
   "/cvs": "Rechercher un CV...",
+  "/notes": "Rechercher une note...",
   "/apply": "Search saved jobs...",
   "/upload": "Search bulk jobs...",
   "/history": "Search application log...",

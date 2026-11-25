@@ -16,6 +16,7 @@ import {
   Network,
   Send,
   ShieldCheck,
+  StickyNote,
   Upload,
   Zap,
 } from "lucide-react";
@@ -431,6 +432,17 @@ export default function Home() {
                 <div className="flex items-center gap-2.5">
                   <FileText className="h-4 w-4 text-amber-500" />
                   <span>Modèles de Messages</span>
+                </div>
+                <ArrowUpRight className="h-3.5 w-3.5 text-gray-400" />
+              </Link>
+
+              <Link
+                className="flex items-center justify-between rounded-lg border border-gray-200 px-3.5 py-2.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 hover:text-gray-900"
+                href="/notes"
+              >
+                <div className="flex items-center gap-2.5">
+                  <StickyNote className="h-4 w-4 text-[#ff5722]" />
+                  <span>Bloc-Notes &amp; Réponses</span>
                 </div>
                 <ArrowUpRight className="h-3.5 w-3.5 text-gray-400" />
               </Link>
