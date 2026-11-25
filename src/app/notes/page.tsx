@@ -10,7 +10,6 @@ import {
   CloudOff,
   Copy,
   CopyPlus,
-  Database,
   ExternalLink,
   FolderOpen,
   Info,
@@ -31,8 +30,8 @@ import { cn } from "@/lib/utils";
 import {
   NOTE_CATEGORIES,
   NOTE_COLORS,
-  NOTES_SQL_SETUP,
   NOTES_UPDATED_EVENT,
+  createNoteId,
   deleteNoteRemote,
   extractUrls,
   formatRelativeNoteDate,
@@ -87,8 +86,6 @@ export default function NotesPage() {
   // Sync state
   const [syncStatus, setSyncStatus] = useState<NotesSyncStatus>("local_only");
   const [isSyncing, setIsSyncing] = useState(false);
-  const [isCloudHelpOpen, setIsCloudHelpOpen] = useState(false);
-  const [sqlCopied, setSqlCopied] = useState(false);
 
   // Refs for debounced remote sync & cursor helpers
   const remoteTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -148,8 +145,6 @@ export default function NotesPage() {
 
     if (res.status === "synced") {
       toast.success("Bloc-notes synchronisé avec le Cloud !");
-    } else if (res.status === "table_missing") {
-      setIsCloudHelpOpen(true);
     } else if (res.status === "local_only") {
       toast.info("Connectez-vous pour synchroniser entre PC et mobile.");
     } else {
@@ -266,7 +261,7 @@ export default function NotesPage() {
         : "reply");
 
     const newNote: NoteItem = {
-      id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: createNoteId(),
       title: presetTitle || "",
       content: "",
       category: resolvedCategory,
@@ -343,7 +338,7 @@ export default function NotesPage() {
     const now = new Date().toISOString();
     const clone: NoteItem = {
       ...selectedNote,
-      id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: createNoteId(),
       title: selectedNote.title ? `${selectedNote.title} (copie)` : "Copie",
       isPinned: false,
       createdAt: now,
@@ -493,38 +488,26 @@ export default function NotesPage() {
             {/* Sync Status Pill */}
             <button
               type="button"
-              onClick={() => {
-                if (syncStatus === "table_missing") {
-                  setIsCloudHelpOpen(true);
-                } else {
-                  void handleManualSync();
-                }
-              }}
+              onClick={() => void handleManualSync()}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-2 text-[11px] font-semibold transition cursor-pointer shadow-2xs",
                 syncStatus === "synced"
                   ? "border-emerald-200 bg-emerald-50/70 text-emerald-700 hover:bg-emerald-50"
-                  : syncStatus === "table_missing"
-                    ? "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100/70"
-                    : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                  : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
               )}
-              title="État de synchronisation Cloud"
+              title="Synchroniser avec le Cloud (PC & Mobile)"
             >
               {syncStatus === "synced" ? (
                 <Cloud className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-              ) : syncStatus === "table_missing" ? (
-                <Database className="h-3.5 w-3.5 text-amber-600 shrink-0" />
               ) : (
                 <CloudOff className="h-3.5 w-3.5 text-gray-400 shrink-0" />
               )}
               <span className="truncate">
                 {syncStatus === "synced"
                   ? "Sync Cloud"
-                  : syncStatus === "table_missing"
-                    ? "Activer Sync Cloud"
-                    : syncStatus === "offline"
-                      ? "Hors ligne"
-                      : "Local"}
+                  : syncStatus === "offline"
+                    ? "Hors ligne"
+                    : "Local"}
               </span>
               <RefreshCw
                 className={cn(
@@ -1238,93 +1221,6 @@ export default function NotesPage() {
         >
           <Plus className="h-6 w-6" />
         </button>
-      )}
-
-      {/* =================================================================== */}
-      {/* CLOUD SYNC SQL SETUP HELPER MODAL (Shown only when user requests)   */}
-      {/* =================================================================== */}
-      {isCloudHelpOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs">
-          <div
-            className="fixed inset-0"
-            onClick={() => setIsCloudHelpOpen(false)}
-          />
-          <div className="relative z-10 w-full max-w-lg rounded-2xl border border-gray-200 bg-white shadow-2xl overflow-hidden flex flex-col max-h-[90dvh]">
-            <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 sm:px-5 bg-gray-50/70">
-              <div className="flex items-center gap-2.5">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600 border border-amber-200">
-                  <Database className="h-4 w-4" />
-                </span>
-                <div>
-                  <h3 className="text-sm font-bold text-gray-900">
-                    Synchronisation Cloud PC ↔ Mobile
-                  </h3>
-                  <p className="text-[11px] text-gray-500">
-                    Activez la table Supabase <code className="font-mono">user_notes</code>
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsCloudHelpOpen(false)}
-                className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="p-4 sm:p-5 space-y-3 overflow-y-auto text-xs text-gray-600">
-              <p className="leading-relaxed">
-                Vos notes fonctionnent déjà hors ligne sur cet appareil. Pour les retrouver automatiquement entre votre ordinateur et votre téléphone, exécutez ce script SQL une seule fois dans le <strong>SQL Editor</strong> de Supabase :
-              </p>
-
-              <pre className="rounded-xl border border-gray-200 bg-gray-950 p-3 text-[11px] font-mono text-gray-100 overflow-x-auto leading-relaxed">
-                {NOTES_SQL_SETUP}
-              </pre>
-            </div>
-
-            <div className="flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-2 border-t border-gray-100 px-4 py-3 sm:px-5 bg-gray-50/70">
-              <button
-                type="button"
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(NOTES_SQL_SETUP);
-                    setSqlCopied(true);
-                    toast.success("Script SQL copié !");
-                    setTimeout(() => setSqlCopied(false), 2000);
-                  } catch {
-                    toast.error("Impossible de copier automatiquement.");
-                  }
-                }}
-                className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 cursor-pointer"
-              >
-                {sqlCopied ? (
-                  <>
-                    <Check className="h-3.5 w-3.5 text-emerald-600" />
-                    <span>SQL copié !</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-3.5 w-3.5" />
-                    <span>Copier le script SQL</span>
-                  </>
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={async () => {
-                  await handleManualSync();
-                  setIsCloudHelpOpen(false);
-                }}
-                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#ff5722] px-4 py-2 text-xs font-bold text-white hover:bg-[#e64a19] cursor-pointer"
-              >
-                <RefreshCw className="h-3.5 w-3.5" />
-                <span>Tester la synchronisation</span>
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );

@@ -23,7 +23,7 @@ export interface NoteItem {
   updatedAt: string;
 }
 
-export type NotesSyncStatus = "synced" | "local_only" | "table_missing" | "offline";
+export type NotesSyncStatus = "synced" | "local_only" | "offline";
 
 export interface NoteCategoryConfig {
   key: NoteCategory;
@@ -127,28 +127,26 @@ export const NOTES_SEEDED_KEY = "mailpilot_user_notes_seeded_v1";
 export const NOTES_SYNC_META_KEY = "mailpilot_user_notes_sync_meta_v1";
 export const NOTES_UPDATED_EVENT = "mailpilot_user_notes_updated";
 
-export const NOTES_SQL_SETUP = `create table if not exists public.user_notes (
-  id text not null,
-  user_id uuid not null references auth.users (id) on delete cascade,
-  title text not null default '',
-  content text not null default '',
-  category text not null default 'reply',
-  color text not null default 'default',
-  tags text[] not null default '{}'::text[],
-  is_pinned boolean not null default false,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  primary key (user_id, id)
-);
-
-alter table public.user_notes enable row level security;
-
-create policy "Users can select own notes" on public.user_notes for select using (auth.uid() = user_id);
-create policy "Users can insert own notes" on public.user_notes for insert with check (auth.uid() = user_id);
-create policy "Users can update own notes" on public.user_notes for update using (auth.uid() = user_id);
-create policy "Users can delete own notes" on public.user_notes for delete using (auth.uid() = user_id);`;
+const NOTE_DOC_TYPE = "mailpilot_note";
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const nowIso = () => new Date().toISOString();
+
+export function createNoteId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+function isValidUuid(id: unknown): id is string {
+  return typeof id === "string" && UUID_REGEX.test(id);
+}
 
 export function createStarterNotes(): NoteItem[] {
   const t1 = new Date().toISOString();
@@ -157,7 +155,7 @@ export function createStarterNotes(): NoteItem[] {
 
   return [
     {
-      id: "note-starter-reply-linkedin",
+      id: createNoteId(),
       title: "Réponse rapide LinkedIn / WhatsApp (Stage PFE 6 mois)",
       content:
         "Bonjour,\n\nMerci beaucoup pour votre retour ! Je suis bien disponible immédiatement pour un stage PFE de 6 mois.\n\nVoici mon CV et mes liens si besoin, et je reste entièrement disponible pour un court échange téléphonique cette semaine selon vos créneaux.\n\nBien cordialement,",
@@ -169,7 +167,7 @@ export function createStarterNotes(): NoteItem[] {
       updatedAt: t1,
     },
     {
-      id: "note-starter-links",
+      id: createNoteId(),
       title: "Mes liens & informations rapides",
       content:
         "• Durée du stage PFE : 6 mois (à partir de Février / Mars)\n• LinkedIn : https://linkedin.com/in/\n• GitHub : https://github.com/\n• Portfolio : https://\n• Disponibilité entretien : Matin 9h-12h / Après-midi 14h-18h",
@@ -181,7 +179,7 @@ export function createStarterNotes(): NoteItem[] {
       updatedAt: t2,
     },
     {
-      id: "note-starter-followup",
+      id: createNoteId(),
       title: "Relance courte après envoi de candidature",
       content:
         "Bonjour,\n\nJe me permets de revenir vers vous suite à ma candidature envoyée la semaine dernière concernant le stage PFE de 6 mois.\n\nToujours très motivé à l'idée de contribuer à vos projets, je reste à votre disposition pour un premier échange.\n\nCordialement,",
@@ -234,7 +232,9 @@ export function markNoteDeleted(id: string): void {
   const meta = readSyncMeta();
   const dirty = meta.dirtyIds.filter((d) => d !== id);
   const deleted = new Set(meta.deletedIds);
-  deleted.add(id);
+  if (isValidUuid(id)) {
+    deleted.add(id);
+  }
   writeSyncMeta({ dirtyIds: dirty, deletedIds: Array.from(deleted) });
 }
 
@@ -245,21 +245,36 @@ export function sortNotes(list: NoteItem[]): NoteItem[] {
   });
 }
 
+function sanitizeCategory(raw: unknown): NoteCategory {
+  const validCategories: NoteCategory[] = ["reply", "info", "idea", "todo", "other"];
+  const val = String(raw || "other") as NoteCategory;
+  return validCategories.includes(val) ? val : "other";
+}
+
+function sanitizeColor(raw: unknown): NoteColor {
+  const validColors: NoteColor[] = [
+    "default",
+    "orange",
+    "blue",
+    "emerald",
+    "purple",
+    "amber",
+  ];
+  const val = String(raw || "default") as NoteColor;
+  return validColors.includes(val) ? val : "default";
+}
+
 function normalizeNote(raw: unknown): NoteItem | null {
   if (!raw || typeof raw !== "object") return null;
   const obj = raw as Record<string, unknown>;
-  const id = typeof obj.id === "string" && obj.id ? obj.id : `note-${Date.now()}`;
-  const validCategories: NoteCategory[] = ["reply", "info", "idea", "todo", "other"];
-  const validColors: NoteColor[] = ["default", "orange", "blue", "emerald", "purple", "amber"];
-  const rawCat = String(obj.category || "other") as NoteCategory;
-  const rawColor = String(obj.color || "default") as NoteColor;
+  const id = isValidUuid(obj.id) ? obj.id : createNoteId();
 
   return {
     id,
     title: typeof obj.title === "string" ? obj.title : "",
     content: typeof obj.content === "string" ? obj.content : "",
-    category: validCategories.includes(rawCat) ? rawCat : "other",
-    color: validColors.includes(rawColor) ? rawColor : "default",
+    category: sanitizeCategory(obj.category),
+    color: sanitizeColor(obj.color),
     tags: Array.isArray(obj.tags)
       ? obj.tags.map((t) => String(t).trim()).filter(Boolean)
       : [],
@@ -276,6 +291,69 @@ function normalizeNote(raw: unknown): NoteItem | null {
         : typeof obj.updated_at === "string"
           ? obj.updated_at
           : nowIso(),
+  };
+}
+
+interface NoteDocMeta {
+  category?: NoteCategory;
+  color?: NoteColor;
+  tags?: string[];
+  isPinned?: boolean;
+  updatedAt?: string;
+}
+
+function noteToDocumentRow(note: NoteItem, userId: string) {
+  const meta: NoteDocMeta = {
+    category: note.category,
+    color: note.color,
+    tags: note.tags,
+    isPinned: note.isPinned,
+    updatedAt: note.updatedAt,
+  };
+
+  return {
+    id: isValidUuid(note.id) ? note.id : createNoteId(),
+    user_id: userId,
+    application_id: null,
+    company_id: null,
+    name: note.title,
+    doc_type: NOTE_DOC_TYPE,
+    url: JSON.stringify(meta),
+    notes: note.content,
+    created_at: note.createdAt,
+  };
+}
+
+function documentRowToNote(row: Record<string, unknown>): NoteItem | null {
+  if (!isValidUuid(row.id)) return null;
+
+  let meta: NoteDocMeta = {};
+  if (typeof row.url === "string" && row.url.trim().startsWith("{")) {
+    try {
+      meta = JSON.parse(row.url) as NoteDocMeta;
+    } catch {
+      meta = {};
+    }
+  }
+
+  const createdAt =
+    typeof row.created_at === "string" ? row.created_at : nowIso();
+
+  return {
+    id: row.id,
+    title: typeof row.name === "string" ? row.name : "",
+    content: typeof row.notes === "string" ? row.notes : "",
+    category: sanitizeCategory(meta.category),
+    color: sanitizeColor(meta.color),
+    tags: Array.isArray(meta.tags)
+      ? meta.tags.map((t) => String(t).trim()).filter(Boolean)
+      : [],
+    isPinned: Boolean(meta.isPinned),
+    createdAt,
+    updatedAt:
+      typeof meta.updatedAt === "string" && meta.updatedAt
+        ? meta.updatedAt
+        : createdAt,
   };
 }
 
@@ -300,9 +378,23 @@ export function loadLocalNotes(): NoteItem[] {
 
     const parsed = JSON.parse(saved);
     if (!Array.isArray(parsed)) return [];
+
+    let migratedIds = false;
     const normalized = parsed
-      .map(normalizeNote)
+      .map((raw) => {
+        const item = normalizeNote(raw);
+        if (item && raw && typeof raw === "object" && !isValidUuid((raw as { id?: unknown }).id)) {
+          migratedIds = true;
+          markNoteDirty(item.id);
+        }
+        return item;
+      })
       .filter((n): n is NoteItem => n !== null);
+
+    if (migratedIds) {
+      localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(normalized));
+    }
+
     return sortNotes(normalized);
   } catch (e) {
     console.warn("Error loading local notes:", e);
@@ -329,18 +421,6 @@ async function resolveUserId(): Promise<string | null> {
   }
 }
 
-function isMissingTableError(errMsg: string | undefined, code?: string): boolean {
-  if (!errMsg && !code) return false;
-  if (code === "42P01" || code === "PGRST205") return true;
-  const lower = (errMsg || "").toLowerCase();
-  return (
-    lower.includes("user_notes") &&
-    (lower.includes("does not exist") ||
-      lower.includes("not find the table") ||
-      lower.includes("schema cache"))
-  );
-}
-
 export async function syncNotesWithSupabase(): Promise<{
   notes: NoteItem[];
   status: NotesSyncStatus;
@@ -355,17 +435,20 @@ export async function syncNotesWithSupabase(): Promise<{
   try {
     const meta = readSyncMeta();
 
-    // 1. Replay offline deletes first
+    // 1. Replay pending offline deletes on public.documents
     if (meta.deletedIds.length > 0) {
-      const { error: delErr } = await supabase
-        .from("user_notes")
-        .delete()
-        .eq("user_id", userId)
-        .in("id", meta.deletedIds);
+      const validDeletes = meta.deletedIds.filter(isValidUuid);
+      if (validDeletes.length > 0) {
+        const { error: delErr } = await supabase
+          .from("documents")
+          .delete()
+          .eq("user_id", userId)
+          .eq("doc_type", NOTE_DOC_TYPE)
+          .in("id", validDeletes);
 
-      if (delErr) {
-        if (isMissingTableError(delErr.message, delErr.code)) {
-          return { notes: local, status: "table_missing" };
+        if (!delErr) {
+          meta.deletedIds = [];
+          writeSyncMeta(meta);
         }
       } else {
         meta.deletedIds = [];
@@ -373,32 +456,16 @@ export async function syncNotesWithSupabase(): Promise<{
       }
     }
 
-    // 2. Push any dirty local notes
+    // 2. Push any dirty local notes created/edited while offline
     if (meta.dirtyIds.length > 0) {
       const dirtyNotes = local.filter((n) => meta.dirtyIds.includes(n.id));
       if (dirtyNotes.length > 0) {
-        const payload = dirtyNotes.map((n) => ({
-          id: n.id,
-          user_id: userId,
-          title: n.title,
-          content: n.content,
-          category: n.category,
-          color: n.color,
-          tags: n.tags,
-          is_pinned: n.isPinned,
-          created_at: n.createdAt,
-          updated_at: n.updatedAt,
-        }));
-
+        const payload = dirtyNotes.map((n) => noteToDocumentRow(n, userId));
         const { error: upsertErr } = await supabase
-          .from("user_notes")
-          .upsert(payload, { onConflict: "user_id,id" });
+          .from("documents")
+          .upsert(payload, { onConflict: "id" });
 
-        if (upsertErr) {
-          if (isMissingTableError(upsertErr.message, upsertErr.code)) {
-            return { notes: local, status: "table_missing" };
-          }
-        } else {
+        if (!upsertErr) {
           meta.dirtyIds = [];
           writeSyncMeta(meta);
         }
@@ -408,43 +475,39 @@ export async function syncNotesWithSupabase(): Promise<{
       }
     }
 
-    // 3. Fetch authoritative remote rows
+    // 3. Fetch authoritative notes from public.documents (isolated with doc_type + null application_id)
     const { data: remoteRows, error } = await supabase
-      .from("user_notes")
-      .select("*")
+      .from("documents")
+      .select("id, user_id, name, doc_type, url, notes, created_at")
       .eq("user_id", userId)
-      .order("is_pinned", { ascending: false })
-      .order("updated_at", { ascending: false });
+      .eq("doc_type", NOTE_DOC_TYPE)
+      .is("application_id", null)
+      .order("created_at", { ascending: false });
 
     if (error) {
-      if (isMissingTableError(error.message, error.code)) {
-        return { notes: local, status: "table_missing" };
-      }
+      console.warn("Supabase notes query warning:", error.message);
       return { notes: local, status: "offline" };
     }
 
-    // If remote is empty while local has notes, seed remote once
+    // Seed remote once if empty on server while local has notes
     if ((!remoteRows || remoteRows.length === 0) && local.length > 0) {
-      const payload = local.map((n) => ({
-        id: n.id,
-        user_id: userId,
-        title: n.title,
-        content: n.content,
-        category: n.category,
-        color: n.color,
-        tags: n.tags,
-        is_pinned: n.isPinned,
-        created_at: n.createdAt,
-        updated_at: n.updatedAt,
-      }));
-      await supabase.from("user_notes").upsert(payload, { onConflict: "user_id,id" });
+      const payload = local.map((n) => noteToDocumentRow(n, userId));
+      const { error: seedErr } = await supabase
+        .from("documents")
+        .upsert(payload, { onConflict: "id" });
+
+      if (seedErr) {
+        console.warn("Supabase notes seed warning:", seedErr.message);
+        return { notes: local, status: "offline" };
+      }
+
       writeSyncMeta({ dirtyIds: [], deletedIds: [] });
       return { notes: local, status: "synced" };
     }
 
     const formatted = sortNotes(
       (remoteRows || [])
-        .map(normalizeNote)
+        .map((r) => documentRowToNote(r as Record<string, unknown>))
         .filter((n): n is NoteItem => n !== null)
     );
 
@@ -461,26 +524,13 @@ export async function upsertNoteRemote(note: NoteItem): Promise<NotesSyncStatus>
   if (!userId) return "local_only";
 
   try {
-    const { error } = await supabase.from("user_notes").upsert(
-      {
-        id: note.id,
-        user_id: userId,
-        title: note.title,
-        content: note.content,
-        category: note.category,
-        color: note.color,
-        tags: note.tags,
-        is_pinned: note.isPinned,
-        created_at: note.createdAt,
-        updated_at: note.updatedAt,
-      },
-      { onConflict: "user_id,id" }
-    );
+    const row = noteToDocumentRow(note, userId);
+    const { error } = await supabase
+      .from("documents")
+      .upsert(row, { onConflict: "id" });
 
     if (error) {
-      if (isMissingTableError(error.message, error.code)) {
-        return "table_missing";
-      }
+      console.warn("Supabase note upsert warning:", error.message);
       return "offline";
     }
 
@@ -500,18 +550,18 @@ export async function upsertNoteRemote(note: NoteItem): Promise<NotesSyncStatus>
 export async function deleteNoteRemote(noteId: string): Promise<NotesSyncStatus> {
   const userId = await resolveUserId();
   if (!userId) return "local_only";
+  if (!isValidUuid(noteId)) return "synced";
 
   try {
     const { error } = await supabase
-      .from("user_notes")
+      .from("documents")
       .delete()
       .eq("user_id", userId)
+      .eq("doc_type", NOTE_DOC_TYPE)
       .eq("id", noteId);
 
     if (error) {
-      if (isMissingTableError(error.message, error.code)) {
-        return "table_missing";
-      }
+      console.warn("Supabase note delete warning:", error.message);
       return "offline";
     }
 
